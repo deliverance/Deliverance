@@ -67,3 +67,14 @@ Deliverance
 You should see the sample file (content/echo123.xml) with the plonenet
 theme.  If not, check the Apache error log for details.  Possibly the
 web page will return a useful error message.
+
+5) If you make changes to the theme file
+   (e.g. content/plonenettheme.xml), you currently have to "compile"
+   it manually:
+
+  a. cd to the plonenet/lib directory.
+
+  b. run sh ./compiletheme.sh
+
+  c. Restart Apache.
+

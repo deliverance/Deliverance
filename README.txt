@@ -9,7 +9,8 @@ content using mod_python and lxml.
 
 Background information is available in the doc directory.
 
-Installation instructions are in INSTALL.txt.
+Installation instructions are in INSTALL.txt and examples of themes
+and content maps are in 'examples'.
 
 Paul Everitt
 paul@zope-europe.org
