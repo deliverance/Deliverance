@@ -1,0 +1,74 @@
+body  { 
+	background-color:#EBEBEB 
+} 
+
+#header  { 
+	position:fixed; background-color: rgb(222,231,236); color:black;
+	top:0; height:5.2em; left:0; right:0;
+	z-index:5; padding: 0; margin: 0;
+	font-family:Arial, sans-serif
+}
+#content-body  { 
+	top:7em; bottom:0; left:5%; right:5%;
+	background-color:white; position:absolute;
+	padding:3em; border:solid 2px silver
+}
+td  { font-size:x-small } 
+
+#header img  { padding-right:0.3em } 
+
+#header span {font-size: xx-large;}
+
+#masthead {padding: 0.3em;}
+
+#menu {
+    color: black; background-color: white;
+    font-size: 1.3em;
+    border: solid gray 1px;
+    margin-top: 0.4em;
+    }
+
+#menu a {
+  padding-right: 0.5em;
+  padding-left: 0.5em;
+  text-decoration: none;
+  color: black;
+  border-right: solid gray 1px;
+}
+
+#menu a:hover {
+  background-color: #D0D0D0;
+  text-decoration: underline;
+}
+
+#news {
+  float: right;
+  width: 14em;
+  border: solid black 1px;
+  margin-right: 0.5em;
+  margin-left: 5em;
+}
+
+#news h2 {
+  margin-top: 0;
+  padding-top: 0;
+  background-color: rgb(222,231,236); text-align: center;
+}
+
+#news ul {
+  padding-left: 1.6em;
+  font-size: smaller;
+}
+
+.provider {
+
+  margin-top: 2em;
+  margin-bottom: 2em;
+  clear: both;
+}
+
+.provider img {
+  display:block;
+  float: left;
+  padding-right: 2em;
+}

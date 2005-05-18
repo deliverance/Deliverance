@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>plone.net Sample Site</title>
+    </head>
+    <body>
+        <div id="content-body">
+            <h1>echo123 Sample Document</h1>
+            <p>This is a test document to be used as input to test the 
+            theme filter for <em>Deliverance</em>.</p>
+        </div>
+    </body>
+</html>
