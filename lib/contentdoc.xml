@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="compiledtheme.xsl" type="text/xml"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
-        <title xml:id="contenttitle">Site Themes</title>
+        <title xml:id="contenttitle">Site Themes 879</title>
     </head>
     <body>
         <div xml:id="contentauthor">Paul Everitt</div>
+        <div xml:id="contentdescription">This is a sample content document's description value.</div>
         <div xml:id="contentbody">
-            <div >
+            <div>
                 <h1>Site Themes</h1>
                 <h3>Summary</h3>
                 <p> Re-skinning a site is one of the first activities in customizing a deployment.

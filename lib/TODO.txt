@@ -1,0 +1,19 @@
+
+To Do Items
+-----------
+
+  - Instead of a bunch of global variables, make it more library-like
+    (I suck at designing things like that)
+
+  - After the xsl:value-of is put in, run another xslt to post-process
+    the theme
+
+  - Have the type="" instruct mode="", moving this out of the Python
+    code (not sure if this is worth it)
+
+  - Figure out why the silly xmlns declaration wind up on the HTML
+    element in the final output
+
+  - Track down why CSS @import in a comment doesn't work when viewing
+    the contentdoc.xml directly in a browser (and using the associated
+    XSLT)
