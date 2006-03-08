@@ -86,6 +86,14 @@ for rule in stage3doc.xpath("/rules/rule"):
 				      "{%s}copy-of" % namespaces["xsl"])
 	xslvalueof.set("select", contentxpath)
 
+# Change the <!-- @import --> CSS rules to xsd:comment
+for style in htmlroot.xpath("./html:head/html:style[comment()]",
+			    namespaces):
+    xslcomment = etree.SubElement(style,
+				  "{%s}comment" % namespaces["xsl"])
+    xslcomment.text = style[0].text
+    del style[0]
+
 # Write the htmlroot to disk
 etree.ElementTree(htmlroot).write("var/3-appliedrules.xml")
 
@@ -109,22 +117,15 @@ themecompilerdoc.write("var/compiledtheme.xsl")
 # Everything before this is done once, on startup.  This next 
 # part is done per request
 
-contentdoc = etree.ElementTree(file="contentdoc.xml")
-processor = etree.XSLT(themecompilerdoc)
-
 def main():
     # ---   Apply this theme to some content and time it ---
-    start = time.time()
-    iterations = 100
-    for i in range(iterations):
-	resultdoc = processor.apply(contentdoc)
-	resultstring = processor.tostring(resultdoc).encode("utf-8")
-	elapsed = (time.time() - start)/iterations
+    contentdoc = etree.ElementTree(file="contentdoc.xml")
+    processor = etree.XSLT(themecompilerdoc)
 
+    resultdoc = processor.apply(contentdoc)
+    resultstring = processor.tostring(resultdoc).encode("utf-8")
     outputfile = open("var/finalresult.html", "w")
     outputfile.write(resultstring)
     outputfile.close()
-    msgfmt = "Applying theme %s times took an average of %s seconds"
-    print msgfmt % (iterations, elapsed)
 
 if __name__ == "__main__": main()
