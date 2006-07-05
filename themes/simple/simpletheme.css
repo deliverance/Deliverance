@@ -1,0 +1,26 @@
+
+body { 
+  font-size: 0.9em;
+  font-family: Helvetica;
+  margin: 0;
+}
+
+#agiheader {
+  height: 3.5em;
+  background-color: lightgray;
+  padding: 0.5em;
+}
+
+#pageframe { 
+  margin: 2em;
+}
+
+#agifooter {
+  	position: fixed;
+	bottom: 0;
+	left: 0;
+	height: 1.8em;
+	width: 100%;
+	background-color:yellow;
+	padding: 0.4em;
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+                      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>Theme Title</title>
+        <link rel="stylesheet" type="text/css" href="simpletheme.css"/>
+    </head>
+    <body>
+        <div id="agiheader">
+            <img src="http://www.foogle.biz/deliverance_the_movie/deliverance2_guitar.jpg"
+                alt="Banjos"/>
+            <a href="/sandboxes/trois/trunk/deliverance/examples/plonenet.py/providers/enfold"
+                >enfold</a> | <a
+                href="/sandboxes/trois/trunk/deliverance/examples/plonenet.py/providers/zea">zea</a>
+        </div>
+        <div id="pageframe">
+            <h1 id="pagetitle">Theme Title</h1>
+
+            <div id="pagecontent">This gets replaced because it is theme content.</div>
+
+        </div>
+    </body>
+</html>
