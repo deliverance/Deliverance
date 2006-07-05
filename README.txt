@@ -13,3 +13,18 @@ Quick Start
 
 This runs the timeit function, showing average time to apply a simple theme.
 
+
+How Does This Work?
+-------------------
+
+There are proposals on zope.org and other places that explain the idea.  Here's 
+the short version:
+
+1) A configuration "map" points at a pile of HTML artifacts that look the 
+way you'd like your site to look.  Let's call this a "theme".
+
+2) A rule file defines boxes in that theme that should get filled by boxes 
+coming from the dynamic side.
+
+3) At startup, a one-time compilation processes turns the theme into a 
+high-speed XSLT transform.
