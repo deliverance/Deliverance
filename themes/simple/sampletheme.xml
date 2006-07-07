@@ -14,9 +14,9 @@
         </div>
         <div id="sitemenu">
             <ul>
-                <li><a href="/content/localhello.html">Home</a> | </li>
-                <li><a href="/content/intro.html">About Deliverance | </a></li>
-                <li><a href="/content/localhello.html?x=2">Unthemed Home</a></li>
+                <li><a href="/content/">Home</a> | </li>
+                <li><a href="/content/intro.html">About Deliverance</a> | </li>
+                <li><a href="/content/index.html?x=2">Unthemed Home</a></li>
             </ul>
         </div>
         <div id="pageframe">

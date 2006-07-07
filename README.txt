@@ -1,5 +1,5 @@
 =======================================
-Deliverancy, high-speed themes for Zope
+Deliverance, high-speed themes for Zope
 =======================================
 
 Quick Start
@@ -13,12 +13,16 @@ Quick Start
 
 This runs the timeit function, showing average time to apply a simple theme.
 
+
 Quick Server Start
 ------------------
 
 1) python ./ThemedHTTPServer.py
 
-2) Open http://localhost:8000/content/localhello.html
+2) Open http://localhost:8000/content/
+
+3) Click on the links in the menu, especially the "Unthemed" link that shows a 
+how content looks without a theme.
 
 
 How Does This Work?
