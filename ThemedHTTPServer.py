@@ -11,6 +11,7 @@ __version__ = "0.6"
 __all__ = ["ThemedHTTPRequestHandler"]
 
 import os
+import mimetypes
 import BaseHTTPServer
 import SimpleHTTPServer
 from StringIO import StringIO
@@ -70,6 +71,16 @@ class ThemedHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", responsesize)
         self.end_headers()
         return f
+
+    extensions_map = mimetypes.types_map.copy()
+    extensions_map.update({
+        '': 'application/octet-stream', # Default
+        '.py': 'text/plain',
+        '.c': 'text/plain',
+        '.h': 'text/plain',
+        '.ico': 'image/x-icon',
+        })
+
     
 
 def test(HandlerClass = ThemedHTTPRequestHandler,
