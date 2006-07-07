@@ -1,26 +1,35 @@
 
 body { 
   font-size: 0.9em;
-  font-family: Helvetica;
+  font-family: Optima, Arial, sans-serif;
   margin: 0;
 }
 
-#agiheader {
-  height: 3.5em;
-  background-color: lightgray;
-  padding: 0.5em;
+#siteheader {
+  height: 110px;
+  background-color:silver;
+  padding: 1em;
+}
+
+#siteheading {
+  float:right;
+}
+
+#sitelogo {
+  height: 100px;
+}
+
+
+#sitemenu li {
+  display:inline;
+  list-style-type:none;
 }
 
 #pageframe { 
-  margin: 2em;
+  margin-left: 4em;
+  margin-top: 2em;
 }
 
-#agifooter {
-  	position: fixed;
-	bottom: 0;
-	left: 0;
-	height: 1.8em;
-	width: 100%;
-	background-color:yellow;
-	padding: 0.4em;
+#pagecontent {
+  margin: 2em;
 }
