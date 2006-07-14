@@ -54,7 +54,7 @@ class ThemedHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             # First check to see if there is a query string.  If so, presume that 
             # to mean they want the source version.
             qs = len(self.path.split("?"))
-            if ctype == "text/html" and qs == 1:
+            if ctype == "text/html" and qs == 99:
                 print "Applying theme to", path
                 xmlstring = open(path, "r").read()
                 response = appmap.publish(xmlstring)

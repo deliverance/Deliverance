@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <title>Theme Title</title>
-        <link rel="stylesheet" type="text/css" href="/themes/simple/simpletheme.css"/>
+        <link rel="stylesheet" type="text/css" href="../themes/simple/simpletheme.css"/>
     </head>
     <body>
         <div id="siteheader">
@@ -14,16 +14,15 @@
         </div>
         <div id="sitemenu">
             <ul>
-                <li><a href="/content/">Home</a> | </li>
-                <li><a href="/content/intro.html">About Deliverance</a> | </li>
-                <li><a href="/content/index.html?x=2">Unthemed Home</a></li>
+                <li><a href="index.html">Home</a> | </li>
+                <li><a href="intro.html">About Deliverance</a> | </li>
+                <li><a href="index.html?notheme=1">Unthemed Home</a></li>
             </ul>
         </div>
         <div id="pageframe">
             <h1 id="pagetitle">Theme Title</h1>
 
             <div id="pagecontent">This gets replaced because it is theme content.</div>
-
         </div>
     </body>
 </html>

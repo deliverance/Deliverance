@@ -33,10 +33,7 @@ class AppMap:
     def publish(self, xmlstring):
         """Given a string of XML, theme it"""
         
-        # Stage 1 and 2, get an etree for the rendered resource
         resource = etree.XML(xmlstring)
-        
-        # Stage 3, apply theme
         response = str(self.themeprocessor(resource))
 
         return response
@@ -122,7 +119,7 @@ class RuleAppendElement(DVRuleBase):
         xslvalueof.set("select", self.get("content"))
 
 
-# lxml Namespace support
+# Bind Python classes for lxml namespace support
 namespace = Namespace(nsmap['dv'])
 namespace['layout'] = LayoutElement
 namespace['replace'] = RuleReplaceElement
@@ -130,27 +127,18 @@ namespace['copy'] = RuleCopyElement
 namespace['append'] = RuleAppendElement
     
 
-def testit(xmlstring):
-    
-    appmap = AppMap()
-    result = appmap.publish(xmlstring)
-    
-    return result
-
 def timeit(xmlstring):
     appmap = AppMap()
     start = time()
     iters = 50
     for i in range(iters):
         result = appmap.publish(xmlstring)
+    print "*** Average time:", (time() - start) / iters, " ***\n"
     print result[0:2000]
-    print "Average time:", (time() - start) / iters
     
 def main():
-    xmlstring = open("content/localhello.html").read()
+    xmlstring = open("content/index.html").read()
     timeit(xmlstring)
-    #testit(path1)
     
 if __name__ == "__main__":
-    result = main()
-    print result
+    main()
