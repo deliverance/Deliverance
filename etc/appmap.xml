@@ -3,6 +3,7 @@
     <layouts>
         <layout>
             <theme>
+                <xi:include href="../themes/spiral/spiraltheme.html"/>
                 <xi:include href="../themes/simple/sampletheme.xml"/>
             </theme>
             <xi:include href="themerules.xml"/>
@@ -11,12 +12,4 @@
             <xi:include href="../themecompiler.xsl"/>
         </compiler>
     </layouts>
-    <contentspace>
-        <content>
-            <xi:include href="themecontent.xml"/>
-        </content>
-        <generator>
-            <xi:include href="../renderer.xsl"/>
-        </generator>
-    </contentspace>
 </appmap>
