@@ -8,6 +8,7 @@ This module gets imported by mod_python during its startup.  Thus, the
 appmap instance becomes a global, computed only once.  If you need to 
 recompute the theme, for example, restart the Apache.
 """
+import time
 from cStringIO import StringIO
 
 from mod_python import apache
@@ -15,7 +16,6 @@ from deliverance import AppMap
 appmap = AppMap() # Theme is generated once at module import time
 
 def outputfilter(filter):
-
     if not hasattr(filter.req, 'notheme'):
         # Check for a flag to not apply theme
         args = filter.req.args
@@ -23,10 +23,23 @@ def outputfilter(filter):
             filter.req.notheme = True
         else:
             filter.req.notheme = False
-
+            
     try:
         streambuffer = filter.req.streambuffer
     except AttributeError:
+        if filter.req.notheme:
+            # pass on if no theme
+            filter.pass_on()
+            return
+        elif not filter.req.headers_out.has_key("content-type"):
+            # pass on if no content type specified
+            filter.pass_on()
+            return
+        elif not filter.req.headers_out["content-type"].startswith("text/html"):
+            # pass on if not HTML
+            filter.pass_on()
+            return
+
         filter.req.streambuffer = StringIO()
         streambuffer = filter.req.streambuffer
 
@@ -36,14 +49,9 @@ def outputfilter(filter):
         streamlet = filter.readline()
 
     if streamlet is None:
-        try:
-            del filter.req.headers_out["Content-Length"]
-        except KeyError:
-            pass            
-        if filter.req.notheme:
-            filter.write(streambuffer.getvalue())
-        else:
-            filter.write(appmap.publish(streambuffer.getvalue()))
+        output = appmap.publish(streambuffer.getvalue())
+        filter.req.headers_out["Content-Length"] = str(len(output))
+        filter.write(output)
         filter.close()
 
 
