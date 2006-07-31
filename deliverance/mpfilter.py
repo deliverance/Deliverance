@@ -12,7 +12,7 @@ import time
 from cStringIO import StringIO
 
 from mod_python import apache
-from deliverance import AppMap
+from deliverance.main import AppMap
 appmap = AppMap() # Theme is generated once at module import time
 
 def outputfilter(filter):

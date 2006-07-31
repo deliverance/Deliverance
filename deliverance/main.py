@@ -1,4 +1,3 @@
-
 import os
 from lxml import etree
 from time import time
@@ -14,11 +13,12 @@ nsmap = {
 
 class AppMap:
 
-    def __init__(self):
+    def __init__(self, layout_dir):
         
         # Open the appmap file, make a tree, and process XIncludes
         self.module_dir = os.path.dirname(os.path.abspath(__file__))
-        layoutsfn = os.path.join(self.module_dir, "etc/appmap.xml")
+        self.layout_dir = os.path.join(self.module_dir, layout_dir)
+        layoutsfn = os.path.join(self.layout_dir, "appmap.xml")
         self.tree = etree.ElementTree(file=layoutsfn)
         self.tree.xinclude()
 
