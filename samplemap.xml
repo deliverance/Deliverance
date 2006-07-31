@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="contentrenderer.xsl"?>
+<contentmap xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:at="http://www.plone.org/archetypes"
+    xmlns="http://www.plone.org/deliverance">
+    <content>
+        <at:collection xml:id="root" xmlns="http://www.plone.org/archetypes" title="Home">
+            <providers name="providers" xml:id="providers" title="Providers">
+                <provider name="providers/enfold" xml:id="providers.enfold" title="Enfold"/>
+                <provider name="providers/zea" xml:id="providers.zea" title="Zea Partners"/>
+                <provider name="providers/joelburton" xml:id="providers.joelburton"
+                    title="Joel Burton"/>
+            </providers>
+            <!-- 
+            <localfile name="localhello" xml:id="localhello" title="Local Hello File">
+                <xi:include href="localhello.html"/>
+            </localfile>
+            -->
+        </at:collection>
+    </content>
+</contentmap>
