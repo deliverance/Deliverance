@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<themes xmlns:xi="http://www.w3.org/2001/XInclude" xmlns="http://www.plone.org/deliverance">
+    <theme themeid="simple">
+        <layout>
+            <xi:include href="../themes/simple/sampletheme.xml"/>
+        </layout>
+        <rules>
+            <replace theme="html:head/html:title" content="/html:html/html:head/html:title"/>
+            <replace theme="html:body//html:h1[@id='pagetitle']"
+                content="/html:html/html:head/html:title"/>
+            <copy theme="html:body//html:div[@id='pagecontent']" content="html:html/html:body/*"/>
+            <append theme="html:head"
+                content="/html:html/html:head/html:link|/html:html/html:head/html:script"/>
+        </rules>
+        <generator>
+            <xi:include href="../themecompiler.xsl"/>
+        </generator>
+    </theme>
+    <theme themeid="spiral">
+        <layout>
+            <xi:include href="../themes/spiral/spiraltheme.html"/>
+        </layout>
+        <rules>
+            <replace theme="html:head/html:title" content="/html:html/html:head/html:title"/>
+            <replace theme="html:body//html:h1[@id='pagetitle']"
+                content="/html:html/html:head/html:title"/>
+            <copy theme="html:body//html:div[@id='pagecontent']" content="html:html/html:body/*"/>
+            <append theme="html:head"
+                content="/html:html/html:head/html:link|/html:html/html:head/html:script"/>
+        </rules>
+        <generator>
+            <xi:include href="../themecompiler.xsl"/>
+        </generator>
+    </theme>
+</themes>
