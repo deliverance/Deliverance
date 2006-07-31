@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appmap xmlns:xi="http://www.w3.org/2001/XInclude" xmlns="http://www.plone.org/deliverance">
+    <layouts>
+        <layout>
+            <theme>
+                <xi:include href="../themes/spiral/spiraltheme.html"/>
+                <xi:include href="../themes/simple/sampletheme.xml"/>
+            </theme>
+            <xi:include href="themerules.xml"/>
+        </layout>
+        <compiler>
+            <xi:include href="../themecompiler.xsl"/>
+        </compiler>
+    </layouts>
+</appmap>
