@@ -27,7 +27,7 @@ class AppMap:
         # defined via a custom Python class defined below (class LayoutElement)
         root = self.tree.getroot()
         layout = root.xpath("dv:layouts/dv:layout", nsmap)[0]
-        self.themeprocessor = layout.processor
+        self.themeprocessor = make_processor(layout)
 
 
     def publish(self, xmlstring):
@@ -44,55 +44,64 @@ class AppMap:
 class DVRuleBase(ElementBase):
 
     def getThemeNode(self):
-        """Get a node in the theme doc"""
+        return getThemeNode(self)
 
-        # Current node is a rule, get xpath from the @theme attr
-        themedoc = self.xpath("../../dv:theme", nsmap)[0][0]
-        xpath = self.get("theme")
-        try:
-            themenode = themedoc.xpath(xpath, nsmap)[0]
-        except IndexError:
-            msg = "Themedoc has no node at: %s" % xpath
-            print msg
-            themenode = None
+def getThemeNode(el):
+    """Get a node in the theme doc"""
 
-        return themenode
+    # Current node is a rule, get xpath from the @theme attr
+    themedoc = el.xpath("../../dv:theme", nsmap)[0][0]
+    xpath = el.get("theme")
+    try:
+        themenode = themedoc.xpath(xpath, nsmap)[0]
+    except IndexError:
+        msg = "Themedoc has no node at: %s" % xpath
+        print msg
+        themenode = None
+
+    return themenode
 
 
 class LayoutElement(ElementBase):
 
     def processor(self):
-        """Make XSLT processor by changing theme based on rules"""
-
-        # Apply all the rules
-        for rule in self.xpath("./dv:rules/*", nsmap):
-            rule.apply()
-
-        # Merge applied rules into compilerdoc
-        compilerroot = self.xpath("../dv:compiler/xsl:stylesheet", nsmap)[0]
-        themeroot = self.xpath("dv:theme/html:html", nsmap)[0]
-        target = compilerroot.xpath("xsl:template[@match='/']", nsmap)[0]
-        target.append(themeroot)
-        
-        #print etree.tostring(compilerroot)
-
-        return etree.XSLT(compilerroot)
+        return make_processor(self)
     
     processor = property(processor)
+
+def make_processor(el):
+    """Make XSLT processor by changing theme based on rules"""
+
+    # Apply all the rules
+    for rule in el.xpath("./dv:rules/*", nsmap):
+        apply_rules(rule)
+
+    # Merge applied rules into compilerdoc
+    compilerroot = el.xpath("../dv:compiler/xsl:stylesheet", nsmap)[0]
+    themeroot = el.xpath("dv:theme/html:html", nsmap)[0]
+    target = compilerroot.xpath("xsl:template[@match='/']", nsmap)[0]
+    target.append(themeroot)
+
+    #print etree.tostring(compilerroot)
+
+    return etree.XSLT(compilerroot)
         
 
 class RuleReplaceElement(DVRuleBase):
 
     def apply(self):
-        # TODO: Someething here
-        themenode = self.getThemeNode()
-        if themenode is None:
-            return
-        del(themenode[:])
-        themenode.text = None
-        xslvalueof = etree.SubElement(themenode,
-                                      "{%s}value-of" % nsmap["xsl"])
-        xslvalueof.set("select", self.get("content"))
+        return apply_rules(self)
+
+def apply_rules(el):
+    # TODO: Someething here
+    themenode = getThemeNode(el)
+    if themenode is None:
+        return
+    del(themenode[:])
+    themenode.text = None
+    xslvalueof = etree.SubElement(themenode,
+                                  "{%s}value-of" % nsmap["xsl"])
+    xslvalueof.set("select", el.get("content"))
 
 
 class RuleCopyElement(DVRuleBase):

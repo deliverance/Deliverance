@@ -16,6 +16,6 @@ app = TestApp(wrapped_app)
 
 def test_filter():
     root = app.get('/')
-    print res
+    print root
     assert 0
     

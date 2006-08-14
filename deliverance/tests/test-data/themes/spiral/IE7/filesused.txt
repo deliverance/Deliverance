@@ -1,0 +1,36 @@
+Files requested by IE
+
+192.168.0.5 - - [15/Jun/2006:08:51:14 +0200] "GET /projects/soros/OSI/folkswagon
+/folkswagon.html HTTP/1.1" 200 12593
+192.168.0.5 - - [15/Jun/2006:08:51:14 +0200] "GET /projects/soros/OSI/folkswagon
+/IE7/ie7-standard-p.js HTTP/1.1" 200 24828
+192.168.0.5 - - [15/Jun/2006:08:51:14 +0200] "GET /projects/soros/OSI/folkswagon
+/IE7/ie7-quirks.js HTTP/1.1" 200 2304
+192.168.0.5 - - [15/Jun/2006:08:51:15 +0200] "GET /projects/soros/OSI/folkswagon
+/folkswagon.css HTTP/1.1" 200 1721
+192.168.0.5 - - [15/Jun/2006:08:51:15 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-bg.css HTTP/1.1" 200 300
+192.168.0.5 - - [15/Jun/2006:08:51:15 +0200] "GET /projects/soros/OSI/folkswagon
+/IE7/ie7-load.htc HTTP/1.1" 200 98
+192.168.0.5 - - [15/Jun/2006:08:51:15 +0200] "GET /projects/soros/OSI/folkswagon
+/IE7/ie7-load.htc HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:15 +0200] "GET /projects/soros/OSI/folkswagon
+/MochiKit/MochiKit.js HTTP/1.1" 200 142976
+192.168.0.5 - - [15/Jun/2006:08:51:16 +0200] "GET /projects/soros/OSI/folkswagon
+/MochiXML.js HTTP/1.1" 200 3854
+192.168.0.5 - - [15/Jun/2006:08:51:16 +0200] "GET /projects/soros/OSI/folkswagon
+/folkswagon.js HTTP/1.1" 200 1133
+192.168.0.5 - - [15/Jun/2006:08:51:17 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-bg.jpg HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:17 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-fade.jpg HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:17 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-blue.jpg HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:17 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-blue.jpg HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:17 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-blue.jpg HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:17 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-fade.jpg HTTP/1.1" 304 -
+192.168.0.5 - - [15/Jun/2006:08:51:18 +0200] "GET /projects/soros/OSI/folkswagon
+/fwfiles/shell-fade.jpg HTTP/1.1" 304 -

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+                      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>Theme Title</title>
+        <link rel="stylesheet" type="text/css" href="../themes/simple/simpletheme.css"/>
+    </head>
+    <body>
+        <div id="siteheader">
+            <h1 id="siteheading">Simple Themed Site</h1>
+            <img id="sitelogo" alt="Banjos"
+                src="http://www.foogle.biz/deliverance_the_movie/deliverance2_guitar.jpg"/>
+        </div>
+        <div id="sitemenu">
+            <ul>
+                <li><a href="index.html">Home</a> | </li>
+                <li><a href="intro.html">About Deliverance</a> | </li>
+                <li><a href="index.html?notheme=1">Unthemed Home</a></li>
+            </ul>
+        </div>
+        <div id="pageframe">
+            <h1 id="pagetitle">Theme Title</h1>
+
+            <div id="pagecontent">This gets replaced because it is theme content.</div>
+        </div>
+    </body>
+</html>
