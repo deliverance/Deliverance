@@ -1,0 +1,7 @@
+
+<!-- helper file for doing hand transforms with this theme --> 
+
+<blend 
+   theme="http://www.nycsr.org" 
+   baseurl="http://www.nycsr.org" 
+   rules="./test-data/nycsr/nycsr.xml" /> 

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deliverance-test-suite>
+
+<!-- tests append command successfully appends the contents of a div tag with all matched 
+span tags in the content --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@id='foo']" content=".//span[@class='bar']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body><div class="bar">Real Content</div><span class="bar">1</span><span class="quux">2</span><p>zzz</p><span class="bar">3</span></body></html>
+  </content>
+  
+  <output>
+    <html><head><title>Blah</title></head><body><div></div>
+	<div id="foo">Dummy Content<p>HI!</p><span class="bar">1</span><span class="bar">3</span></div></body></html>
+  </output> 
+</deliverance-test>
+
+
+<!-- tests that an error is raised if append command does not find a target element in the theme --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@id='foo']" content=".//div[@id='bar']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body></body></html>
+  </theme>
+
+  <content> 
+    <html><body><div id="bar">Real Content</div></body></html>
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>Blah</title>
+      </head>
+      <body>
+	<div class="deliverance-error">Deliverance error: no element found in theme<br/>
+	  rule: &lt;append theme=".//div[@id='foo']" content=".//div[@id='bar']"/&gt;
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+
+<!-- tests that an error is raised if append command finds more than one target element in the theme --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@class='foo']" content=".//div[@id='bar']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div class="foo">Dummy Content</div><div class="foo">Dummy Content</div></body></html>
+  </theme>
+
+  <content> 
+    <html><body><div id="bar">Real Content</div></body></html>
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>Blah</title>
+      </head>
+      <body>
+	<div class="foo">Dummy Content<div class="deliverance-error">
+	    Deliverance error: multiple elements found in theme<br/>rule: &lt;append theme=".//div[@class='foo']" content=".//div[@id='bar']"/&gt;
+	</div></div>
+	<div class="foo">Dummy Content</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+
+<!-- tests append command successfully appends the contents of a div tag with all contents of body tag, 
+including unelemented text --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@id='foo']" content="//body/child::node()" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p>
+	  leading text <br/> more <p>inside p </p>trailing text</div>
+    </body></html>
+  </output> 
+</deliverance-test>
+
+
+<!-- tests append command successfully appends the contents of a div tag with all contents of body tag, 
+including unelemented text --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@id='foo']" content="//body/child::node()" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content </div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content leading text <br/> more 
+	  <p>inside p </p>trailing text</div>
+    </body></html>
+  </output> 
+</deliverance-test>
+
+
+</deliverance-test-suite>
