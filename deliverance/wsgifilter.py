@@ -26,30 +26,50 @@ class DeliveranceMiddleware(object):
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
-        self._theme = None
-        self._rule = None
         self._renderer = None
         self._cache_time = datetime.datetime.now()
         self._timeout = datetime.timedelta(0,10)
         self._lock = threading.Lock()
 
+
+    def get_renderer(self,environ):
+        try:
+            self._lock.acquire()
+            if not self._renderer or self.cache_expired():
+                print "rebuild renderer"
+                self._renderer = self.create_renderer(environ)
+                self._cache_time = datetime.datetime.now()
+            return self._renderer
+        finally:
+            self._lock.release()
+
+    def create_renderer(self,environ):
+        theme = self.theme(environ)
+        rule = self.rule(environ)
+        full_theme_uri = urlparse.urljoin(
+            construct_url(environ, with_path_info=False),
+            self.theme_uri)
+
+        def reference_resolver(href, parse, encoding=None):
+            text = self.get_resource(environ,href)
+            if parse == "xml":
+                return etree.XML(text)
+            elif encoding:
+                return text.decode(encoding)
+
+        return Renderer(etree.HTML(theme), full_theme_uri, etree.XML(rule), 
+                        reference_resolver=reference_resolver)
+
+        
     def cache_expired(self):
         return self._cache_time + self._timeout < datetime.datetime.now()
 
     def rule(self, environ):
-        if self._rule is None or self.cache_expired():
-            self._cache_time = datetime.datetime.now()
-            self._renderer = None
-            self._rule = self.get_resource(environ, self.rule_uri)
-        return self._rule
+        return self.get_resource(environ,self.rule_uri)
 
     def theme(self, environ):
-        if self._theme is None or self.cache_expired():
-            self._cache_time = datetime.datetime.now()
-            self._renderer = None
-            self._theme = self.get_resource(environ, self.theme_uri)
-        return self._theme
-        
+        return self.get_resource(environ,self.theme_uri)
+
     def __call__(self, environ, start_response):
         qs = environ.get('QUERY_STRING', '')
         environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False)
@@ -77,32 +97,8 @@ class DeliveranceMiddleware(object):
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
     def filter_body(self, environ, body):
-        try:
-            self._lock.acquire()
-            theme = self.theme(environ)
-            rule = self.rule(environ)
-            full_theme_uri = urlparse.urljoin(
-                construct_url(environ, with_path_info=False),
-                self.theme_uri)
-
-            def reference_resolver(href, parse, encoding=None):
-                text = self.get_resource(environ,href)
-                if parse == "xml":
-                    return etree.XML(text)
-                elif encoding:
-                    return text.decode(encoding)
-
-            if not self._renderer:
-                self._renderer = Renderer(etree.HTML(theme), full_theme_uri, etree.XML(rule), 
-                                          reference_resolver=reference_resolver)
-
-            content = self._renderer.render(etree.HTML(body))
+            content = self.get_renderer(environ).render(etree.HTML(body))
             return tostring(content)
-        finally:
-                self._lock.release()
-
-
-
 
     def get_resource(self, environ, uri):
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
