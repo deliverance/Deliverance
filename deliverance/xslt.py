@@ -37,6 +37,13 @@ class Renderer(RendererBase):
 
         if reference_resolver:
             xinclude.include(rules,loader=reference_resolver)
+
+        debug = rules.get("debug", None)
+        if debug and debug.lower() == "true":
+            self.debug = True
+        else:
+            self.debug = False
+
         self.apply_rules(rules,theme_copy)
         xslt_wrapper = etree.XML(xslt_wrapper_skel)
         insertion_point = xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
@@ -87,9 +94,11 @@ class Renderer(RendererBase):
         # no content is matched 
         self.add_conditional_missing_content_error(theme,rule)
 
-        copier = etree.SubElement(theme_el,
-                                    "{%s}copy-of" % nsmap["xsl"])
+
+        copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
+
+        self.debug_append(theme_el, copier, rule)
 
 
     def apply_prepend(self,rule,theme):
@@ -105,9 +114,8 @@ class Renderer(RendererBase):
 
         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
 
-        theme_el.insert(0,copier)
-        copier.tail = theme_el.text
-        theme_el.text = None
+        self.debug_prepend(theme_el, copier, rule)
+
 
     def apply_replace(self,rule,theme):
         theme_el = self.get_theme_el(rule,theme)
@@ -127,7 +135,7 @@ class Renderer(RendererBase):
                                           copy.deepcopy(theme_el), 
                                           copier)
 
-        self.replace_element(theme_el,choose)
+        self.debug_replace(theme_el,choose,rule)
 
 
     def apply_copy(self,rule,theme):
@@ -158,7 +166,7 @@ class Renderer(RendererBase):
                                           rule.attrib[self.RULE_CONTENT_KEY], 
                                           normal_theme_el, 
                                           copy_theme_el)
-        self.replace_element(theme_el,choose)
+        self.debug_replace(theme_el,choose,rule)
         
 
    
@@ -185,8 +193,9 @@ class Renderer(RendererBase):
  
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
-        theme_el.append(copier)
    
+        self.debug_append(theme_el, copier, rule)
+
 
     def xsl_escape_comments(self,doc):
         """
@@ -219,3 +228,51 @@ class Renderer(RendererBase):
         choose.append(when)
         choose.append(otherwise)
         return choose
+
+
+    def debug_append(self, parent, child, rule):
+        if self.debug:
+            comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
+            comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
+            parent.append(comment_before)
+
+        parent.append(child)
+
+        if self.debug:
+            comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
+            comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+            parent.append(comment_after)
+
+
+    def debug_replace(self, old_el, new_el, rule):
+        self.replace_element(old_el, new_el)
+        
+        if self.debug:
+            parent = new_el.getparent()
+            index = parent.index(new_el)
+
+            comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
+            comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
+            comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
+            comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+            comment_after.tail = new_el.tail
+            new_el.tail = None
+
+            parent.insert(index, comment_before)
+            parent.insert(index+2, comment_after)
+
+    def debug_prepend(self, parent, child, rule):
+        parent.insert(0,child)
+        child.tail = parent.text
+        parent.text = None
+
+        if self.debug:
+            comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
+            comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
+            comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
+            comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+            comment_after.tail = child.tail
+            child.tail = None
+
+            parent.insert(0, comment_before)
+            parent.insert(2, comment_after)

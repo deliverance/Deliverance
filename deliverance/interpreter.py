@@ -20,6 +20,12 @@ class Renderer(RendererBase):
         if reference_resolver:
             xinclude.include(self.rules, loader=reference_resolver)
 
+        debug = rules.get("debug", None)
+        if debug and debug.lower() == "true":
+            self.debug = True
+        else:
+            self.debug = False
+
 
     def render(self, content):
         result = copy.deepcopy(self.theme)
