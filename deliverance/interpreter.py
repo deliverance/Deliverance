@@ -269,8 +269,3 @@ class Renderer(RendererBase):
                 index + 1 < len(els) and 
                 type(els[index+1]) is type(str())):
                 el.tail = els[index+1]   
-
-
-
-                
-
