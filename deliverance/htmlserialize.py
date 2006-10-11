@@ -1,5 +1,5 @@
 from lxml import etree
-
+import re
 
 html_xsl = """
 <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -37,3 +37,26 @@ def tostring(doc,pretty = False):
         return str(html_transform(doc))
                   
 
+
+
+HTTP_EQUIV_MATCHER_PAT = re.compile(r"\<\s*meta\s+([^\>])*http-equiv\s*=\s*(\'|\")\s*content-type\s*(\'|\")([^\>])*charset\s*=\s*(?P<charset>[\w-]+)([^\>])*\>",re.I|re.M) 
+OTHER_HTTP_EQUIV_MATCHER_PAT = re.compile(r"\<\s*meta\s+([^\>])*charset\s*=\s*(?P<charset>[\w-]+)([^\>])*http-equiv\s*=\s*(\'|\")\s*content-type\s*(\'|\")([^\>])*\>",re.I|re.M) 
+def decodeAndParseHTML(text):
+    """
+    if an html meta tag specifying a charset can be matched, 
+    decode the text to a python unicode string before parsing
+    """
+    m = HTTP_EQUIV_MATCHER_PAT.search(text)
+    if not m:
+        m = OTHER_HTTP_EQUIV_MATCHER_PAT.search(text)
+
+    if m:
+        charset = m.group('charset')
+        text = text.decode(charset)
+
+    return etree.HTML(text)
+    
+
+        
+
+    

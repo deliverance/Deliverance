@@ -42,7 +42,9 @@ class Renderer(RendererBase):
         insertion_point = xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
                                              nsmap)[0]
         insertion_point.append(theme_copy)
+
         self.transform = etree.XSLT(xslt_wrapper)
+    
         
 
     def render(self,content):
@@ -81,14 +83,23 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
+        # add an element that produces an error in the theme if 
+        # no content is matched 
+        self.add_conditional_missing_content_error(theme,rule)
+
         copier = etree.SubElement(theme_el,
                                     "{%s}copy-of" % nsmap["xsl"])
         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
+
 
     def apply_prepend(self,rule,theme):
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
             return 
+
+        # add an element that produces an error in the theme if 
+        # no content is matched 
+        self.add_conditional_missing_content_error(theme,rule)
 
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
 
@@ -102,11 +113,21 @@ class Renderer(RendererBase):
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
             return 
-      
+
+        self.add_conditional_missing_content_error(theme,rule)      
+
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
 
-        self.replace_element(theme_el,copier)
+
+        # if content is matched, replace the theme element, otherwise, keep the
+        # theme element 
+        choose = self.make_when_otherwise("count(%s)=0" % 
+                                          rule.attrib[self.RULE_CONTENT_KEY], 
+                                          copy.deepcopy(theme_el), 
+                                          copier)
+
+        self.replace_element(theme_el,choose)
 
 
     def apply_copy(self,rule,theme):
@@ -114,11 +135,30 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        del(theme_el[:])
-        theme_el.text = None
+        # add an element that produces an error in the theme if 
+        # no content is matched 
+        self.add_conditional_missing_content_error(theme,rule)
+
+        # create an element that is like the target theme element 
+        # with its children replaced by an xsl copy element 
+        copy_theme_el = copy.deepcopy(theme_el)
+        del(copy_theme_el[:])
+        copy_theme_el.text = None
         copier = etree.SubElement(theme_el,
                                     "{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
+        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])  
+        copy_theme_el.append(copier)
+
+        # create a copy of the current theme element 
+        normal_theme_el = copy.deepcopy(theme_el)
+
+        # create an xsl choose element that picks between them based 
+        # on whether content was matched 
+        choose = self.make_when_otherwise("count(%s)=0" % 
+                                          rule.attrib[self.RULE_CONTENT_KEY], 
+                                          normal_theme_el, 
+                                          copy_theme_el)
+        self.replace_element(theme_el,choose)
         
 
    
@@ -131,12 +171,21 @@ class Renderer(RendererBase):
             self.add_to_body_start(theme,self.format_error("invalid xpath for content", rule=rule))
             return 
 
+        # add an element that produces an error in the theme if 
+        # no content is matched 
+        self.add_conditional_missing_content_error(theme,rule)
+
         for el in theme_el:
             if el.tag == remove_tag:
-                theme_el.remove(el)
-        copier = etree.SubElement(theme_el,
-                                    "{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
+                conditional = etree.Element("{%s}if" % nsmap["xsl"])
+                conditional.set("test","count(%s) = 0" % 
+                                rule.attrib[self.RULE_CONTENT_KEY])
+                conditional.append(copy.deepcopy(el))
+                self.replace_element(el,conditional)
+ 
+        copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
+        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
+        theme_el.append(copier)
    
 
     def xsl_escape_comments(self,doc):
@@ -149,3 +198,24 @@ class Renderer(RendererBase):
             escaped.text = c.text 
             self.replace_element(c,escaped)
     
+    def add_conditional_missing_content_error(self,theme,rule):
+        """
+        """
+        err = self.format_error("no content matched", rule)
+        if err:
+            conditional = etree.Element("{%s}if" % nsmap["xsl"])
+            conditional.set("test", "count(%s)=0" % rule.attrib[self.RULE_CONTENT_KEY])
+            conditional.append(err)
+            self.add_to_body_start(theme,conditional)
+        
+
+    def make_when_otherwise(self, test, whenbody, otherwisebody):
+        choose = etree.Element("{%s}choose" % nsmap["xsl"])
+        when = etree.Element("{%s}when" % nsmap["xsl"])
+        when.set("test", test)
+        when.append(copy.deepcopy(whenbody))
+        otherwise = etree.Element("{%s}otherwise" % nsmap["xsl"])
+        otherwise.append(otherwisebody)
+        choose.append(when)
+        choose.append(otherwise)
+        return choose

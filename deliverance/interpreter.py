@@ -62,6 +62,7 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if (len(content_els) == 0):
+            self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -96,6 +97,7 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if (len(content_els) == 0):
+            self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -141,8 +143,7 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
-            self.attach_text_to_previous(theme_el,theme_el.tail)
-            theme_el.getparent().remove(theme_el)
+            self.add_to_body_start(theme, self.format_error("no content matched", rule))            
             return       
 
         non_text_els = self.elements_in(content_els)
@@ -195,6 +196,7 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
+            self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -222,11 +224,16 @@ class Renderer(RendererBase):
             self.add_to_body_start(theme,self.format_error("invalid xpath for content", rule=rule))
             return
 
+        content_els = copy.deepcopy(content.xpath(content_xpath))        
+ 
+        if len(content_els) == 0:
+            self.add_to_body_start(theme, self.format_error("no content matched", rule))
+            return 
+
         for el in theme_el:
             if el.tag == remove_tag:
                 theme_el.remove(el)
 
-        content_els = copy.deepcopy(content.xpath(content_xpath))
         self.strip_tails(content_els)
         theme_el.extend(content_els)
 

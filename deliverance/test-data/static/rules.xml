@@ -2,8 +2,8 @@
   <rules xmlns="http://www.plone.org/deliverance">
     <append-or-replace theme="//head" content="//head/title" />
     <append theme="//head" content="//head/link" />
-    <append theme="//head" content="//head/script" />    
-    <append theme="//head" content="//head/style" />    
-    <append theme="//head" content="//head/meta" />
+    <append theme="//head" content="//head/script" onerror="ignore" />    
+    <append theme="//head" content="//head/style" onerror="ignore" />    
+    <append theme="//head" content="//head/meta" onerror="ignore" />
     <copy theme="//div[@id='content']" content="//body/*" />
   </rules>

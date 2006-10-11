@@ -91,18 +91,20 @@
   </content>
   
   <output>
-    <html>
-      <head>
-	<title>Blah</title>
-      </head>
-      <body>
-	<div>Dummy Content<div class="deliverance-error">
-	    Deliverance error: multiple elements found in theme<br/>rule: &lt;append-or-replace theme=".//div" content=".//div"/&gt;
-	</div></div>
-	<div>Dummy Content</div>
-      </body>
-    </html>
-  </output> 
+   <html>
+     <head>
+       <title>Blah</title>
+     </head>
+     <body>
+       <div class="deliverance-error">Deliverance error: multiple elements found in theme<br/>rule: &lt;append-or-replace theme=".//div" content=".//div"/&gt;
+	 <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div&gt;Dummy Content&lt;/div&gt;
+&lt;div&gt;Dummy Content&lt;/div&gt;
+       </textarea></div>
+       <div>Dummy Content</div>
+       <div>Dummy Content</div>
+     </body>
+   </html>
+  </output>
 </deliverance-test>
 
 
@@ -167,4 +169,38 @@
   </output>
 </deliverance-test>
 
+
+
+
+<!-- tests append-or-replace command generates an error when no content is found -->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content="//span[@id='bar']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+<html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div class="deliverance-error">Deliverance error: no content matched<br/>rule: &lt;append-or-replace theme=".//div[@id='foo']" content="//span[@id='bar']"/&gt;
+  </div>
+    <div/>
+    <div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+  </body>
+</html>
+  </output> 
+</deliverance-test>
+
 </deliverance-test-suite>
+

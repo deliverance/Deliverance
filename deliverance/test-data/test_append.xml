@@ -68,17 +68,51 @@ span tags in the content -->
   </content>
   
   <output>
-    <html>
-      <head>
-	<title>Blah</title>
-      </head>
-      <body>
-	<div class="foo">Dummy Content<div class="deliverance-error">
-	    Deliverance error: multiple elements found in theme<br/>rule: &lt;append theme=".//div[@class='foo']" content=".//div[@id='bar']"/&gt;
-	</div></div>
-	<div class="foo">Dummy Content</div>
-      </body>
-    </html>
+  <html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div class="deliverance-error">Deliverance error: multiple elements found in theme<br/>rule: &lt;append theme=".//div[@class='foo']" content=".//div[@id='bar']"/&gt;
+  <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div class="foo"&gt;Dummy Content&lt;/div&gt;
+&lt;div class="foo"&gt;Dummy Content&lt;/div&gt;
+</textarea></div>
+    <div class="foo">Dummy Content</div>
+    <div class="foo">Dummy Content</div>
+  </body>
+</html>
+
+  </output> 
+</deliverance-test>
+
+
+<!-- tests append command generates an error when no content is found -->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@id='foo']" content="//div[@id='bar']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+<html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div class="deliverance-error">Deliverance error: no content matched<br/>rule: &lt;append theme=".//div[@id='foo']" content="//div[@id='bar']"/&gt;
+  </div>
+    <div/>
+    <div id="foo">Dummy Content<p>HI!</p></div>
+  </body>
+</html>
   </output> 
 </deliverance-test>
 

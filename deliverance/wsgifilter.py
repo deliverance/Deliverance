@@ -8,6 +8,8 @@ import re
 import urlparse
 import urllib
 from lxml import etree
+#from lxml.etree import HTML as parseHTML 
+from htmlserialize import decodeAndParseHTML as parseHTML
 from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
@@ -36,7 +38,6 @@ class DeliveranceMiddleware(object):
         try:
             self._lock.acquire()
             if not self._renderer or self.cache_expired():
-                print "rebuild renderer"
                 self._renderer = self.create_renderer(environ)
                 self._cache_time = datetime.datetime.now()
             return self._renderer
@@ -57,7 +58,7 @@ class DeliveranceMiddleware(object):
             elif encoding:
                 return text.decode(encoding)
 
-        return Renderer(etree.HTML(theme), full_theme_uri, etree.XML(rule), 
+        return Renderer(parseHTML(theme), full_theme_uri, etree.XML(rule), 
                         reference_resolver=reference_resolver)
 
         
@@ -86,6 +87,7 @@ class DeliveranceMiddleware(object):
         if status is None:
             # should_intercept returned False
             return body
+
         body = self.filter_body(environ, body)
         replace_header(headers, 'content-length', str(len(body)))
         replace_header(headers, 'content-type', 'text/html; charset=utf-8')
@@ -97,8 +99,8 @@ class DeliveranceMiddleware(object):
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
     def filter_body(self, environ, body):
-            content = self.get_renderer(environ).render(etree.HTML(body))
-            return tostring(content)
+        content = self.get_renderer(environ).render(parseHTML(body))
+        return tostring(content)
 
     def get_resource(self, environ, uri):
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)

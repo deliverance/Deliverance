@@ -1,6 +1,7 @@
 from lxml import etree
 import re
 import urlparse
+import htmlserialize
 
 class RuleSyntaxError(Exception):
     """
@@ -38,8 +39,8 @@ class RendererBase(object):
             self.add_to_body_start(theme, e)
             return None
         elif len(theme_els)> 1:
-            e = self.format_error("multiple elements found in theme", rule)
-            theme_els[0].append(e)
+            e = self.format_error("multiple elements found in theme", rule, theme_els)
+            self.add_to_body_start(theme, e)
             return None
         return theme_els[0]
 
@@ -61,7 +62,15 @@ class RendererBase(object):
         br.tail = 'rule: %s' % etree.tostring(rule)
         d.append(br)
         if elts:
-            d.extend(elts)
+            d.append(etree.Element('br'))
+            textArea = etree.Element('textarea')
+            textArea.attrib['rows'] = '24'
+            textArea.attrib['cols'] = '80'
+            textArea.attrib['readonly'] = 'readonly'
+            textArea.text = ''
+            for el in elts:
+                textArea.text += htmlserialize.tostring(el)
+            d.append(textArea)
         return d
 
 
@@ -75,6 +84,8 @@ class RendererBase(object):
 
 
     def add_to_body_start(self,theme, el):
+        if not el:
+            return
         body = theme.find('body')
         if body is None:
             body = theme[0]
