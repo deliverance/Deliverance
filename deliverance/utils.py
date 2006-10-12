@@ -48,8 +48,8 @@ class RendererBase(object):
     def format_error(self, message, rule, elts=None):
         """
         Returns a node containing the error message;
-        Checks the onerror attribute of the rule element to see if errors should
-        be ignored in which case returns None
+        If the onerror attribute of the rule element is set to ignore,
+        returns None
         """
 
         if rule.attrib.get('onerror', None) == 'ignore':
@@ -76,6 +76,9 @@ class RendererBase(object):
 
     TAG_MATCHER = re.compile(r'^\.?/?/?(.*?/)*(?P<tag>[^*^(^)^:^[^.^/]+?)(\[.*\])*$',re.I)
     def get_tag_from_xpath(self,xpath):
+        """
+        attemtps to extract the tag type that an xpath expression selects (if any)
+        """
         match = self.TAG_MATCHER.match(xpath)
         if match:
             return match.group('tag')  
@@ -83,33 +86,38 @@ class RendererBase(object):
             return None
 
 
-    def add_to_body_start(self,theme, el):
+    def add_to_body_start(self,doc,el):
+        """
+        inserts the element el into the beginning of body 
+        element of the document given        
+        """
         if not el:
             return
-        body = theme.find('body')
+        body = doc.find('body')
         if body is None:
-            body = theme[0]
+            body = doc[0]
         body[:0] = [el]
 
-    def replace_element(self,replace, new_el):
-        parent = replace.getparent()        
-        for i in range(len(parent)):
-            if parent[i] == replace:
-                new_el.tail = replace.tail 
-                parent[i] = new_el
-                break
+    def replace_element(self,old_el, new_el):
+        """
+        replaces old_el with new_el in the parent 
+        element of old_el. The tail of 
+        new_el is replaced by the tail of old_el 
+        """
+        new_el.tail = old_el.tail
+        parent = old_el.getparent()
+        parent[parent.index(old_el)] = new_el
 
-    def mark_bad_elements(self,els):
-        for el in els:
-            if 'class' in el.attrib:
-                el.attrib['class'] += ' deliverance-bad-element'
-            else:
-                el.attrib['class'] = 'deliverance-bad-element'
 
 
     def fixup_links(self, doc, uri):
-        """ resolve all links in the ``doc`` element to be absolute; the links
-        should be considered relative to ``uri``
+        """ 
+        replaces relative urls found in the document given 
+        with absolute urls by prepending the uri given. 
+        <base href> tags are removed from the document. 
+
+        Affects urls in href attributes, src attributes and 
+        css of the form url(...) in style elements 
         """        
         base_uri = uri 
         basetags = doc.xpath('//base[@href]')
@@ -132,14 +140,18 @@ class RendererBase(object):
 
 
     def fixup_link_attrs(self, elts, base_uri, attr):
-        """ makes all attr values in elts to be absolute uris based on base_uri """
+        """
+        prepends base_uri onto the attribute given by attr for 
+        all elements given in elts 
+        """
         for el in elts:
             el.attrib[attr] = urlparse.urljoin(base_uri, el.attrib[attr])
 
 
     CSS_URL_PAT = re.compile(r'url\((.*?)\)',re.I)
     def fixup_css_links(self, elts, base_uri):
-        """ fixes @import uris in css style elements to be 
+        """ 
+        prepends url(...) in css style elements to be 
         absolute links based on base_uri
         """
 
@@ -150,18 +162,12 @@ class RendererBase(object):
             if el.text:
                 el.text = re.sub(self.CSS_URL_PAT,absuri,el.text)
 
-    def remove_http_equiv_metas(self,doc):
-        if not doc:
-            return 
-
-        metas = doc.xpath("//meta[translate(@http-equiv,'contenyp','CONTENYP') = 'CONTENT-TYPE']")
-        for elt in metas:
-            if elt.tail:
-                attach_text_to_previous(self,elt,elt.tail)
-            elt.getparent().remove(elt)
-
 
     def attach_text_to_previous(self,el,text):
+        """
+        attaches the text given to the nearest previous node to el, 
+        ie its preceding sibling or parent         
+        """
         if text is None:
             return 
 

@@ -13,8 +13,8 @@ from htmlserialize import decodeAndParseHTML as parseHTML
 from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
-#from interpreter import Renderer
-from xslt import Renderer
+from interpreter import Renderer
+#from xslt import Renderer
 from htmlserialize import tostring
 import sys 
 import datetime

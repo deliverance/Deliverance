@@ -32,7 +32,6 @@ class Renderer(RendererBase):
         theme_copy = copy.deepcopy(theme)
 
         self.fixup_links(theme_copy,theme_uri)
-        self.remove_http_equiv_metas(theme_copy)
         self.xsl_escape_comments(theme_copy)
 
         if reference_resolver:
@@ -201,7 +200,9 @@ class Renderer(RendererBase):
 
     def xsl_escape_comments(self,doc):
         """
-        replaces comment nodes with xsl:comment nodes 
+        replaces comment nodes with xsl:comment nodes so they will 
+        appear in the result of a transform rather than being 
+        treated as comments in the transform 
         """
         comment_nodes = doc.xpath('//comment()')
         for c in comment_nodes:
@@ -211,6 +212,9 @@ class Renderer(RendererBase):
     
     def add_conditional_missing_content_error(self,theme,rule):
         """
+        adds a node to the body of theme which produces an error 
+        message if no content is matched by a rule given 
+        during the transformation 
         """
         err = self.format_error("no content matched", rule)
         if err:
@@ -221,6 +225,11 @@ class Renderer(RendererBase):
         
 
     def make_when_otherwise(self, test, whenbody, otherwisebody):
+        """
+        makes a conditional xlst node. when placed into a document, 
+        if the xslt expression represented by the string test evaluates 
+        to true, whenbody is produced, if false, otherwise body is produced 
+        """
         choose = etree.Element("{%s}choose" % nsmap["xsl"])
         when = etree.Element("{%s}when" % nsmap["xsl"])
         when.set("test", test)
@@ -233,6 +242,11 @@ class Renderer(RendererBase):
 
 
     def debug_append(self, parent, child, rule):        
+        """
+        helper method for appending a node, if debugging is enabled, 
+        the appended node is wrapped in comments referring to the 
+        rule that performed the append 
+        """
         if self.debug:
             comment_before,comment_after = self.make_debugging_comments(rule)
             parent.append(comment_before)
@@ -243,6 +257,11 @@ class Renderer(RendererBase):
 
 
     def debug_replace(self, old_el, new_el, rule):
+        """
+        helper method for replacing a node, if debugging is enabled, 
+        the new node is wrapped in comments referring to the 
+        rule that performed the replace  
+        """
         self.replace_element(old_el, new_el)
         
         if self.debug:
@@ -257,6 +276,11 @@ class Renderer(RendererBase):
             parent.insert(index+2, comment_after)
 
     def debug_prepend(self, parent, child, rule):
+        """
+        helper method for prepending a node, if debugging is enabled, 
+        the prepended node is wrapped in comments referring to the 
+        rule that performed the append 
+        """
         parent.insert(0,child)
         child.tail = parent.text
         parent.text = None
@@ -271,6 +295,10 @@ class Renderer(RendererBase):
 
 
     def make_debugging_comments(self, rule):
+        """
+        helper method which prepares two xslt:comment nodes used 
+        for wrapping inserted content nodes during debugging
+        """
         comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
         comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
         comment_after = etree.Element("{%s}comment" % nsmap["xsl"])

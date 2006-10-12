@@ -14,7 +14,6 @@ class Renderer(RendererBase):
 
     def __init__(self, theme, theme_uri, rules, reference_resolver=None):  
         self.theme = self.fixup_links(theme, theme_uri)
-        self.remove_http_equiv_metas(self.theme)
         self.rules = rules
         # perform xincludes on the rules
         if reference_resolver:
@@ -30,7 +29,6 @@ class Renderer(RendererBase):
     def render(self, content):
         result = copy.deepcopy(self.theme)
         input = copy.deepcopy(content)
-        self.remove_http_equiv_metas(input)
         self.apply_rules(self.rules,result,input)
         return result
 
