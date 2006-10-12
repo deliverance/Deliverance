@@ -39,7 +39,63 @@ $ cd deliverance
 $ nosetests 
 
 
+Simple Tests
+------------
 
+There are a number of tests in the test-data directory that follow the form:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<deliverance-test-suite>
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+     ... rules as described at http://www.openplans.org/projects/deliverance/specification
+  </rules>
+
+  <theme base="http://example.com"> 
+     ... theme html 
+  </theme>
+
+  <content> 
+     ... content html 
+  </content>
+ 
+  <output>
+     ... expected output of applying rules to theme and content 
+  </output> 
+</deliverance-test>
+
+... 
+
+</deliverance-test-suite>
+
+
+WSGI Tests 
+----------
+
+test_wsgi.py contains tests which take the theme and content from the 
+web and local pages found under test-data. 
+
+
+Hand Transform 
+--------------
+
+a hand test may also be performed using the handtransform.py script 
+run python handtransform.py --help for instructions. The result of the 
+transform is output to standard out. 
+
+To avoid lengthy command lines, the script can accept a file which describes 
+the theme and rules to apply using the -f flag eg: 
+
+python handtransform.py -f test-data/nycsr/nycsr.theme ./test-data/nycsr/openplans.html
+
+where nycsr.theme contains something like: 
+
+<blend 
+   theme="http://www.nycsr.org" 
+   baseurl="http://www.nycsr.org" 
+   rules="./test-data/nycsr/nycsr.xml" /> 
+
+and the second argument points to the content 
 
 
 
