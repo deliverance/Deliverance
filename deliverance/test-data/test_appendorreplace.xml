@@ -44,6 +44,34 @@
   </output> 
 </deliverance-test>
 
+<!-- test append-or-replace preserves surrounding text of replaced elements --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme="//body" content="//body/div" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html>
+    <body>
+      before the div<div>in the div</div>after the div
+    </body></html>
+  </theme>
+
+  <content> 
+    <html>
+      <body><div>Real Content</div>
+    </body></html>
+  </content>
+  
+  <output>
+    <html>
+        <body>
+             before the divafter the div
+	     <div>Real Content</div>
+        </body>
+      </html>
+  </output> 
+</deliverance-test>
 
 <!-- tests that an error is raised if append-or-replace command does not find a target element 
      in the theme --> 

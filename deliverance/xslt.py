@@ -167,6 +167,8 @@ class Renderer(RendererBase):
                                           normal_theme_el, 
                                           copy_theme_el)
         self.debug_replace(theme_el,choose,rule)
+        copy_theme_el.tail = None
+        normal_theme_el.tail = None
         
 
    
@@ -230,18 +232,14 @@ class Renderer(RendererBase):
         return choose
 
 
-    def debug_append(self, parent, child, rule):
+    def debug_append(self, parent, child, rule):        
         if self.debug:
-            comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
-            comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
+            comment_before,comment_after = self.make_debugging_comments(rule)
             parent.append(comment_before)
-
-        parent.append(child)
-
-        if self.debug:
-            comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
-            comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+            parent.append(child)
             parent.append(comment_after)
+        else:
+            parent.append(child)
 
 
     def debug_replace(self, old_el, new_el, rule):
@@ -250,11 +248,8 @@ class Renderer(RendererBase):
         if self.debug:
             parent = new_el.getparent()
             index = parent.index(new_el)
-
-            comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
-            comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
-            comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
-            comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+            
+            comment_before,comment_after = self.make_debugging_comments(rule)
             comment_after.tail = new_el.tail
             new_el.tail = None
 
@@ -267,12 +262,17 @@ class Renderer(RendererBase):
         parent.text = None
 
         if self.debug:
-            comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
-            comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
-            comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
-            comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+            comment_before,comment_after = self.make_debugging_comments(rule)
             comment_after.tail = child.tail
             child.tail = None
 
             parent.insert(0, comment_before)
             parent.insert(2, comment_after)
+
+
+    def make_debugging_comments(self, rule):
+        comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
+        comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
+        comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
+        comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+        return comment_before, comment_after

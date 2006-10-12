@@ -67,12 +67,16 @@ class Renderer(RendererBase):
 
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
-        if (len(content_els) == 0):
+        if len(content_els) == 0:
             self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
+        if self.debug:
+            self.debug_append(theme_el, content_els, rule)
+            return 
+
         non_text_els = self.elements_in(content_els)
-        self.strip_tails(non_text_els)
+        self.strip_tails(non_text_els)        
 
         # the xpath may return a mixture of strings and elements, handle strings 
         # by attaching them to the proper element 
@@ -95,6 +99,20 @@ class Renderer(RendererBase):
         self.attach_tails(content_els)
         theme_el.extend(non_text_els)
 
+    def debug_append(self, theme_el, content_els, rule):
+        
+        comment_before,comment_after = self.make_debugging_comments(rule)
+        content_els[:0] = [comment_before]
+        content_els.append(comment_after)
+
+        non_text_els = self.elements_in(content_els)
+        self.strip_tails(non_text_els)        
+            
+        self.attach_tails(content_els)
+        theme_el.extend(non_text_els)
+        
+
+
     def apply_prepend(self,rule,theme,content):
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
@@ -102,8 +120,12 @@ class Renderer(RendererBase):
 
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
-        if (len(content_els) == 0):
+        if len(content_els) == 0:
             self.add_to_body_start(theme, self.format_error("no content matched", rule))
+            return 
+
+        if self.debug:
+            self.debug_prepend(theme_el, content_els, rule)
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -131,8 +153,7 @@ class Renderer(RendererBase):
             theme_el.text = None
             
         self.attach_tails(content_els)
-        for index,el in enumerate(non_text_els):
-            theme_el.insert(index,el)
+        theme_el[:0] = non_text_els
 
         # tack on the previous text of the parent element 
         if old_start_text:
@@ -140,6 +161,22 @@ class Renderer(RendererBase):
                 non_text_els[-1].tail += old_start_text
             else:
                 non_text_els[-1].tail = old_start_text
+
+    def debug_prepend(self, theme_el, content_els, rule):        
+        
+        comment_before,comment_after = self.make_debugging_comments(rule)
+        content_els[:0] = [comment_before]
+        content_els.append(comment_after)
+
+        if theme_el.text:
+            content_els.append(theme_el.text)
+            theme_el.text = None
+
+        non_text_els = self.elements_in(content_els)
+        self.strip_tails(non_text_els)                
+        self.attach_tails(content_els)
+
+        theme_el[:0] = non_text_els
 
     def apply_replace(self,rule,theme,content):
         theme_el = self.get_theme_el(rule,theme)
@@ -151,6 +188,10 @@ class Renderer(RendererBase):
         if len(content_els) == 0:
             self.add_to_body_start(theme, self.format_error("no content matched", rule))            
             return       
+
+        if self.debug:
+            self.debug_replace(theme_el,content_els,rule)
+            return 
 
         non_text_els = self.elements_in(content_els)
         self.strip_tails(non_text_els)
@@ -178,8 +219,7 @@ class Renderer(RendererBase):
         non_text_els[0].tail = None
         parent = non_text_els[0].getparent()
         i = parent.index(non_text_els[0])
-        for index,cel in enumerate(non_text_els[1:]):
-            parent.insert(i + index + 1,cel)
+        parent[i+1:i+1] = non_text_els[1:]
 
         if non_text_els[-1].tail:
             non_text_els[-1].tail += temptail
@@ -192,6 +232,24 @@ class Renderer(RendererBase):
                 non_text_els[0].tail = preserve_tail + non_text_els[0].tail
             else:
                 non_text_els[0].tail = preserve_tail
+
+    def debug_replace(self,theme_el,content_els,rule):
+        comment_before,comment_after = self.make_debugging_comments(rule)
+        content_els[:0] = [comment_before]
+        content_els.append(comment_after)
+
+        non_text_els = self.elements_in(content_els)
+        self.strip_tails(non_text_els)                    
+        self.attach_tails(content_els)
+
+        parent = theme_el.getparent()
+
+        if theme_el.tail:
+            comment_after.tail = theme_el.tail 
+
+        parent.replace(theme_el, non_text_els[0])
+        i = parent.index(non_text_els[0])
+        parent[i+1:i+1] = non_text_els[1:]
         
 
     def apply_copy(self,rule,theme,content):
@@ -216,8 +274,18 @@ class Renderer(RendererBase):
             theme_el.text = None
 
         self.attach_tails(content_els)
-        theme_el[:] = non_text_els        
-    
+        theme_el[:] = non_text_els  
+
+        if self.debug:
+            comment_before,comment_after = self.make_debugging_comments(rule)
+            parent = theme_el.getparent()
+            index = parent.index(theme_el)
+            parent.insert(index-1,comment_before)
+            parent.insert(index+2,comment_after)
+            comment_after.tail = theme_el.tail
+            theme_el.tail = None
+            
+
     def apply_append_or_replace(self,rule,theme,content):
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
@@ -238,10 +306,17 @@ class Renderer(RendererBase):
 
         for el in theme_el:
             if el.tag == remove_tag:
+                self.attach_text_to_previous(el,el.tail)
                 theme_el.remove(el)
+
+
+        if self.debug:
+            self.debug_append(theme_el, content_els, rule)
+            return 
 
         self.strip_tails(content_els)
         theme_el.extend(content_els)
+
 
 
     def elements_in(self, els):
@@ -269,3 +344,9 @@ class Renderer(RendererBase):
                 index + 1 < len(els) and 
                 type(els[index+1]) is type(str())):
                 el.tail = els[index+1]   
+
+
+    def make_debugging_comments(self, rule):
+        comment_before = etree.Comment("Deliverance: applying rule %s" % etree.tostring(rule))
+        comment_after = etree.Comment("Deliverance: done applying rule %s" % etree.tostring(rule))
+        return comment_before, comment_after

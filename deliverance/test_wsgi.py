@@ -59,7 +59,7 @@ def test_xinclude():
     res2 = app.get('/xinclude_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-
+4
 def test_nycsr():
     wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://www.nycsr.org','nycsr.xml')
     app = TestApp(wsgi_app)

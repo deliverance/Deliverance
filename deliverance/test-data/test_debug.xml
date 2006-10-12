@@ -135,26 +135,29 @@
 <!-- test debug mode with copy --> 
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance" debug="true">
-    <copy theme="//body" content="//body/div" />
+    <copy theme="//body/span" content="//body/div" />
   </rules>
 
   <theme base="http://example.com"> 
     <html>
     <body>
+      before span<span>inside span</span>after span
     </body></html>
   </theme>
 
   <content> 
     <html>
-      <body><div>Real Content</div>
+      <body><div>Real Content</div> 
     </body></html>
   </content>
   
   <output>
     <html>
-         <!--Deliverance: applying rule <copy theme="//body" content="//body/div"/>
-         --><body><div>Real Content</div></body><!--Deliverance: done applying rule <copy theme="//body" content="//body/div"/>
-         -->
+      <body>before span
+         <!--Deliverance: applying rule <copy theme="//body/span" content="//body/div"/>
+         --><span><div>Real Content</div></span><!--Deliverance: done applying rule <copy theme="//body/span" content="//body/div"/>
+         -->after span
+	   </body>
       </html>
   </output> 
 </deliverance-test>

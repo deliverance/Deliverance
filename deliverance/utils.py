@@ -92,7 +92,7 @@ class RendererBase(object):
         body[:0] = [el]
 
     def replace_element(self,replace, new_el):
-        parent = replace.getparent()
+        parent = replace.getparent()        
         for i in range(len(parent)):
             if parent[i] == replace:
                 new_el.tail = replace.tail 
@@ -177,3 +177,5 @@ class RendererBase(object):
                 el.getparent().text += text 
             else:
                 el.getparent().text = text
+
+   
