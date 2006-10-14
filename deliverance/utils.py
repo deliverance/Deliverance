@@ -3,6 +3,13 @@ import re
 import urlparse
 import htmlserialize
 
+# Test if the libxml2 fix is in place
+html = etree.HTML('<html><head><script>some text</script></head></html>')
+if html[0][0].text != 'some text':
+    import warnings
+    warnings.warn(
+        'Deliverance requires the CVS HEAD version of libxml2')
+
 class RuleSyntaxError(Exception):
     """
     Raised when an invalid or unknown rule is encountered by a renderer 
@@ -31,6 +38,8 @@ class RendererBase(object):
 
     RULE_CONTENT_KEY = "content"
     RULE_THEME_KEY   = "theme" 
+
+    NOCONTENT_KEY = "nocontent"
 
     def get_theme_el(self,rule,theme):
         theme_els = theme.xpath(rule.attrib[self.RULE_THEME_KEY])
@@ -118,8 +127,8 @@ class RendererBase(object):
 
         Affects urls in href attributes, src attributes and 
         css of the form url(...) in style elements 
-        """        
-        base_uri = uri 
+        """
+        base_uri = uri
         basetags = doc.xpath('//base[@href]')
         if (len(basetags)):
             base_uri = basetags[0].attrib['href']
