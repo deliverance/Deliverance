@@ -12,14 +12,17 @@ class Renderer(RendererBase):
     render time.
     """
 
-    def __init__(self, theme, theme_uri, rules, reference_resolver=None):  
+    def __init__(self, theme, theme_uri,
+                 rule, rule_uri,
+                 reference_resolver=None):  
         self.theme = self.fixup_links(theme, theme_uri)
-        self.rules = rules
+        self.rules = rule
+        self.rules_uri = rule_uri
         # perform xincludes on the rules
         if reference_resolver:
-            xinclude.include(self.rules, loader=reference_resolver)
+            xinclude.include(self.rules, self.rules_uri, loader=reference_resolver)
 
-        debug = rules.get("debug", None)
+        debug = self.rules.get("debug", None)
         if debug and debug.lower() == "true":
             self.debug = True
         else:
@@ -66,7 +69,8 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
-            self.add_to_body_start(theme, self.format_error("no content matched", rule))
+            if rule.get(self.NOCONTENT_KEY) != 'ignore':
+                self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         if self.debug:
@@ -119,7 +123,8 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
-            self.add_to_body_start(theme, self.format_error("no content matched", rule))
+            if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
+                self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         if self.debug:
@@ -184,7 +189,8 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
-            self.add_to_body_start(theme, self.format_error("no content matched", rule))            
+            if rule.attrib.get(self.NOCONTENT_KEY) == 'ignore':
+                self.add_to_body_start(theme, self.format_error("no content matched", rule))            
             return       
 
         if self.debug:
@@ -258,7 +264,8 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
-            self.add_to_body_start(theme, self.format_error("no content matched", rule))
+            if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
+                self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -299,7 +306,8 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(content_xpath))        
  
         if len(content_els) == 0:
-            self.add_to_body_start(theme, self.format_error("no content matched", rule))
+            if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
+                self.add_to_body_start(theme, self.format_error("no content matched", rule))
             return 
 
         for el in theme_el:

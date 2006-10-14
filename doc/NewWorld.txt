@@ -207,8 +207,8 @@ customize the UI without touching the artifacts they got from the
 7. Tedious instructions.
 
 In CMF/Plone templates, every `link`, `script`, `a`, `img`, etc.  As
-such, each of these gets a `tal:attributes="src:
-{portal_url}/foo.png"` added to it, even though the image src was
+such, each of these gets a `tal:attributes="src
+${portal_url}/foo.png"` added to it, even though the image src was
 stated on the actual src attribute.
 
 What happens?  First, nobody even bothers putting an actual src

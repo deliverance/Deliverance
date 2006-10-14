@@ -21,6 +21,8 @@ setup(name="Deliverance",
         'lxml',
       ],
       entry_points="""
+      [paste.filter_app_factory]
+      main = deliverance.wsgifilter:make_filter
       """,
       )
 

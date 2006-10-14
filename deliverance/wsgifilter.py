@@ -20,7 +20,7 @@ import sys
 import datetime
 import threading
 
-DELIVERANCE_BASE_URL = 'deliverance-base-url'
+DELIVERANCE_BASE_URL = 'deliverance.base-url'
 
 class DeliveranceMiddleware(object):
 
@@ -58,8 +58,12 @@ class DeliveranceMiddleware(object):
             elif encoding:
                 return text.decode(encoding)
 
-        return Renderer(parseHTML(theme), full_theme_uri, etree.XML(rule), 
-                        reference_resolver=reference_resolver)
+        return Renderer(
+            theme=parseHTML(theme),
+            theme_uri=full_theme_uri,
+            rule=etree.XML(rule), 
+            rule_uri=self.rule_uri,
+            reference_resolver=reference_resolver)
 
         
     def cache_expired(self):
@@ -96,6 +100,8 @@ class DeliveranceMiddleware(object):
 
     def should_intercept(self, status, headers):
         type = header_value(headers, 'content-type')
+        if type is None:
+            return False
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
     def filter_body(self, environ, body):
@@ -104,10 +110,9 @@ class DeliveranceMiddleware(object):
 
     def get_resource(self, environ, uri):
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
+        uri = urlparse.urljoin(internalBaseURL, uri)
         
-        if self.relative_uri(uri):
-            return self.get_internal_resource(environ, uri)
-        elif internalBaseURL and uri.startswith(internalBaseURL):
+        if internalBaseURL and uri.startswith(internalBaseURL):
             return self.get_internal_resource(environ, uri[len(internalBaseURL):])
         else:
             return self.get_external_resource(uri)
@@ -129,5 +134,32 @@ class DeliveranceMiddleware(object):
         if not uri.startswith('/'):
             uri = '/' + uri
         environ['PATH_INFO'] = uri
+        environ['SCRIPT_NAME'] = environ[DELIVERANCE_BASE_URL]
+        if environ['QUERY_STRING']:
+            environ['QUERY_STRING'] += '&notheme'
+        else:
+            environ['QUERY_STRING'] = 'notheme'
+
+        path_info = environ['PATH_INFO']
         status, headers, body = intercept_output(environ, self.app)
+        if not status.startswith('200'):
+            loc = header_value(headers, 'location')
+            if loc:
+                loc = ' location=%r' % loc
+            else:
+                loc = ''
+            raise Exception(
+                "Request for internal resource at %s (%r) failed with status code %r%s"
+                % (construct_url(environ), path_info, status,
+                   loc))
         return body
+
+def make_filter(app, global_conf,
+                theme_uri=None, rule_uri=None):
+    assert theme_uri is not None, (
+        "You must give a theme_uri")
+    assert rule_uri is not None, (
+        "You must give a rule_uri")
+    return DeliveranceMiddleware(
+        app, theme_uri, rule_uri)
+

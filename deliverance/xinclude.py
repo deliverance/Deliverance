@@ -45,6 +45,7 @@
 
 import copy
 from lxml import etree 
+import urlparse
 
 XINCLUDE = "{http://www.w3.org/2001/XInclude}"
 
@@ -97,7 +98,7 @@ def default_loader(href, parse, encoding=None):
 # xinclude) for use in Deliverance
 
 
-def include(elem, loader=None):
+def include(elem, base_href, loader=None):
     if loader is None:
         loader = default_loader
     # look for xinclude elements
@@ -109,6 +110,7 @@ def include(elem, loader=None):
             href = e.get("href")
             parse = e.get("parse", "xml")
             if parse == "xml":
+                href = urlparse.urljoin(base_href, href)
                 node = loader(href, parse)
                 if node is None:
                     raise FatalIncludeError(
