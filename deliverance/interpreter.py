@@ -189,7 +189,7 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
-            if rule.attrib.get(self.NOCONTENT_KEY) == 'ignore':
+            if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
                 self.add_to_body_start(theme, self.format_error("no content matched", rule))            
             return       
 

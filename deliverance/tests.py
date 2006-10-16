@@ -8,8 +8,9 @@ import copy
 
 class DeliveranceTestCase:
 
-    def __init__(self, rules, theme, theme_uri, content, output):
+    def __init__(self, rules, rules_uri, theme, theme_uri, content, output):
         self.rules = rules
+        self.rules_uri = rules_uri
         self.theme = theme
         self.theme_uri = theme_uri
         self.content = content
@@ -19,7 +20,7 @@ class DeliveranceTestCase:
         renderer = Renderer(
             theme=self.theme,
             theme_uri=self.theme_uri,
-            rules=self.rules)
+            rule=self.rules, rule_uri=self.rules_uri)
         actual = renderer.render(self.content)
         reporter = []
         result = xml_compare(actual, self.output, reporter.append)
@@ -82,6 +83,7 @@ def cases(fn):
 
         case = DeliveranceTestCase(
             rules=rules,
+            rules_uri = fn, # not sure about this
             theme=themebody,
             theme_uri=el.find('theme').attrib['base'],
             content=contentbody,

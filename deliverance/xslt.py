@@ -28,22 +28,24 @@ class Renderer(RendererBase):
     content at render time
     """
 
-    def __init__(self,theme,theme_uri,rules,reference_resolver=None):
+    def __init__(self,theme,theme_uri,rule, rule_uri, reference_resolver=None):
         theme_copy = copy.deepcopy(theme)
+        self.rules = rule
+        self.rules_uri = rule_uri
 
         self.fixup_links(theme_copy,theme_uri)
         self.xsl_escape_comments(theme_copy)
 
         if reference_resolver:
-            xinclude.include(rules,loader=reference_resolver)
+            xinclude.include(self.rules, self.rules_uri, loader=reference_resolver)
 
-        debug = rules.get("debug", None)
+        debug = self.rules.get("debug", None)
         if debug and debug.lower() == "true":
             self.debug = True
         else:
             self.debug = False
 
-        self.apply_rules(rules,theme_copy)
+        self.apply_rules(self.rules,theme_copy)
         xslt_wrapper = etree.XML(xslt_wrapper_skel)
         insertion_point = xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
                                              nsmap)[0]
@@ -214,8 +216,12 @@ class Renderer(RendererBase):
         """
         adds a node to the body of theme which produces an error 
         message if no content is matched by a rule given 
-        during the transformation 
+        during the transformation; no message is produced
+        if nocontent='ignore' attribute is set
         """
+        if rule.get(self.NOCONTENT_KEY) == 'ignore':
+            return
+
         err = self.format_error("no content matched", rule)
         if err:
             conditional = etree.Element("{%s}if" % nsmap["xsl"])

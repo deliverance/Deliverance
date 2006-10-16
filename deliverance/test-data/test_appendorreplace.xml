@@ -198,8 +198,6 @@
 </deliverance-test>
 
 
-
-
 <!-- tests append-or-replace command generates an error when no content is found -->
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">
@@ -229,6 +227,36 @@
 </html>
   </output> 
 </deliverance-test>
+
+<!-- tests append-or-replace command ignores error when no content is found 
+and nocontent='ignore' flag is set-->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content="//span[@id='bar']" nocontent='ignore' />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+<html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div/>
+    <div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+  </body>
+</html>
+  </output> 
+</deliverance-test>
+
 
 </deliverance-test-suite>
 

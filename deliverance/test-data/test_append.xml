@@ -116,6 +116,35 @@ span tags in the content -->
   </output> 
 </deliverance-test>
 
+<!-- tests append command ignores an error when no content is found
+and nocontent='ignore' flag is set -->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme=".//div[@id='foo']" content="//div[@id='bar']" nocontent='ignore' />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+<html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div/>
+    <div id="foo">Dummy Content<p>HI!</p></div>
+  </body>
+</html>
+  </output> 
+</deliverance-test>
+
 
 <!-- tests append command successfully appends the contents of a div tag with all contents of body tag, 
 including unelemented text --> 
