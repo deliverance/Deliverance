@@ -121,7 +121,7 @@ def include(elem, base_href, loader=None):
                     node.tail = (node.tail or "") + e.tail
                 elem[i] = node
                 # be recursive about including in the included tree
-                include(node,loader)
+                include(node, href, loader)
             elif parse == "text":
                 text = loader(href, parse, e.get("encoding"))
                 if text is None:
@@ -144,6 +144,6 @@ def include(elem, base_href, loader=None):
                 "xi:fallback tag must be child of xi:include (%r)" % e.tag
                 )
         else:
-            include(e, loader)
+            include(e, base_href, loader)
         i = i + 1
 
