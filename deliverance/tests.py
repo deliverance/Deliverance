@@ -5,6 +5,7 @@ from formencode.doctest_xml_compare import xml_compare
 from deliverance.interpreter import Renderer
 #from deliverance.xslt import Renderer
 import copy 
+import urllib
 
 class DeliveranceTestCase:
 
@@ -17,10 +18,20 @@ class DeliveranceTestCase:
         self.output = output
 
     def __call__(self, name):
+        def reference_resolver(href, parse, encoding=None):
+            f = urllib.urlopen(href)
+            content = f.read()
+            f.close()
+            if parse == "xml":
+                return etree.XML(content)
+            elif encoding:
+                return content.decode(encoding)
+
         renderer = Renderer(
             theme=self.theme,
             theme_uri=self.theme_uri,
-            rule=self.rules, rule_uri=self.rules_uri)
+            rule=self.rules, rule_uri=self.rules_uri,
+            reference_resolver=reference_resolver)
         actual = renderer.render(self.content)
         reporter = []
         result = xml_compare(actual, self.output, reporter.append)
@@ -80,10 +91,9 @@ def cases(fn):
             outputbody = copy.deepcopy(output[0])
         output[:] = []
 
-
         case = DeliveranceTestCase(
             rules=rules,
-            rules_uri = fn, # not sure about this
+            rules_uri = fn,
             theme=themebody,
             theme_uri=el.find('theme').attrib['base'],
             content=contentbody,
