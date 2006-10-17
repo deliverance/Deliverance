@@ -8,9 +8,11 @@ from formencode.doctest_xml_compare import xml_compare
 from htmlserialize import tostring
 
 static_data = os.path.join(os.path.dirname(__file__), 'test-data', 'static')
+tasktracker_data = os.path.join(os.path.dirname(__file__), 'test-data', 'tasktracker')
 nycsr_data = os.path.join(os.path.dirname(__file__), 'test-data', 'nycsr')
 
 static_app = StaticURLParser(static_data)
+tasktracker_app = StaticURLParser(tasktracker_data)
 nycsr_app = StaticURLParser(nycsr_data)
 
 def html_string_compare(astr, bstr):
@@ -51,6 +53,13 @@ def test_text():
     res2 = app.get('/texttest_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
+def test_tasktracker():
+    wsgi_app = DeliveranceMiddleware(tasktracker_app, 'http://www.nycsr.org/nyc/video.php', 'tasktracker.xml')
+    app = TestApp(wsgi_app)
+    res = app.get('/content.html')
+    res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
 
 def test_xinclude():
     wsgi_app = DeliveranceMiddleware(static_app, 'xinclude_theme.html', 'xinclude_rules.xml')
@@ -59,7 +68,7 @@ def test_xinclude():
     res2 = app.get('/xinclude_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-4
+
 def test_nycsr():
     wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://www.nycsr.org','nycsr.xml')
     app = TestApp(wsgi_app)
