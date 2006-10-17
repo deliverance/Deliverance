@@ -66,7 +66,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        content_els = self.deepcopy_elementlist(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.get(self.NOCONTENT_KEY) != 'ignore':
@@ -120,7 +120,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        content_els = self.deepcopy_elementlist(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -186,7 +186,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        content_els = self.deepcopy_elementlist(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -261,7 +261,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        content_els = self.deepcopy_elementlist(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -303,7 +303,7 @@ class Renderer(RendererBase):
             self.add_to_body_start(theme,self.format_error("invalid xpath for content", rule=rule))
             return
 
-        content_els = self.deepcopy_elementlist(content.xpath(content_xpath))        
+        content_els = copy.deepcopy(content.xpath(content_xpath))        
  
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -356,13 +356,3 @@ class Renderer(RendererBase):
         comment_before = etree.Comment("Deliverance: applying rule %s" % etree.tostring(rule))
         comment_after = etree.Comment("Deliverance: done applying rule %s" % etree.tostring(rule))
         return comment_before, comment_after
-
-    def deepcopy_elementlist(self, els):
-        # converts etree._Comment list elements into strings and then performs copy
-        # this is necessary to avoid a  bug in lxml which turns comments into None when
-        # perfoming a deepcopy
-        for index, el in enumerate(els):
-            if type(el) == etree._Comment:
-                els[index] = str(el)
-
-        return copy.deepcopy(els)
