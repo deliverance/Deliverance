@@ -38,14 +38,15 @@ def do_transform(renderer_type, theme_url, base_url, rules_url, content_url):
         elif encoding:
             return text.decode(encoding)
 
-    renderer = None
     if renderer_type == 'xslt':
-        renderer = XSLTRenderer(theme,base_url,rules,reference_resolver)
+        renderer_class = XSLTRenderer
     elif renderer_type == 'py':
-        renderer = PythonRenderer(theme,base_url,rules,reference_resolver)
+        renderer_class = PythonRenderer
     else:
         print "Unknown renderer type '" + renderer_type + "'"
         return etree.Element("error")
+
+    renderer = renderer_class(theme,base_url,rules,'.',reference_resolver)
 
     start = time()
     iters = 3000
