@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<rules xmlns="http://www.plone.org/deliverance">
-    <replace theme="html:head/html:title" content="/html:html/html:head/html:title"/>
-    <replace theme="//html:h1[@id='pagetitle']" content="/html:html/html:head/html:title"/>
-    <copy theme="//html:div[@id='pagecontent']" content="html:html/html:body/*"/>
-    <append theme="html:head"
-        content="/html:html/html:head/html:link|/html:html/html:head/html:script"/>
-</rules>
