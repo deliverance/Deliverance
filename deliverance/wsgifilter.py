@@ -77,7 +77,7 @@ class DeliveranceMiddleware(object):
 
     def __call__(self, environ, start_response):
         qs = environ.get('QUERY_STRING', '')
-        environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False)
+        environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
         notheme = 'notheme' in qs
         if notheme:
             return self.app(environ, start_response)
@@ -112,7 +112,7 @@ class DeliveranceMiddleware(object):
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
         uri = urlparse.urljoin(internalBaseURL, uri)
         
-        if self.relative_uri(uri) or (internalBaseURL and uri.startswith(internalBaseURL)):
+        if  internalBaseURL and uri.startswith(internalBaseURL):
             return self.get_internal_resource(environ, uri[len(internalBaseURL):])
         else:
             return self.get_external_resource(uri)
