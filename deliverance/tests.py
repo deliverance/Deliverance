@@ -2,8 +2,8 @@ import unittest
 import os
 from lxml import etree
 from formencode.doctest_xml_compare import xml_compare
-from deliverance.interpreter import Renderer
-#from deliverance.xslt import Renderer
+from interpreter import Renderer
+#from xslt import Renderer
 import copy 
 import urllib
 
