@@ -19,7 +19,9 @@ setup(name="Deliverance",
       zip_safe=False,
       install_requires=[
         'lxml',
+        'paste'
       ],
+      include_package_data=True,
       entry_points="""
       [paste.filter_app_factory]
       main = deliverance.wsgifilter:make_filter
