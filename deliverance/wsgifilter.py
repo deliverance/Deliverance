@@ -112,7 +112,7 @@ class DeliveranceMiddleware(object):
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
         uri = urlparse.urljoin(internalBaseURL, uri)
         
-        if internalBaseURL and uri.startswith(internalBaseURL):
+        if relative_url(uri) or (internalBaseURL and uri.startswith(internalBaseURL)):
             return self.get_internal_resource(environ, uri[len(internalBaseURL):])
         else:
             return self.get_external_resource(uri)
