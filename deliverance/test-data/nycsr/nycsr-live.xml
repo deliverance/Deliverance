@@ -5,7 +5,7 @@
 
   <!-- This rule isn't working for me; the div that contains
        everything on nycsr.org seems to have an id of 'body'
-       not 'container'...?  -- ianb  -->
+       not 'container'...? - ianb  -->
 
   <!-- <copy theme="//div[@id='container']"
         content="//*[@id='portal-columns']" /> -->
