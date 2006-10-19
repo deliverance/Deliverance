@@ -32,28 +32,28 @@ class Renderer(RendererBase):
     def render(self, content):
         result = copy.deepcopy(self.theme)
         input = copy.deepcopy(content)
-        self.apply_rules(self.rules,result,input)
+        self.apply_rules(self.rules, result, input)
         return result
 
 
-    def apply_rules(self,rules,theme,content):
+    def apply_rules(self, rules, theme, content):
         for rule in rules:
-            self.apply_rule(rule,theme,content)
+            self.apply_rule(rule, theme, content)
 
 
-    def apply_rule(self,rule,theme,content):
+    def apply_rule(self, rule, theme, content):
         if rule.tag == self.APPEND_RULE_TAG:
-            self.apply_append(rule,theme,content)
+            self.apply_append(rule, theme, content)
         elif rule.tag == self.PREPEND_RULE_TAG:
-            self.apply_prepend(rule,theme,content)
+            self.apply_prepend(rule, theme, content)
         elif rule.tag == self.REPLACE_RULE_TAG:
-            self.apply_replace(rule,theme,content)
+            self.apply_replace(rule, theme, content)
         elif rule.tag == self.COPY_RULE_TAG:
-            self.apply_copy(rule,theme,content)
+            self.apply_copy(rule, theme, content)
         elif rule.tag == self.APPEND_OR_REPLACE_RULE_TAG:
-            self.apply_append_or_replace(rule,theme,content)
+            self.apply_append_or_replace(rule, theme, content)
         elif rule.tag == self.SUBRULES_TAG:
-            self.apply_rules(rule,theme,content)
+            self.apply_rules(rule, theme, content)
         elif rule.tag is etree.Comment:
             pass
         else:
@@ -62,15 +62,17 @@ class Renderer(RendererBase):
                     rule.tag, etree.tostring(rule)))
 
     def apply_append(self,rule,theme,content):
-        theme_el = self.get_theme_el(rule,theme)
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
-        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(
+            content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.get(self.NOCONTENT_KEY) != 'ignore':
-                self.add_to_body_start(theme, self.format_error("no content matched", rule))
+                self.add_to_body_start(
+                    theme, self.format_error("no content matched", rule))
             return 
 
         if self.debug:
@@ -115,16 +117,18 @@ class Renderer(RendererBase):
         
 
 
-    def apply_prepend(self,rule,theme,content):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_prepend(self, rule, theme, content):
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
-        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        xpath = rule.attrib[self.RULE_CONTENT_KEY]
+        content_els = copy.deepcopy(content.xpath(xpath))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
-                self.add_to_body_start(theme, self.format_error("no content matched", rule))
+                self.add_to_body_start(
+                    theme, self.format_error("no content matched", rule))
             return 
 
         if self.debug:
@@ -167,7 +171,7 @@ class Renderer(RendererBase):
 
     def debug_prepend(self, theme_el, content_els, rule):        
         
-        comment_before,comment_after = self.make_debugging_comments(rule)
+        comment_before, comment_after = self.make_debugging_comments(rule)
         content_els[:0] = [comment_before]
         content_els.append(comment_after)
 
@@ -181,20 +185,22 @@ class Renderer(RendererBase):
 
         theme_el[:0] = non_text_els
 
-    def apply_replace(self,rule,theme,content):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_replace(self, rule, theme, content):
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
-        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(
+            content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
-                self.add_to_body_start(theme, self.format_error("no content matched", rule))            
+                self.add_to_body_start(
+                    theme, self.format_error("no content matched", rule))            
             return       
 
         if self.debug:
-            self.debug_replace(theme_el,content_els,rule)
+            self.debug_replace(theme_el, content_els, rule)
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -206,13 +212,13 @@ class Renderer(RendererBase):
         if (type(content_els[0]) is type(str())):
             # text must be appended to the tail of the most recent sibling or appended 
             # to the text of the parent of the replaced element
-            self.attach_text_to_previous(theme_el,content_els[0])
+            self.attach_text_to_previous(theme_el, content_els[0])
 
         if len(non_text_els) == 0:
-            self.attach_text_to_previous(theme_el,theme_el.tail)
+            self.attach_text_to_previous(theme_el, theme_el.tail)
             theme_el.getparent().remove(theme_el)
             return
-            
+        
         self.attach_tails(content_els)
 
         # this tail, if there is one, should stick around 
@@ -238,7 +244,7 @@ class Renderer(RendererBase):
                 non_text_els[0].tail = preserve_tail
 
     def debug_replace(self,theme_el,content_els,rule):
-        comment_before,comment_after = self.make_debugging_comments(rule)
+        comment_before, comment_after = self.make_debugging_comments(rule)
         content_els[:0] = [comment_before]
         content_els.append(comment_after)
 
@@ -256,16 +262,18 @@ class Renderer(RendererBase):
         parent[i+1:i+1] = non_text_els[1:]
         
 
-    def apply_copy(self,rule,theme,content):
+    def apply_copy(self, rule, theme, content):
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
-            return 
+            return
 
-        content_els = copy.deepcopy(content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = copy.deepcopy(
+            content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
-                self.add_to_body_start(theme, self.format_error("no content matched", rule))
+                self.add_to_body_start(
+                    theme, self.format_error("no content matched", rule))
             return 
 
         non_text_els = self.elements_in(content_els)
@@ -285,14 +293,14 @@ class Renderer(RendererBase):
             comment_before,comment_after = self.make_debugging_comments(rule)
             parent = theme_el.getparent()
             index = parent.index(theme_el)
-            parent.insert(index-1,comment_before)
-            parent.insert(index+2,comment_after)
+            parent.insert(index-1, comment_before)
+            parent.insert(index+2, comment_after)
             comment_after.tail = theme_el.tail
             theme_el.tail = None
             
 
-    def apply_append_or_replace(self,rule,theme,content):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_append_or_replace(self, rule, theme, content):
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
@@ -300,19 +308,21 @@ class Renderer(RendererBase):
         remove_tag = self.get_tag_from_xpath(content_xpath)
 
         if remove_tag is None:
-            self.add_to_body_start(theme,self.format_error("invalid xpath for content", rule=rule))
+            self.add_to_body_start(
+                theme, self.format_error("invalid xpath for content", rule=rule))
             return
 
         content_els = copy.deepcopy(content.xpath(content_xpath))        
  
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
-                self.add_to_body_start(theme, self.format_error("no content matched", rule))
+                self.add_to_body_start(
+                    theme, self.format_error("no content matched", rule))
             return 
 
         for el in theme_el:
             if el.tag == remove_tag:
-                self.attach_text_to_previous(el,el.tail)
+                self.attach_text_to_previous(el, el.tail)
                 theme_el.remove(el)
 
 
