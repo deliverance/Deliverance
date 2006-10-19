@@ -81,6 +81,8 @@ class DeliveranceMiddleware(object):
         notheme = 'notheme' in qs
         if notheme:
             return self.app(environ, start_response)
+        if 'HTTP_ACCEPT_ENCODING' in environ:
+            del environ['HTTP_ACCEPT_ENCODING']
 
         status, headers, body = intercept_output(
             environ, self.app,
