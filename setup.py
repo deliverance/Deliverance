@@ -19,12 +19,15 @@ setup(name="Deliverance",
       zip_safe=False,
       install_requires=[
         'lxml',
-        'paste'
+        'paste==dev,>=0.9.9a'
       ],
       include_package_data=True,
       entry_points="""
       [paste.filter_app_factory]
       main = deliverance.wsgifilter:make_filter
+
+      [console_scripts]
+      deliverance-proxy = deliverance.proxycommand:main
       """,
       )
 
