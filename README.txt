@@ -1,7 +1,17 @@
 
 Quick Start to run tests 
 -------------------------
-running setup.py is probably going to do the wrong thing currently
+
+The easiest way to get started is to check out the buildout: 
+
+svn co https://svn.openplans.org/svn/deliverance.buildout deliverance.buildout
+
+If you follow the instructions there and install nose and it's dependencies, 
+you should be able to run tests by running nosetests from 
+this directory. 
+
+
+Otherwise to install manually: 
 
 get workingenv.py from
 http://cheeseshop.python.org/pypi/workingenv.py
