@@ -1,4 +1,7 @@
 
+See: http://www.openplans.org/projects/deliverance/specification 
+for more information
+
 Quick Start to run tests 
 -------------------------
 
