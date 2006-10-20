@@ -6,9 +6,7 @@ The easiest way to get started is to check out the buildout:
 
 svn co https://svn.openplans.org/svn/deliverance.buildout deliverance.buildout
 
-If you follow the instructions there and install nose and it's dependencies, 
-you should be able to run tests by running nosetests from 
-this directory. 
+If you follow the instructions there. 
 
 
 Otherwise to install manually: 
@@ -24,17 +22,18 @@ source deliverance_env/bin/activate
 install a recent cvs version of libxml2,libxstl and svn lxml. 
 You are likely to encounter segfaults and other failures if recent versions are not used.
 
-$ easy_install nose 
-$ easy_install FormEncode
-$ easy_install elementtree
-$ easy_install paste 
-
 checkout deliverance: 
 $ svn co http://codespeak.net/svn/z3/deliverance/branches/packaged deliverance
 
 $ cd deliverance
-$ nosetests 
+$ python setup.py develop 
+$ nosetests
 
+you can also run: 
+deliverance_env/bin/deliverance-tests 
+deliverance_env/bin/deliverance-speed 
+
+from the top level checkout directory
 
 Simple Tests
 ------------
