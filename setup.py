@@ -20,7 +20,6 @@ setup(name="Deliverance",
       install_requires=[
         'lxml',
         'paste==dev,>=0.9.9a'
-	'setuptools'
       ],
       include_package_data=True,
       entry_points="""
