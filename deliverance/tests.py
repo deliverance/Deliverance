@@ -104,6 +104,8 @@ def cases(fn):
 
 
 
+def main(args=None):
+    import nose; nose.main() 
 
 if __name__ == '__main__':
-    import nose; nose.main() 
+    main()

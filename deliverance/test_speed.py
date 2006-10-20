@@ -69,7 +69,9 @@ def die(message,parser):
     parser.print_usage()
     sys.exit(0)    
     
-if __name__ == '__main__':
-    do_transform('xslt','test-data/nycsr/nycsr_speed.html','http://www.nycsr.org','test-data/nycsr/nycsr.xml','test-data/nycsr/openplans.html')
-    do_transform('py','test-data/nycsr/nycsr_speed.html','http://www.nycsr.org','test-data/nycsr/nycsr.xml','test-data/nycsr/openplans.html')
+def main(args=None):
+    do_transform('xslt','deliverance/test-data/nycsr/nycsr_speed.html','http://www.nycsr.org','deliverance/test-data/nycsr/nycsr.xml','deliverance/test-data/nycsr/openplans.html')
+    do_transform('py','deliverance/test-data/nycsr/nycsr_speed.html','http://www.nycsr.org','deliverance/test-data/nycsr/nycsr.xml','deliverance/test-data/nycsr/openplans.html')
     
+if __name__ == '__main__':
+    main()

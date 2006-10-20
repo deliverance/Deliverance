@@ -20,6 +20,9 @@ setup(name="Deliverance",
       install_requires=[
         'lxml',
         'paste==dev,>=0.9.9a',
+	'nose',
+	'formencode',
+	'elementtree',
 	'setuptools'
       ],
       include_package_data=True,
@@ -29,6 +32,8 @@ setup(name="Deliverance",
 
       [console_scripts]
       deliverance-proxy = deliverance.proxycommand:main
+      deliverance-tests = deliverance.tests:main
+      deliverance-speed = deliverance.test_speed:main
       """,
       )
 
