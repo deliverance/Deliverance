@@ -19,10 +19,10 @@ setup(name="Deliverance",
       zip_safe=False,
       install_requires=[
         'lxml',
-        'paste==dev,>=0.9.9a',
-	'nose',
+        'paste',
 	'formencode',
 	'elementtree',
+	'nose',
 	'setuptools'
       ],
       include_package_data=True,
