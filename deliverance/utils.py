@@ -102,7 +102,7 @@ class RendererBase(object):
             textArea.attrib['readonly'] = 'readonly'
             textArea.text = ''
             for el in elts:
-                textArea.text += htmlserialize.tostring(el)
+                textArea.append(el)
             d.append(textArea)
         return d
 
