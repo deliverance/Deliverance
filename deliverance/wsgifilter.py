@@ -16,11 +16,16 @@ from paste.response import header_value, replace_header
 from interpreter import Renderer
 #from xslt import Renderer
 from htmlserialize import tostring
+from utils import DeliveranceError
+from utils import DELIVERANCE_ERROR_PAGE
 import sys 
 import datetime
 import threading
+import traceback
+from StringIO import StringIO
 
 DELIVERANCE_BASE_URL = 'deliverance.base-url'
+
 
 class DeliveranceMiddleware(object):
 
@@ -58,10 +63,26 @@ class DeliveranceMiddleware(object):
             elif encoding:
                 return text.decode(encoding)
 
+        try:
+            parsedTheme = parseHTML(theme)
+        except Exception, message:
+            newmessage = "Unable to parse theme page (" + self.theme_uri + ")"
+            if message:
+                newmessage += ":" + str(message)
+            raise DeliveranceError(newmessage)
+
+        try:
+            parsedRule = etree.XML(rule)
+        except Exception, message:
+            newmessage = "Unable to parse rules (" + self.rule_uri + ")"
+            if message:
+                newmessage += ":" + str(message)
+            raise DeliveranceError(newmessage)
+
         return Renderer(
-            theme=parseHTML(theme),
+            theme=parsedTheme,
             theme_uri=full_theme_uri,
-            rule=etree.XML(rule), 
+            rule=parsedRule, 
             rule_uri=self.rule_uri,
             reference_resolver=reference_resolver)
 
@@ -70,35 +91,62 @@ class DeliveranceMiddleware(object):
         return self._cache_time + self._timeout < datetime.datetime.now()
 
     def rule(self, environ):
-        return self.get_resource(environ,self.rule_uri)
+        try:
+            return self.get_resource(environ,self.rule_uri)
+        except Exception, message:
+            newmessage = "Unable to retrieve rules from " + self.rule_uri 
+            if message:
+                newmessage += ": " + str(message)
+
+            raise DeliveranceError(newmessage)
 
     def theme(self, environ):
-        return self.get_resource(environ,self.theme_uri)
+        try:
+            return self.get_resource(environ,self.theme_uri)
+        except Exception, message:
+            newmessage = "Unable to retrieve theme page from " + self.theme_uri 
+            if message:
+                newmessage += ": " + str(message)
+            raise DeliveranceError(newmessage)
+
 
     def __call__(self, environ, start_response):
-        qs = environ.get('QUERY_STRING', '')
-        environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
-        notheme = 'notheme' in qs
-        if notheme:
-            return self.app(environ, start_response)
-        if 'HTTP_ACCEPT_ENCODING' in environ:
-            del environ['HTTP_ACCEPT_ENCODING']
+        try:
+            qs = environ.get('QUERY_STRING', '')
+            environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
+            notheme = 'notheme' in qs
+            if notheme:
+                return self.app(environ, start_response)
+            if 'HTTP_ACCEPT_ENCODING' in environ:
+                del environ['HTTP_ACCEPT_ENCODING']
 
-        status, headers, body = intercept_output(
-            environ, self.app,
-            self.should_intercept,
-            start_response)
+            status, headers, body = intercept_output(
+                environ, self.app,
+                self.should_intercept,
+                start_response)
 
 
-        if status is None:
-            # should_intercept returned False
-            return body
+            if status is None:
+                # should_intercept returned False
+                return body
 
-        body = self.filter_body(environ, body)
-        replace_header(headers, 'content-length', str(len(body)))
-        replace_header(headers, 'content-type', 'text/html; charset=utf-8')
-        start_response(status, headers)
-        return [body]
+            body = self.filter_body(environ, body)
+            replace_header(headers, 'content-length', str(len(body)))
+            replace_header(headers, 'content-type', 'text/html; charset=utf-8')
+            start_response(status, headers)
+            return [body]
+        
+        except DeliveranceError, message:            
+            stack = StringIO()
+            traceback.print_exception(sys.exc_info()[0],
+                                      sys.exc_info()[1],
+                                      sys.exc_info()[2],
+                                      file=stack)
+            status = "500 Internal Server Error"
+            headers = [('Content-type','text/html')]
+            start_response(status,headers)
+            errpage = DELIVERANCE_ERROR_PAGE % (message,stack.getvalue())
+            return [ errpage ]
 
     def should_intercept(self, status, headers):
         type = header_value(headers, 'content-type')
@@ -150,7 +198,7 @@ class DeliveranceMiddleware(object):
                 loc = ' location=%r' % loc
             else:
                 loc = ''
-            raise Exception(
+            raise DeliveranceError(
                 "Request for internal resource at %s (%r) failed with status code %r%s"
                 % (construct_url(environ), path_info, status,
                    loc))

@@ -10,11 +10,35 @@ if html[0][0].text != 'some text':
     warnings.warn(
         'Deliverance requires the CVS HEAD version of libxml2')
 
-class RuleSyntaxError(Exception):
+class DeliveranceError(Exception):
+    """
+    General Deliverance Error.
+    """    
+
+class RuleSyntaxError(DeliveranceError):
     """
     Raised when an invalid or unknown rule is encountered by a renderer 
     during rule processing 
     """
+
+DELIVERANCE_ERROR_PAGE = """
+<html>
+<head>
+  <title>Deliverance Error</title>
+</head>
+<body>
+  <H3>Deliverance Error</H3>
+  <p>An error occurred processing the request<BR>
+  <pre>
+    %s
+  </pre>
+  <p>Stack Trace:
+  <pre>
+    %s
+  </pre>
+</body>
+</html>
+"""
 
 
 class RendererBase(object):
