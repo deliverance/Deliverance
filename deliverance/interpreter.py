@@ -52,6 +52,8 @@ class Renderer(RendererBase):
             self.apply_copy(rule, theme, content)
         elif rule.tag == self.APPEND_OR_REPLACE_RULE_TAG:
             self.apply_append_or_replace(rule, theme, content)
+        elif rule.tag == self.DROP_RULE_TAG:
+            self.apply_drop(rule, theme, content)
         elif rule.tag == self.SUBRULES_TAG:
             self.apply_rules(rule, theme, content)
         elif rule.tag is etree.Comment:
@@ -261,14 +263,19 @@ class Renderer(RendererBase):
         i = parent.index(non_text_els[0])
         parent[i+1:i+1] = non_text_els[1:]
         
+    def _xpath_copy(self, source, xpath):
+        try:
+            found_element = source.xpath(xpath)
+        except etree.XPathSyntaxError, e:
+            raise etree.XPathSyntaxError('%s (in expression %r)' % (e, xpath))
+        return copy.deepcopy(found_element)
 
     def apply_copy(self, rule, theme, content):
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
             return
 
-        content_els = copy.deepcopy(
-            content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+        content_els = self._xpath_copy(content, rule.attrib[self.RULE_CONTENT_KEY])
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -334,6 +341,13 @@ class Renderer(RendererBase):
         theme_el.extend(content_els)
 
 
+    def apply_drop(self, rule, theme, content):
+        if 'theme' in rule.attrib:
+            for el in theme.xpath(rule.attrib['theme']):
+                el.getparent().remove(el)
+        if 'content' in rule.attrib:
+            for el in content.xpath(rule.attrib['content']):
+                el.getparent().remove(el)
 
     def elements_in(self, els):
         """

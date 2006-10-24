@@ -59,6 +59,7 @@ class RendererBase(object):
     COPY_RULE_TAG              = "{http://www.plone.org/deliverance}copy"
     APPEND_OR_REPLACE_RULE_TAG = "{http://www.plone.org/deliverance}append-or-replace"
     SUBRULES_TAG               = "{http://www.plone.org/deliverance}rules"
+    DROP_RULE_TAG              = "{http://www.plone.org/deliverance}drop"
 
     RULE_CONTENT_KEY = "content"
     RULE_THEME_KEY   = "theme" 
@@ -154,7 +155,7 @@ class RendererBase(object):
         """
         base_uri = uri
         basetags = doc.xpath('//base[@href]')
-        if (len(basetags)):
+        if basetags:
             base_uri = basetags[0].attrib['href']
 
             for b in basetags:
