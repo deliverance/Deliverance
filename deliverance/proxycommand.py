@@ -18,10 +18,12 @@ parser = optparse.OptionParser(
 parser.add_option('-s', '--serve',
                   help="The interface to serve on (default 0.0.0.0:80)",
                   dest="serve",
+                  metavar="HOST",
                   default="0.0.0.0:80")
 parser.add_option('-p', '--proxy',
                   help="The host and port to proxy to (default localhost:8080)",
                   dest="proxy",
+                  metavar="PROXY_TO",
                   default='localhost:8080')
 parser.add_option('--theme',
                   help="The URI of the theme to use",
@@ -37,6 +39,15 @@ parser.add_option('--debug',
                   help="Show tracebacks when an error occurs (use twice for fancy/dangerous traceback)",
                   action="count",
                   dest="debug")
+parser.add_option('--request-log',
+                  help="Show an apache-style log of requests (use twice for more logging)",
+                  action="count",
+                  dest="request_log",
+                  default=0)
+parser.add_option('--rewrite',
+                  help="Rewrite all headers and links",
+                  action="store_true",
+                  dest="rewrite")
 
 def strip(prefix, string):
     if string.startswith(prefix):
@@ -61,11 +72,17 @@ def main(args=None):
             op = '--theme'
         print 'You must provide the %s option' % op
         sys.exit(2)
+    debug_headers = options.request_log > 1
     app = proxyapp.ProxyDeliveranceApp(
         theme_uri=options.theme,
         rule_uri=options.rule,
         proxy=proxy,
-        transparent=options.transparent)
+        transparent=options.transparent,
+        debug_headers=debug_headers,
+        relocate_content=options.rewrite)
+    if options.request_log:
+        from paste.translogger import TransLogger
+        app = TransLogger(app)
     if options.debug:
         if options.debug > 1:
             from paste.evalexception.middleware import EvalException
