@@ -125,8 +125,7 @@
      </head>
      <body>
        <div class="deliverance-error">Deliverance error: multiple elements found in theme<br/>rule: &lt;append-or-replace theme=".//div" content=".//div"/&gt;
-	 <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div&gt;Dummy Content&lt;/div&gt;
-&lt;div&gt;Dummy Content&lt;/div&gt;
+	 <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div&gt;Dummy Content&lt;/div&gt;&lt;div&gt;Dummy Content&lt;/div&gt;
        </textarea></div>
        <div>Dummy Content</div>
        <div>Dummy Content</div>

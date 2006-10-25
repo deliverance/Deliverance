@@ -103,7 +103,7 @@ class RendererBase(object):
             textArea.attrib['readonly'] = 'readonly'
             textArea.text = ''
             for el in elts:
-                textArea.append(el)
+                textArea.text += etree.tostring(el)
             d.append(textArea)
         return d
 

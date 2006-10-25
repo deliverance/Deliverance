@@ -82,8 +82,7 @@
   </head>
   <body>
     <div class="deliverance-error">Deliverance error: multiple elements found in theme<br/>rule: &lt;replace theme="//div[@class='foo']" content="//div[@id='bar']"/&gt;
-  <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div class="foo"&gt;Dummy Content&lt;/div&gt;
-&lt;div class="foo"&gt;Dummy Content&lt;/div&gt;
+  <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div class="foo"&gt;Dummy Content&lt;/div&gt;&lt;div class="foo"&gt;Dummy Content&lt;/div&gt;
 </textarea></div>
     <div class="foo">Dummy Content</div>
     <div class="foo">Dummy Content</div>
