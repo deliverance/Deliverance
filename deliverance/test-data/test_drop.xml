@@ -119,8 +119,7 @@
 </deliverance-test>
 
 <!-- dropping missing tag generates an error  -->
-<!-- XXX currently does not generate error, should it? -->
-<!--deliverance-test>
+<deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">
     <drop theme="//div[@id='foo']"/>
   </rules>
@@ -137,12 +136,38 @@
      <html>
        <body>
          Dummy Content
-         <div class="deliverance-error">Deliverance error: no element found in theme<br/>rule: &lt;drop theme=".//div[@id='foo']"/&gt;
+         <div class="deliverance-error">Deliverance error: no element found in theme<br/>rule: &lt;drop theme="//div[@id='foo']"/&gt;
          </div>
        </body>
      </html>
   </output>
-</deliverance-test-->
+</deliverance-test>
+
+<!-- dropping missing tag in the content generates an error  -->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <drop content="//div[@id='foo']"/>
+  </rules>
+
+  <theme base="http://example.com"> 
+     <html><body>Dummy Content</body></html>
+  </theme>
+
+  <content>
+     <html><body>Real Content</body></html>
+  </content>
+
+  <output>
+     <html>
+       <body>
+         Dummy Content
+         <div class="deliverance-error">Deliverance error: no element found in content<br/>rule: &lt;drop content="//div[@id='foo']"/&gt;
+         </div>
+       </body>
+     </html>
+  </output>
+</deliverance-test>
+
 
 <!-- dropping a tag that doesn't exist and ignoring errors
      should squash error messages -->

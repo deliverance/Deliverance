@@ -342,12 +342,25 @@ class Renderer(RendererBase):
 
 
     def apply_drop(self, rule, theme, content):
+
         if 'theme' in rule.attrib:
+            removed = False
             for el in theme.xpath(rule.attrib['theme']):
                 el.getparent().remove(el)
+                removed = True
+            if not removed and rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
+                self.add_to_body_start(
+                    theme, self.format_error("no element found in theme", rule))
+        
         if 'content' in rule.attrib:
+            removed = False
             for el in content.xpath(rule.attrib['content']):
                 el.getparent().remove(el)
+            if not removed and rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
+                self.add_to_body_start(
+                    theme, self.format_error("no element found in content", rule))
+
+                
 
     def elements_in(self, els):
         """
