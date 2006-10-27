@@ -77,6 +77,8 @@ class Renderer(RendererBase):
             self.apply_copy(rule,theme)
         elif rule.tag == self.APPEND_OR_REPLACE_RULE_TAG:
             self.apply_append_or_replace(rule,theme)
+        elif rule.tag == self.DROP_RULE_TAG:
+            self.apply_drop(rule,theme)
         elif rule.tag == self.SUBRULES_TAG:
             self.apply_rules(rule,theme)
         elif rule.tag is etree.Comment:
@@ -200,6 +202,42 @@ class Renderer(RendererBase):
         self.debug_append(theme_el, copier, rule)
 
 
+    def apply_drop(self,rule,theme):
+        
+        if self.RULE_THEME_KEY in rule.attrib:
+            if len(theme.xpath(rule.attrib[self.RULE_THEME_KEY])) == 0:
+                if rule.get(self.NOCONTENT_KEY) == 'ignore':
+                    return 
+                else:
+                    e = self.format_error("no element found in theme", rule)
+                    self.add_to_body_start(theme, e)
+                    return 
+                    
+            for el in theme.xpath(rule.attrib[self.RULE_THEME_KEY]):
+                self.debug_drop(el,rule)
+                self.attach_text_to_previous(el, el.tail)
+                el.getparent().remove(el)
+
+
+
+#         if 'content' in rule.attrib:
+#             self.add_conditional_missing_content_error(theme,rule)
+
+            
+
+#         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
+#         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
+
+
+#         # if content is matched, replace the theme element, otherwise, keep the
+#         # theme element 
+#         choose = self.make_when_otherwise("count(%s)=0" % 
+#                                           rule.attrib[self.RULE_CONTENT_KEY], 
+#                                           copy.deepcopy(theme_el), 
+#                                           copier)
+
+
+
     def xsl_escape_comments(self,doc):
         """
         replaces comment nodes with xsl:comment nodes so they will 
@@ -277,6 +315,21 @@ class Renderer(RendererBase):
             comment_before,comment_after = self.make_debugging_comments(rule)
             comment_after.tail = new_el.tail
             new_el.tail = None
+
+            parent.insert(index, comment_before)
+            parent.insert(index+2, comment_after)
+
+    def debug_drop(self, el, rule):
+        """
+        helper method for deleting a node, if debugging is enabled, 
+        comments are inserted referring to the 
+        rule that performed the drop  
+        """
+        if self.debug:
+            parent = el.getparent()
+            index = parent.index(el)
+            
+            comment_before,comment_after = self.make_debugging_comments(rule)
 
             parent.insert(index, comment_before)
             parent.insert(index+2, comment_after)
