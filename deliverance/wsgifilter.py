@@ -13,7 +13,7 @@ from htmlserialize import decodeAndParseHTML as parseHTML
 from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
-from interpreter import Renderer
+#from interpreter import Renderer
 #from xslt import Renderer
 from htmlserialize import tostring
 from utils import DeliveranceError
@@ -29,7 +29,7 @@ DELIVERANCE_BASE_URL = 'deliverance.base-url'
 
 class DeliveranceMiddleware(object):
 
-    def __init__(self, app, theme_uri, rule_uri):
+    def __init__(self, app, theme_uri, rule_uri, renderer='py'):
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
@@ -38,6 +38,14 @@ class DeliveranceMiddleware(object):
         self._timeout = datetime.timedelta(0,10)
         self._lock = threading.Lock()
 
+        if renderer == 'py':
+            import interpreter
+            self._rendererType = interpreter.Renderer
+        elif renderer == 'xslt':
+            import xslt
+            self._rendererType = xslt.Renderer
+        else:
+            raise ValueError("Unknown Renderer: %s - Expecting 'py' or 'xslt'" % renderer)
 
     def get_renderer(self,environ):
         try:
@@ -79,7 +87,7 @@ class DeliveranceMiddleware(object):
                 newmessage += ":" + str(message)
             raise DeliveranceError(newmessage)
 
-        return Renderer(
+        return self._rendererType(
             theme=parsedTheme,
             theme_uri=full_theme_uri,
             rule=parsedRule, 

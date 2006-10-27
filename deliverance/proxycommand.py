@@ -48,6 +48,9 @@ parser.add_option('--rewrite',
                   help="Rewrite all headers and links",
                   action="store_true",
                   dest="rewrite")
+parser.add_option('--renderer',
+                  help="Select which renderer to use: 'py' or 'xslt'",
+                  default='py')
 
 def strip(prefix, string):
     if string.startswith(prefix):

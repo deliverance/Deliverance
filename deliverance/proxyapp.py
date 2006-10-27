@@ -11,7 +11,7 @@ class ProxyDeliveranceApp(object):
 
     def __init__(self, theme_uri, rule_uri, proxy,
                  transparent=False, debug_headers=False,
-                 relocate_content=False):
+                 relocate_content=False, renderer='py'):
         self.theme_uri = theme_uri,
         self.rule_uri = rule_uri,
         self.proxy = proxy
@@ -19,7 +19,7 @@ class ProxyDeliveranceApp(object):
         self.debug_headers = debug_headers
         self.subapp = self.make_app()
         self.deliverance_app = wsgifilter.DeliveranceMiddleware(
-            self.subapp, theme_uri, rule_uri)
+            self.subapp, theme_uri, rule_uri, renderer)
         self.relocate_content = relocate_content
 
     def make_app(self):
