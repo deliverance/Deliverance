@@ -347,6 +347,7 @@ class Renderer(RendererBase):
             document = locals()[context]
             removed = False
             for el in document.xpath(rule.attrib[context]):
+                self.attach_text_to_previous(el, el.tail)
                 el.getparent().remove(el)
                 removed = True
             if not removed and rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':

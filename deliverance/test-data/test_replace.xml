@@ -211,6 +211,24 @@ and nocontent='ignore' is set-->
   </output> 
 </deliverance-test>
 
+<!-- a test that replaces text with a mixture of elements and text -->
+<!-- <deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <replace theme="//div[@id='foo']/child::node()" content="//div[@id='bar']/child::node()" />
+  </rules>
+
+  <theme base="http://example.com"> 
+     <html><head><title>Blah</title></head><body><p>some text</p><div id="foo">Dummy Content</div>theme tail</body></html>
+  </theme>
+
+  <content> 
+     <html><body><div id="bar">Real Content<p>a nice p tag</p>mid text<i>some i text</i>end tail</div></body></html>
+  </content>
+ 
+  <output>
+     <html><head><title>Blah</title></head><body><p>some text</p><div id="foo">Real Content<p>a nice p tag</p>mid text<i>some i text</i>end tail</div>theme tail</body></html>
+  </output> 
+</deliverance-test>-->
 
 </deliverance-test-suite>
 
