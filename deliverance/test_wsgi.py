@@ -15,6 +15,7 @@ static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
 nycsr_app = StaticURLParser(nycsr_data)
 
+
 def html_string_compare(astr, bstr):
     def reporter(x):
         print x
@@ -39,43 +40,58 @@ def html_string_compare(astr, bstr):
             "Comparison failed between actual:\n==================\n%s\n\nexpected:\n==================\n%s\n\nReport:\n%s"
             % (astr, bstr, '\n'.join(reporter)))
 
-def test_basic():
-    wsgi_app = DeliveranceMiddleware(static_app, 'theme.html', 'rules.xml')
+
+
+def do_basic(renderer_type):
+    wsgi_app = DeliveranceMiddleware(static_app, 'theme.html', 'rules.xml',
+                                     renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/example.html')
     res2 = app.get('/example_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-def test_text():
-    wsgi_app = DeliveranceMiddleware(static_app, 'theme.html', 'text-rules.xml')
+def do_text(renderer_type):
+    wsgi_app = DeliveranceMiddleware(static_app, 'theme.html', 'text-rules.xml',
+                                     renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/example.html')
     res2 = app.get('/texttest_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-def test_tasktracker():
-    wsgi_app = DeliveranceMiddleware(tasktracker_app, 'http://www.nycsr.org/nyc/video.php', 'tasktracker.xml')
+def do_tasktracker(renderer_type):
+    wsgi_app = DeliveranceMiddleware(tasktracker_app, 'http://www.nycsr.org/nyc/video.php', 
+                                     'tasktracker.xml',renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/content.html')
     res2 = app.get('/expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
 
-def test_xinclude():
-    wsgi_app = DeliveranceMiddleware(static_app, 'xinclude_theme.html', 'xinclude_rules.xml')
+def do_xinclude(renderer_type):
+    wsgi_app = DeliveranceMiddleware(static_app, 'xinclude_theme.html', 'xinclude_rules.xml',
+                                     renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/example.html')
     res2 = app.get('/xinclude_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
 
-def test_nycsr():
-    wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://www.nycsr.org','nycsr.xml')
+def do_nycsr(renderer_type):
+    wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://www.nycsr.org','nycsr.xml',
+                                     renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/openplans.html')
     res2 = app.get('/nycsr_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
+
+RENDERER_TYPES = ['py','xslt']
+TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr ]
+def test_all():
+    for renderer_type in RENDERER_TYPES:
+        for test_func in TEST_FUNCS: 
+            yield lambda(name): test_func(renderer_type), ("[%s] : %s" % (renderer_type, test_func.func_name))
+            
 
 if __name__ == '__main__':
     pass

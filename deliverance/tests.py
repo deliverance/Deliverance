@@ -2,20 +2,23 @@ import unittest
 import os
 from lxml import etree
 from formencode.doctest_xml_compare import xml_compare
-from interpreter import Renderer
-#from xslt import Renderer
+from interpreter import Renderer as PyRenderer
+from xslt import Renderer as XSLTRenderer
 import copy 
 import urllib
 
+RENDERER_CLASSES = [ PyRenderer, XSLTRenderer ]
+
 class DeliveranceTestCase:
 
-    def __init__(self, rules, rules_uri, theme, theme_uri, content, output):
+    def __init__(self, rules, rules_uri, theme, theme_uri, content, output, renderer_class):
         self.rules = rules
         self.rules_uri = rules_uri
         self.theme = theme
         self.theme_uri = theme_uri
         self.content = content
         self.output = output
+        self.renderer_class = renderer_class
 
     def __call__(self, name):
         def reference_resolver(href, parse, encoding=None):
@@ -27,7 +30,7 @@ class DeliveranceTestCase:
             elif encoding:
                 return content.decode(encoding)
 
-        renderer = Renderer(
+        renderer = self.renderer_class(
             theme=self.theme,
             theme_uri=self.theme_uri,
             rule=self.rules, rule_uri=self.rules_uri,
@@ -50,12 +53,13 @@ def strify(el):
 test_dir = os.path.join(os.path.dirname(__file__), 'test-data')
 
 def test_examples():
-    for fn in os.listdir(test_dir):
-        fn = os.path.join(test_dir, fn)
-        for case in cases(fn):
-            yield case
+    for renderer_class in RENDERER_CLASSES:
+        for fn in os.listdir(test_dir):
+            fn = os.path.join(test_dir, fn)
+            for case in cases(fn,renderer_class):
+                yield case
 
-def cases(fn):
+def cases(fn, renderer_class):
     if not os.path.basename(fn).startswith('test_'):
         return
     if fn.endswith('~'):
@@ -97,8 +101,9 @@ def cases(fn):
             theme=themebody,
             theme_uri=el.find('theme').attrib['base'],
             content=contentbody,
-            output=outputbody)
-        yield case, ('%s:%s' % (fn, index))
+            output=outputbody, 
+            renderer_class=renderer_class)
+        yield case, ('[%s] %s:%s' % (renderer_class, fn, index))
 
 
 
