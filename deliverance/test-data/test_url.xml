@@ -13,6 +13,9 @@
 	<style type="text/css" media="screen">
 	  @import url(/css/test-style.css);
 	  @import url(http://www.example.com/foo.css);
+	  @import url('/foo/bar.css');
+	  @import url("/flub/quone.css");
+	  @import "joop/win.css";
 	  #effbot-nav {
 	  float: left;
 	  width: 180px;
@@ -39,6 +42,9 @@
 	<style type="text/css" media="screen">
 	  @import url(http://nycsr.org/css/test-style.css);
 	  @import url(http://www.example.com/foo.css);
+	  @import url(http://nycsr.org/foo/bar.css);
+	  @import url(http://nycsr.org/flub/quone.css);
+	  @import url(http://nycsr.org/joop/win.css);
 	  #effbot-nav {
 	  float: left;
 	  width: 180px;

@@ -182,7 +182,8 @@ class RendererBase(object):
             el.attrib[attr] = urlparse.urljoin(base_uri, el.attrib[attr])
 
 
-    CSS_URL_PAT = re.compile(r'url\((.*?)\)',re.I)
+    CSS_URL_PAT = re.compile(r'url\([\"\']*(.*?)[\"\']*\)',re.I)
+    CSS_IMPORT_PAT = re.compile(r'\@import\s*[\"\'](.*?)[\"\']',re.I)
     def fixup_css_links(self, elts, base_uri):
         """ 
         prepends url(...) in css style elements to be 
@@ -192,9 +193,14 @@ class RendererBase(object):
         def absuri(matchobj): 
             return 'url(' + urlparse.urljoin(base_uri,matchobj.group(1)) + ')'
 
+        def imp_absuri(matchobj):
+            return '@import url(' + urlparse.urljoin(base_uri,matchobj.group(1)) + ')'
+
         for el in elts:
             if el.text:
+                el.text = re.sub(self.CSS_IMPORT_PAT,imp_absuri,el.text)
                 el.text = re.sub(self.CSS_URL_PAT,absuri,el.text)
+        
 
 
     def attach_text_to_previous(self,el,text):
