@@ -211,6 +211,29 @@ and nocontent='ignore' is set-->
   </output> 
 </deliverance-test>
 
+<!-- tests replace command on edge case: html element  --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <replace theme="//html" content="//html" />
+  </rules>
+
+  <theme base="http://example.com"> 
+     <html><head><title>Blah</title></head><body><div id="foo">Dummy Content</div></body></html>
+  </theme>
+
+  <content> 
+     <html><body><div id="bar">Real Content</div></body></html>
+  </content>
+ 
+  <output>
+     <html><head><title>Blah</title></head><body><div class="deliverance-error">Deliverance error: cannot replace whole theme<br /> 
+        rule: &lt;replace theme="//html" content="//html"/&gt;</div><div id="foo">Dummy Content</div> 
+     </body></html>
+  </output> 
+
+</deliverance-test>
+
+
 <!-- a test that replaces text with a mixture of elements and text -->
 <!-- <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">

@@ -201,6 +201,12 @@ class Renderer(RendererBase):
                     theme, self.format_error("no content matched", rule))            
             return       
 
+        if theme_el.getparent() is None:
+            self.add_to_body_start(
+                theme, self.format_error("cannot replace whole theme", rule))            
+            return
+            
+
         if self.debug:
             self.debug_replace(theme_el, content_els, rule)
             return 
@@ -226,10 +232,13 @@ class Renderer(RendererBase):
         # this tail, if there is one, should stick around 
         preserve_tail = non_text_els[0].tail 
 
+        #replaces first element
         self.replace_element(theme_el, non_text_els[0])
         temptail = non_text_els[0].tail 
         non_text_els[0].tail = None
         parent = non_text_els[0].getparent()
+
+        # appends the rest of the elements
         i = parent.index(non_text_els[0])
         parent[i+1:i+1] = non_text_els[1:]
 

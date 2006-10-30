@@ -125,6 +125,11 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
+        if theme_el.getparent() is None:
+            self.add_to_body_start(
+                theme, self.format_error("cannot replace whole theme", rule))            
+            return
+
         self.add_conditional_missing_content_error(theme,rule)      
 
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
