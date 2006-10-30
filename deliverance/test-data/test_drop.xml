@@ -208,24 +208,5 @@
   </output> 
 </deliverance-test>
 
-<!-- drop an element that is just text  --> 
-<!--<deliverance-test>
-  <rules xmlns="http://www.plone.org/deliverance">
-    <drop theme="//div[@id='foo']/child::node()" />
-  </rules>
-
-  <theme base="http://example.com"> 
-     <html><head><title>Blah</title></head><body>before<div id="foo">Dummy Content</div>after</body></html>
-  </theme>
-
-  <content> 
-     <html><body>Real Content</body></html>
-  </content>
- 
-  <output>
-     <html><head><title>Blah</title></head><body>before<div id="foo"></div>after</body></html>
-  </output> 
-</deliverance-test>-->
-
 </deliverance-test-suite>
 
