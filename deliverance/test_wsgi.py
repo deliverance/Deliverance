@@ -46,7 +46,7 @@ def html_string_compare(astr, bstr):
 
 
 
-def do_basic(renderer_type):
+def do_basic(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(static_app, 'theme.html', 'rules.xml',
                                      renderer_type)
     app = TestApp(wsgi_app)
@@ -54,7 +54,7 @@ def do_basic(renderer_type):
     res2 = app.get('/example_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-def do_text(renderer_type):
+def do_text(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(static_app, 'theme.html', 'text-rules.xml',
                                      renderer_type)
     app = TestApp(wsgi_app)
@@ -62,7 +62,7 @@ def do_text(renderer_type):
     res2 = app.get('/texttest_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-def do_tasktracker(renderer_type):
+def do_tasktracker(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(tasktracker_app, 'http://www.nycsr.org/nyc/video.php', 
                                      'tasktracker.xml',renderer_type)
     app = TestApp(wsgi_app)
@@ -71,7 +71,7 @@ def do_tasktracker(renderer_type):
     html_string_compare(res.body, res2.body)
 
 
-def do_xinclude(renderer_type):
+def do_xinclude(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(static_app, 'xinclude_theme.html', 'xinclude_rules.xml',
                                      renderer_type)
     app = TestApp(wsgi_app)
@@ -80,7 +80,7 @@ def do_xinclude(renderer_type):
     html_string_compare(res.body, res2.body)
 
 
-def do_nycsr(renderer_type):
+def do_nycsr(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://www.nycsr.org','nycsr.xml',
                                      renderer_type)
     app = TestApp(wsgi_app)
@@ -89,14 +89,14 @@ def do_nycsr(renderer_type):
     html_string_compare(res.body, res2.body)
 
 
-def do_necoro(renderer_type):
+def do_necoro(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(necoro_app, 'http://www.necoro.com/photo/index.html','necoro.xml', renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/zope.html')
     res2 = app.get('/expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
-def do_guidesearch(renderer_type):
+def do_guidesearch(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(guidesearch_app, 'http://www.guidesearch.jp/index.php?language=schinese','guidesearch.xml', renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/zope.html')
@@ -104,12 +104,12 @@ def do_guidesearch(renderer_type):
     html_string_compare(res.body, res2.body)
 
 
-RENDERER_TYPES = ['py','xslt']
-TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch ]
+RENDERER_TYPES = ['py', 'xslt']
+TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
-            yield lambda(name): test_func(renderer_type), ("[%s] : %s" % (renderer_type, test_func.func_name))
+            yield test_func, renderer_type, test_func.func_name
             
 
 if __name__ == '__main__':
