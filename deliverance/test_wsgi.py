@@ -10,10 +10,14 @@ from htmlserialize import tostring
 static_data = os.path.join(os.path.dirname(__file__), 'test-data', 'static')
 tasktracker_data = os.path.join(os.path.dirname(__file__), 'test-data', 'tasktracker')
 nycsr_data = os.path.join(os.path.dirname(__file__), 'test-data', 'nycsr')
+necoro_data = os.path.join(os.path.dirname(__file__), 'test-data', 'necoro')
+guidesearch_data = os.path.join(os.path.dirname(__file__), 'test-data', 'guidesearch')
 
 static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
 nycsr_app = StaticURLParser(nycsr_data)
+necoro_app = StaticURLParser(necoro_data)
+guidesearch_app = StaticURLParser(guidesearch_data)
 
 
 def html_string_compare(astr, bstr):
@@ -85,8 +89,23 @@ def do_nycsr(renderer_type):
     html_string_compare(res.body, res2.body)
 
 
+def do_necoro(renderer_type):
+    wsgi_app = DeliveranceMiddleware(necoro_app, 'http://www.necoro.com/photo/index.html','necoro.xml', renderer_type)
+    app = TestApp(wsgi_app)
+    res = app.get('/zope.html')
+    res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+def do_guidesearch(renderer_type):
+    wsgi_app = DeliveranceMiddleware(guidesearch_app, 'http://www.guidesearch.jp/index.php?language=schinese','guidesearch.xml', renderer_type)
+    app = TestApp(wsgi_app)
+    res = app.get('/zope.html')
+    res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+
 RENDERER_TYPES = ['py','xslt']
-TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr ]
+TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch ]
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 

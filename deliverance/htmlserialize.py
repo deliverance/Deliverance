@@ -52,7 +52,7 @@ def decodeAndParseHTML(text):
 
     if m:
         charset = m.group('charset')
-        text = text.decode(charset)
+#        text = text.decode(charset)
 
     content = etree.HTML(text)
     assert content is not None

@@ -1,7 +1,0 @@
-
-<!-- helper file for doing hand transforms with this theme --> 
-
-<blend 
-   theme="http://www.necoro.com/photo/index.html" 
-   baseurl="http://www.necoro.com/photo" 
-   rules="./test-data/necoro/necoro.xml" /> 
