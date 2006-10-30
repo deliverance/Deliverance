@@ -37,8 +37,6 @@ def do_transform(renderer_type, theme_url, base_url, rules_url, content_url):
     content = etree.HTML(grab_url(content_url))
     
     def reference_resolver(href, parse, encoding=None):
-        if not href.startswith('/'):
-            href = os.path.join(os.path.dirname(rules_url),href)
         text = grab_url(href)
         if parse == "xml":
             return etree.XML(text)
@@ -47,9 +45,9 @@ def do_transform(renderer_type, theme_url, base_url, rules_url, content_url):
 
     renderer = None
     if renderer_type == 'xslt':
-        renderer = XSLTRenderer(theme,base_url,rules,reference_resolver)
+        renderer = XSLTRenderer(theme,base_url,rules,rules_url,reference_resolver)
     elif renderer_type == 'py':
-        renderer = PythonRenderer(theme,base_url,rules,reference_resolver)
+        renderer = PythonRenderer(theme,base_url,rules,rules_url,reference_resolver)
     else:
         print "Unknown renderer type '" + renderer_type + "'"
         return etree.Element("error")
