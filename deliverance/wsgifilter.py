@@ -133,12 +133,14 @@ class DeliveranceMiddleware(object):
                 self.should_intercept,
                 start_response)
 
-
+            # ignore non-html responses 
             if status is None:
-                # should_intercept returned False
                 return body
 
-            body = self.filter_body(environ, body)
+            # don't theme html snippets 
+            if self.hasHTMLTag(body):
+                body = self.filter_body(environ, body)
+
             replace_header(headers, 'content-length', str(len(body)))
             replace_header(headers, 'content-type', 'text/html; charset=utf-8')
             start_response(status, headers)
@@ -211,6 +213,16 @@ class DeliveranceMiddleware(object):
                 % (construct_url(environ), path_info, status,
                    loc))
         return body
+
+    HTML_DOC_PAT = re.compile(r"^.*<\s*html(\s*|>).*$",re.I|re.M)
+    def hasHTMLTag(self, body):
+        """
+        a quick and dirty check to see if some text contains 
+        anything that looks like an html tag. This could 
+        certainly be improved if needed or there are 
+        ambiguous tags 
+        """
+        return self.HTML_DOC_PAT.search(body) is not None
 
 def make_filter(app, global_conf,
                 theme_uri=None, rule_uri=None):

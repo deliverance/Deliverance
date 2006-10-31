@@ -114,7 +114,7 @@ def do_ajax(renderer_type, name):
 
 
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch ] 
+TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch, do_ajax ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
