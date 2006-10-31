@@ -14,6 +14,19 @@ xslt_wrapper_skel = """
   </xsl:template>
 </xsl:transform>"""
 
+xslt_dropper_skel = """
+<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <!-- match nodes that do dropping are inserted here --> 
+
+  <xsl:template match="node()|@*">
+    <xsl:copy>
+      <xsl:apply-templates select="node()|@*"/>
+    </xsl:copy>
+  </xsl:template> 
+
+</xsl:transform>
+"""
 
 nsmap = {
     "dv": "http://www.plone.org/deliverance",
@@ -45,7 +58,9 @@ class Renderer(RendererBase):
         else:
             self.debug = False
 
+        self.transform_drop = None
         self.apply_rules(self.rules,theme_copy)
+    
         xslt_wrapper = etree.XML(xslt_wrapper_skel)
         insertion_point = xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
                                              nsmap)[0]
@@ -57,14 +72,28 @@ class Renderer(RendererBase):
 
     def render(self,content):
         if content:
+            if self.transform_drop:
+                content = self.transform_drop(content)
+
             return self.transform(content).getroot()
+
         else:
             return self.transform(etree.Element("dummy")).getroot()
 
 
     def apply_rules(self,rules,theme):
-        for rule in rules:
+
+        drop_rules, other_rules = self.separate_drop_rules(rules)
+
+        if len(drop_rules):
+            self.xslt_dropper = etree.XML(xslt_dropper_skel)
+            for rule in drop_rules:
+                self.apply_drop(rule, theme)
+            self.transform_drop = etree.XSLT(self.xslt_dropper)
+
+        for rule in other_rules:
             self.apply_rule(rule,theme)
+
 
     def apply_rule(self,rule,theme):
         if rule.tag == self.APPEND_RULE_TAG:
@@ -214,7 +243,7 @@ class Renderer(RendererBase):
                 if rule.get(self.NOCONTENT_KEY) == 'ignore':
                     return 
                 else:
-                    e = self.format_error("no element found in theme", rule)
+                    e = self.format_error("no theme matched", rule)
                     self.add_to_body_start(theme, e)
                     return 
                     
@@ -223,23 +252,16 @@ class Renderer(RendererBase):
                 self.attach_text_to_previous(el, el.tail)
                 el.getparent().remove(el)
 
+        if self.RULE_CONTENT_KEY in rule.attrib:
+            drop_template = etree.Element("{%s}template" % nsmap["xsl"])
+            drop_template.set("match", rule.attrib[self.RULE_CONTENT_KEY])
+            self.xslt_dropper[0:0] = [drop_template]
+
+            # add an element that produces an error if 
+            # no content is matched 
+            self.add_conditional_missing_content_error(theme,rule)
 
 
-#         if 'content' in rule.attrib:
-#             self.add_conditional_missing_content_error(theme,rule)
-
-            
-
-#         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
-#         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
-
-
-#         # if content is matched, replace the theme element, otherwise, keep the
-#         # theme element 
-#         choose = self.make_when_otherwise("count(%s)=0" % 
-#                                           rule.attrib[self.RULE_CONTENT_KEY], 
-#                                           copy.deepcopy(theme_el), 
-#                                           copier)
 
 
 

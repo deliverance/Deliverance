@@ -37,7 +37,14 @@ class Renderer(RendererBase):
 
 
     def apply_rules(self, rules, theme, content):
-        for rule in rules:
+
+        drop_rules, other_rules = self.separate_drop_rules(rules)
+
+        # process all drop rules first 
+        for rule in drop_rules:
+            self.apply_rule(rule, theme, content) 
+
+        for rule in other_rules:
             self.apply_rule(rule, theme, content)
 
 
@@ -361,7 +368,7 @@ class Renderer(RendererBase):
                 removed = True
             if not removed and rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
                 self.add_to_body_start(
-                    theme, self.format_error("no element found in %s" % context, rule))
+                    theme, self.format_error("no %s matched" % context, rule))
 
     def elements_in(self, els):
         """

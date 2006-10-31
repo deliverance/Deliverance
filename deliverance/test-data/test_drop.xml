@@ -136,7 +136,7 @@
      <html>
        <body>
          Dummy Content
-         <div class="deliverance-error">Deliverance error: no element found in theme<br/>rule: &lt;drop theme="//div[@id='foo']"/&gt;
+         <div class="deliverance-error">Deliverance error: no theme matched<br/>rule: &lt;drop theme="//div[@id='foo']"/&gt;
          </div>
        </body>
      </html>
@@ -161,7 +161,7 @@
      <html>
        <body>
          Dummy Content
-         <div class="deliverance-error">Deliverance error: no element found in content<br/>rule: &lt;drop content="//div[@id='foo']"/&gt;
+         <div class="deliverance-error">Deliverance error: no content matched<br/>rule: &lt;drop content="//div[@id='foo']"/&gt;
          </div>
        </body>
      </html>

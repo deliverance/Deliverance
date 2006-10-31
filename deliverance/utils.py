@@ -181,6 +181,24 @@ class RendererBase(object):
         for el in elts:
             el.attrib[attr] = urlparse.urljoin(base_uri, el.attrib[attr])
 
+    def separate_drop_rules(self, rules):
+        """
+        separates out drop rules from a list of rules, returns two 
+        lists. 
+
+        first the list of all drop rules, second all other rules 
+        order is preserved. 
+        """
+        regular_rules = []
+        drop_rules = []
+        for rule in rules:
+            if rule.tag == self.DROP_RULE_TAG:
+                drop_rules.append(rule)
+            else:
+                regular_rules.append(rule)
+        return drop_rules, regular_rules
+        
+
 
     CSS_URL_PAT = re.compile(r'url\([\"\']*(.*?)[\"\']*\)',re.I)
     CSS_IMPORT_PAT = re.compile(r'\@import\s*[\"\'](.*?)[\"\']',re.I)
