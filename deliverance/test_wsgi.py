@@ -90,14 +90,14 @@ def do_nycsr(renderer_type, name):
 
 
 def do_necoro(renderer_type, name):
-    wsgi_app = DeliveranceMiddleware(necoro_app, 'http://www.necoro.com/photo/index.html','necoro.xml', renderer_type)
+    wsgi_app = DeliveranceMiddleware(necoro_app, 'theme.html','necoro.xml', renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/zope.html')
     res2 = app.get('/expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
 def do_guidesearch(renderer_type, name):
-    wsgi_app = DeliveranceMiddleware(guidesearch_app, 'http://www.guidesearch.jp/index.php?language=schinese','guidesearch.xml', renderer_type)
+    wsgi_app = DeliveranceMiddleware(guidesearch_app, 'theme.html','guidesearch.xml', renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/zope.html')
     res2 = app.get('/expected.html?notheme')

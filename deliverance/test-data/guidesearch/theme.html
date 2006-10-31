@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+<meta name='author' content='观光口译导游搜索系统' />
+<meta name='copyright' content='社团法人　日本观光口译协会' />
+<meta name='description' content='观光口译导游搜索系统' />
+<meta name='generator' content='GUIDE 0.5.0' />
+
+<title>观光口译导游搜索系统</title>
+<script type='text/javascript'>
+<!--
+
+function restChar(txtarea,maxlength) {
+  len = txtarea.value.length;
+  if(len > maxlength) alert("max length "+maxlength+" .........");
+  txtarea.innerText = txtarea.value.substring(0, maxlength);
+}
+
+//-->
+</script>
+<link rel='stylesheet' type='text/css' media='all' href='http://www.guidesearch.jp/css/top_schinese.css' />
+
+<div id="wrapper">
+  <div id="mainpic">
+  <h1>观光口译导游搜索系统</h1>
+  <div id="mainbox">
+  <p>在日本，根据口译导游法（1949年法律第210号），仅限于经考试证明精通日本相关知识与充分的外语交流能力者，方可从事有偿的口译导游工作，因此，可以利用高质量的口译导游。<br>
+本网站面向访问日本的外国人旅行者，提供国家认定的观光口译导游搜索服务。<br>可以按地区、领域、语言及其他条件，在全国的观光口译导游中进行搜索，通过直接接触进行预约。</p>
+  <ul>
+  <li><a href="./search/search.php?language=schinese">进入口译导游搜索</a>
+  </li>
+    </ul>
+  </div>
+<div id="lang">    
+  <form name="top" action="/index.php" method="POST">
+    <select name="language">
+      <option value="japanese" >日语</option>
+      <option value="english">English</option>
+      <option value="korean">Korean</option>
+      <option value="schinese" selected>Simple Chinese</option>
+      <option value="tchinese">Traditional Chinese</option>
+    </select>
+    <input name="change_language" type="submit" value="Change" />
+  </form>
+  </div>
+    <div id="copy">
+  <a href="./about.php?language=schinese">关于我们  >></a>
+  <a href="./priv.php?language=schinese">个人私隐政策  >></a>
+  <a href="http://www.mlit.go.jp/sogoseisaku/kanko/english/">国土交通省(english)</a>
+    </div>
+  </div>
+</div>
+
+<center>Special URL<br>Admin URL<a href="admin/index.php">Admin</a><br>User URL<a href="user/user.php">User</a><br></center><center>
+<br />Powered by&nbsp;GUIDE 0.5.0 &copy; 2006 <a href='http://www.jga21c.or.jp/' target='_blank'>The Guide-Interpreter Search System</a>
+</center>
+</body>
+</html>
