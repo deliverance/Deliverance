@@ -12,12 +12,14 @@ tasktracker_data = os.path.join(os.path.dirname(__file__), 'test-data', 'tasktra
 nycsr_data = os.path.join(os.path.dirname(__file__), 'test-data', 'nycsr')
 necoro_data = os.path.join(os.path.dirname(__file__), 'test-data', 'necoro')
 guidesearch_data = os.path.join(os.path.dirname(__file__), 'test-data', 'guidesearch')
+ajax_data = os.path.join(os.path.dirname(__file__), 'test-data', 'ajax')
 
 static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
 nycsr_app = StaticURLParser(nycsr_data)
 necoro_app = StaticURLParser(necoro_data)
 guidesearch_app = StaticURLParser(guidesearch_data)
+ajax_app = StaticURLParser(ajax_data)
 
 
 def html_string_compare(astr, bstr):
@@ -101,6 +103,13 @@ def do_guidesearch(renderer_type, name):
     app = TestApp(wsgi_app)
     res = app.get('/zope.html')
     res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+def do_ajax(renderer_type, name):
+    wsgi_app = DeliveranceMiddleware(ajax_app, 'theme.html','rules.xml', renderer_type)
+    app = TestApp(wsgi_app)
+    res = app.get('/content.html')
+    res2 = app.get('/content.html?notheme')
     html_string_compare(res.body, res2.body)
 
 

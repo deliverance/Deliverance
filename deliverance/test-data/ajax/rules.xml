@@ -1,0 +1,1 @@
+<copy theme=".//div[@id='foo']" content=".//span[@class='bar']" />
