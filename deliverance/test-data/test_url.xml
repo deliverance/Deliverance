@@ -1,6 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <deliverance-test-suite>
 
+<deliverance-test>
+<rules xmlns="http://www.plone.org/deliverance">
+</rules>
+
+<theme base="http://www.example.com/foo/bar/" >
+  <html>
+     <head>
+       <style type="text/css">
+         @import url(whatever.css)
+       </style>
+     </head>
+     <body>
+        <a href="quux/zoop">zoop</a>
+     </body>
+  </html>
+</theme>
+
+<content>
+</content>
+
+<output> 
+  <html>
+     <head>
+       <style type="text/css">
+          @import url(http://www.example.com/foo/bar/whatever.css)
+       </style>
+       </head>
+       <body>
+          <a href="http://www.example.com/foo/bar/quux/zoop">zoop</a>
+       </body>
+     </html>
+</output>
+
+</deliverance-test>
+
 <!-- tests url replacement successfully; replaces the relative urls with absolute urls based on <base> if present --> 
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">

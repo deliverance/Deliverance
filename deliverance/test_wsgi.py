@@ -13,6 +13,7 @@ nycsr_data = os.path.join(os.path.dirname(__file__), 'test-data', 'nycsr')
 necoro_data = os.path.join(os.path.dirname(__file__), 'test-data', 'necoro')
 guidesearch_data = os.path.join(os.path.dirname(__file__), 'test-data', 'guidesearch')
 ajax_data = os.path.join(os.path.dirname(__file__), 'test-data', 'ajax')
+url_data = os.path.join(os.path.dirname(__file__), 'test-data', 'wsgiurl')
 
 static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
@@ -20,6 +21,7 @@ nycsr_app = StaticURLParser(nycsr_data)
 necoro_app = StaticURLParser(necoro_data)
 guidesearch_app = StaticURLParser(guidesearch_data)
 ajax_app = StaticURLParser(ajax_data)
+url_app = StaticURLParser(url_data)
 
 
 def html_string_compare(astr, bstr):
@@ -112,9 +114,16 @@ def do_ajax(renderer_type, name):
     res2 = app.get('/content.html?notheme')
     html_string_compare(res.body, res2.body)
 
+def do_url(renderer_type, name):
+    wsgi_app = DeliveranceMiddleware(url_app, '/foo/bar/test_url_theme.html','/foo/bar/test_url.xml', renderer_type)
+    app = TestApp(wsgi_app)
+    res = app.get('/foo/bar/test_url_content.html')
+    res2 = app.get('/foo/bar/test_url_expected.html?notheme')
+    html_string_compare(res.body,res2.body)
+
 
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch, do_ajax ] 
+TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch, do_ajax ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
