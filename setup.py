@@ -34,6 +34,7 @@ setup(name="Deliverance",
       deliverance-proxy = deliverance.proxycommand:main
       deliverance-tests = deliverance.tests:main
       deliverance-speed = deliverance.test_speed:main
+      deliverance-handtransform = deliverance.handtransform:main
       """,
       )
 

@@ -24,6 +24,20 @@ it should contain an element like
 
 DEFAULT_BASE_URL = "http://www.example.com"
 
+usage = "usage: %prog [options] <content_url>"
+parser = OptionParser(usage=usage)
+parser.add_option("-t","--theme",dest="theme_url",help="url of theme html")
+parser.add_option("-b","--baseurl",dest="base_url",
+                  help="relative urls in the theme will be made absolute relative to this url [default %default]", 
+                  default=DEFAULT_BASE_URL)
+parser.add_option("-r","--rules",dest="rules_file",
+                  help="path to file containing the deliverance rules to apply")
+parser.add_option("-f","--from-file",dest="blend_file",
+                  help="take theme, baseurl and rules parameters from the referenced file")
+parser.add_option("-R","--renderer",dest="renderer_type",
+                  help="(xslt|py) [default %default]", default="xslt", choices=['xslt','py'])
+
+
 
 def grab_url(url):
     f = urllib.urlopen(url)
@@ -65,23 +79,11 @@ def die(message,parser):
     parser.print_usage()
     sys.exit(0)    
     
-if __name__ == '__main__':
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
 
-
-    usage = "usage: %prog [options] <content_url>"
-    parser = OptionParser(usage=usage)
-    parser.add_option("-t","--theme",dest="theme_url",help="url of theme html")
-    parser.add_option("-b","--baseurl",dest="base_url",
-                      help="relative urls in the theme will be made absolute relative to this url [default %default]", 
-                      default=DEFAULT_BASE_URL)
-    parser.add_option("-r","--rules",dest="rules_file",
-                      help="path to file containing the deliverance rules to apply")
-    parser.add_option("-f","--from-file",dest="blend_file",
-                      help="take theme, baseurl and rules parameters from the referenced file")
-    parser.add_option("-R","--renderer",dest="renderer_type",
-                      help="(xslt|py) [default %default]", default="xslt", choices=['xslt','py'])
-
-    (options,args) = parser.parse_args()
+    options,args = parser.parse_args(args)
     
     if len(args) == 0:
         die("no content url specified.",parser)
@@ -120,3 +122,6 @@ if __name__ == '__main__':
 
     print tostring(do_transform(options.renderer_type,theme_url,base_url,rules_file,content_url))
     
+
+if __name__ == '__main__':
+    main()

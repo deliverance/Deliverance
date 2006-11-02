@@ -43,8 +43,8 @@ http://cheeseshop.python.org/pypi/workingenv.py
 
 Create a working enviornment for deliverance and its dependencies:  
 
-workingenv.py deliverance_env
-source deliverance_env/bin/activate
+$ workingenv.py deliverance_env
+$ source deliverance_env/bin/activate
 
 install a recent cvs version of libxml2,libxstl and svn lxml. 
 You are likely to encounter segfaults and other failures if recent versions are not used.
