@@ -5,7 +5,7 @@ for more information
 
 
 Contents: 
-* What's Deliverance? 
+* What is Deliverance? 
 * Quick Start to build deliverance 
 * Deliverance Proxy 
 * WSGI Middleware 
@@ -15,7 +15,7 @@ Contents:
 * Quick Example
 
 ----------------------------------
-What's Deliverance? 
+What is Deliverance? 
 ----------------------------------
 
 Deliverance is a non-invasive mechanism for combining HTML content produced 
@@ -27,93 +27,101 @@ existing static designs.
 
 
 -----------------------------------
-Quick Start to build deliverance
+Quick Start to build Deliverance
 -----------------------------------
 
-The easiest way to get started is to checkout the buildout and follow the instructions
-found there. 
+The easiest way to get Deliverance installed is to checkout the
+buildout and follow the instructions found there.
 
-svn co https://svn.openplans.org/svn/deliverance.buildout deliverance.buildout
+$ svn co https://svn.openplans.org/svn/deliverance.buildout deliverance.buildout
 
 
-Otherwise to install manually: 
+Otherwise, to install Deliverance manually, first get workingenv.py
+from http://cheeseshop.python.org/pypi/workingenv.py. Create a working
+environment for Deliverance and its dependencies:
 
-get workingenv.py from
-http://cheeseshop.python.org/pypi/workingenv.py
-
-Create a working enviornment for deliverance and its dependencies:  
-
-$ workingenv.py deliverance_env
+$ workingenv.py deliverance_env 
 $ source deliverance_env/bin/activate
 
-install a recent cvs version of libxml2,libxstl and svn lxml. 
-You are likely to encounter segfaults and other failures if recent versions are not used.
 
-checkout deliverance: 
-$ svn co http://codespeak.net/svn/z3/deliverance/branches/packaged deliverance
+Then install recent versions of libxml2, libxslt and lxml.  You are
+likely to encounter segfaults and other failures if recent versions
+are not used.
 
-$ cd deliverance
-$ python setup.py develop 
+Checkout and setup Deliverance, then make sure your installation is
+complete by running the tests:
+
+$ svn co http://codespeak.net/svn/z3/deliverance/branches/packaged deliverance 
+$ cd deliverance 
+$ python setup.py develop  
 $ nosetests
 
-you can also run: 
-deliverance_env/bin/deliverance-tests 
-deliverance_env/bin/deliverance-speed 
 
-from the top level checkout directory
+You can also run the tests like this:
+
+$ deliverance_env/bin/deliverance-tests 
+$ deliverance_env/bin/deliverance-speed 
+
 
 ----------------------------------------------
 Deliverance Proxy
 ----------------------------------------------
 
-The deliverance proxy is a standalone application which serves a "themed" version of some web 
-location given a theme page and a set of rules. 
+The deliverance proxy is a standalone application which serves a
+themed version of some web location using a theme and a set of rules.
 
 eg:
+$ deliverance-proxy --serve=localhost:5001 --proxy=localhost:8080 
+		--theme=http://www.example.org 
+		--rule=file:///some/path/somerulesfile.xml
 
-deliverance-proxy --serve=localhost:5001 --proxy=localhost:8080 
-                  --theme=http://www.example.org 
-                  --rule=file:///some/path/somerulesfile.xml
+This example provides a themed version of a local webserver at port
+8080 served on port 5001. The theme page is http://www.example.org and
+the rules are specified in somerulesfile.xml.
 
-provides a themed version of a local webserver at port 8080 served on port 5001. 
-The theme page is http://www.example.org and somerulesfile.xml describes how to 
-put the content from localhost:8080 together with the look of the webpage at 
-http://www.example.org to produce the "themed" result. 
+For more options, run:
 
-run deliverance-proxy --help for more options 
+$ deliverance-proxy --help 
+
 
 ------------------------------------------------
 WSGI Middleware 
 ------------------------------------------------
 
-Deliverance theming can also used directly in a WSGI stack using 
-deliverance.wsgifilter.DeliveranceMiddleware
-
-see deliverance/wsgifilter.py and deliverance/test_wsgi.py for examples. 
+Deliverance can also be used directly in a WSGI stack using the python
+class in deliverance.wsgifilter.DeliveranceMiddleware.  See
+deliverance/wsgifilter.py and deliverance/test_wsgi.py for examples.
+ 
 
 
 -------------------------------------------------
 Command Line Transformations 
 -------------------------------------------------
 
-a command line transformation may also be performed using the 
-handtransform.py script. 
 
-run python handtransform.py --help for instructions. The result of the 
-transform is output to standard out. 
+The command line tool used to execute Deliverance is called
+deliverance-handtransform.  For instructions, run:
 
-To avoid lengthy command lines, the script can accept a file which describes 
-the theme and rules to apply using the -f flag eg: 
+$ deliverance-handtransform --help 
 
-python handtransform.py -f ./example.theme http://www.example.org
+The theme, rules and other parameters are specified using command line
+options -t, -r, etc.  The result of the transform is output to
+standard out.
 
+To avoid lengthy command lines, the tool can accept a "blend" file,
+using the -f flag, which describes the theme and rules to apply.
 
-The second argument refers to the content and example.theme contains something like: 
+eg:
 
-<blend 
-   theme="http://www.example.org" 
+$ deliverance-handtransform -f ./blendfile.xml http://www.example.org
+
+The second argument refers to the content; blendfile.xml contains
+something like:
+
+<blend theme="http://www.example.org" 
    baseurl="http://www.example.org" 
    rules="./example-rules.xml" /> 
+
 
 
 ------------------------------------------------
