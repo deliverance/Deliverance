@@ -42,5 +42,5 @@ def fixup_css_links(doc, link_repl_func):
     els = doc.xpath('//head/style')
     for el in els:
         if el.text:
-            el.text = re.sub(self.CSS_URL_PAT,absuri,el.text)
+            el.text = re.sub(CSS_URL_PAT,absuri,el.text)
 
