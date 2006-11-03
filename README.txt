@@ -53,7 +53,7 @@ are not used.
 Checkout and setup Deliverance, then make sure your installation is
 complete by running the tests:
 
-$ svn co http://codespeak.net/svn/z3/deliverance/branches/packaged deliverance 
+$ svn co http://codespeak.net/svn/z3/deliverance/trunk/ deliverance
 $ cd deliverance 
 $ python setup.py develop  
 $ nosetests
