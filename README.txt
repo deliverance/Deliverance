@@ -35,7 +35,7 @@ Quick Start to build Deliverance
 The easiest way to get Deliverance installed is to checkout the
 buildout and follow the instructions found there.
 
-$ svn co https://svn.openplans.org/svn/deliverance.buildout/trunk deliverance.buildout
+$ svn co https://codespeak.net/svn/z3/deliverance/deliverance.buildout 
 
 
 Otherwise, to install Deliverance manually, first get workingenv.py
