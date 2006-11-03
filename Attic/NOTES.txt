@@ -1,0 +1,57 @@
+==============================
+Notes during development
+==============================
+
+
+May 21
+------
+
+I think I'll make a fundamental change.  Right now I have some hairy
+Python code to work around the libxml2 features that don't appear in
+lxml: XInclude and EXSLT being the two big ones.  There is another
+part about the current approach that is bugging me: seeing the
+intermediate stages (for debugging) is painful.  Finally, the current
+approach is poorer in performance (althoug 120 requests/sec ain't too
+bad) than it could be.
+
+I thought about the current 'compile-theme.sh' which was a
+capitulation to the ideas above, for one part of the pipeline.  I now
+think I'll just bite the bullet and have a multi-line shell script
+that is run whenever any of the static stuff changes:
+
+  o The theme file.
+
+  o The theme rule file.
+
+  o The theme compiler stylesheet.
+
+  o The SXC spreadsheet with all the content.
+
+  o The static pages (home page, about us, whatever).
+
+  o The stylesheet with rules to render all the content in the
+  spreadsheet.
+
+Especially on the static pages, this will be a big win.  First, I can
+put the pages in the model, instead of hacking them into the XSLT.  I
+can do so without using lxml to add nodes to transformed content from
+the SXC, which was causing problems.
+
+I can also avoid a 'document()' call in the content rendering
+stylesheet.  This is not only a performance hit, but also some brittle
+complexity (mapping URLs to filenames on disk).
+
+I'd also get a really nice improvement in the integrity of the model,
+conceptually.  Currently, static pages exist outside the model, which
+ATM comes only from spreadsheet data.  At a minimum, the pages will be
+processed into the compiled model.  At a maximum, I might have the
+static pages in the spreadsheet itself!  (Only if the majority of the
+pages are simple enough for ReST.)
+
+Still, the biggest win will debuggability.  My brittle code for doing
+includes and multi-step XSLT compiling using lxml will be replaced by
+libxml2 command line functions.  Each stage of the output will be
+written to disk, for visual inspection.  And most importantly, I can
+sit in oXygen and hack away.
+
+

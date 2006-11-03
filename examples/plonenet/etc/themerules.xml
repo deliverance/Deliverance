@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<themerules xmlns="http://www.zope.org/deliverance">
-    <rule docxpath="/html:html/html:head/html:title/text()" themeid="title"/>
-    <rule docxpath="/html:html/html:head/html:title/text()" themeid="page-heading"/>
-    <rule docxpath="/html:html/html:body//html:div[@id='content-body']/*" themeid="content-body"/>
-</themerules>

@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deliverance-test-suite>
+
+<!-- tests append-or-replace command successfully replaces span tags in the div tag matched 
+  in the theme --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content=".//span" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p><span>This should go away</span></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body><div class="bar">Real Content</div><span>1</span><p>zzz</p><span>3</span></body></html>
+  </content>
+  
+  <output>
+    <html><head><title>Blah</title></head><body><div></div>
+	<div id="foo">Dummy Content<p>HI!</p><span>1</span><span>3</span></div></body></html>
+  </output> 
+</deliverance-test>
+
+<!-- tests append-or-replace can accomplish a normal append when there is nothing to replace --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content=".//span" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body><div class="bar">Real Content</div><span>1</span><p>zzz</p><span>3</span></body></html>
+  </content>
+  
+  <output>
+    <html><head><title>Blah</title></head><body><div></div>
+	<div id="foo">Dummy Content<p>HI!</p><span>1</span><span>3</span></div></body></html>
+  </output> 
+</deliverance-test>
+
+<!-- test append-or-replace preserves surrounding text of replaced elements --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme="//body" content="//body/div" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html>
+    <body>
+      before the div<div>in the div</div>after the div
+    </body></html>
+  </theme>
+
+  <content> 
+    <html>
+      <body><div>Real Content</div>
+    </body></html>
+  </content>
+  
+  <output>
+    <html>
+        <body>
+             before the divafter the div
+	     <div>Real Content</div>
+        </body>
+      </html>
+  </output> 
+</deliverance-test>
+
+<!-- tests that an error is raised if append-or-replace command does not find a target element 
+     in the theme --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content=".//div" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body></body></html>
+  </theme>
+
+  <content> 
+    <html><body><div>Real Content</div></body></html>
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>Blah</title>
+      </head>
+      <body>
+	<div class="deliverance-error">Deliverance error: no element found in theme<br/>
+	  rule: &lt;append-or-replace theme=".//div[@id='foo']" content=".//div"/&gt;
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+
+<!-- tests that an error is raised if append-or-replace command finds more than one 
+     target element in the theme --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div" content=".//div" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div>Dummy Content</div><div>Dummy Content</div></body></html>
+  </theme>
+
+  <content> 
+    <html><body><div>Real Content</div></body></html>
+  </content>
+  
+  <output>
+   <html>
+     <head>
+       <title>Blah</title>
+     </head>
+     <body>
+       <div class="deliverance-error">Deliverance error: multiple elements found in theme<br/>rule: &lt;append-or-replace theme=".//div" content=".//div"/&gt;
+	 <br/><textarea rows="24" cols="80" readonly="readonly">&lt;div&gt;Dummy Content&lt;/div&gt;&lt;div&gt;Dummy Content&lt;/div&gt;
+       </textarea></div>
+       <div>Dummy Content</div>
+       <div>Dummy Content</div>
+     </body>
+   </html>
+  </output>
+</deliverance-test>
+
+
+<!-- tests that when append-or-replace finds unelemented text in the matched content tag it produces an error --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content="//span/child::node()" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p><span>This should go away</span></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body><div class="bar">Real Content</div><span>1</span><p>zzz</p><span>3</span></body></html>
+  </content>
+  
+  <output>
+ <html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div class="deliverance-error">Deliverance error: invalid xpath for content<br/>rule: &lt;append-or-replace theme=".//div[@id='foo']" content="//span/child::node()"/&gt;
+  </div>
+    <div/>
+    <div id="foo">Dummy Content<p>HI!</p><span>This should go away</span></div>
+  </body>
+  </html>
+ </output> 
+</deliverance-test>
+
+
+<!-- tests that when append-or-replace finds unelemented text in the matched content tag it produces an error --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content="//span/child::node()" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo">Dummy Content<p>HI!</p><span>This should go away</span></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body><div class="bar">Real Content</div><span><p>in p</p>1</span><p>zzz</p><span>3</span></body></html>
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>Blah</title>
+      </head>
+      <body>
+	<div class="deliverance-error">Deliverance error: invalid xpath for content<br/>rule: &lt;append-or-replace theme=".//div[@id='foo']" content="//span/child::node()"/&gt;
+</div>
+	<div/>
+	<div id="foo">Dummy Content<p>HI!</p><span>This should go away</span></div>
+      </body>
+    </html>
+  </output>
+</deliverance-test>
+
+
+<!-- tests append-or-replace command generates an error when no content is found -->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content="//span[@id='bar']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+<html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div class="deliverance-error">Deliverance error: no content matched<br/>rule: &lt;append-or-replace theme=".//div[@id='foo']" content="//span[@id='bar']"/&gt;
+  </div>
+    <div/>
+    <div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+  </body>
+</html>
+  </output> 
+</deliverance-test>
+
+<!-- tests append-or-replace command ignores error when no content is found 
+and nocontent='ignore' flag is set-->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme=".//div[@id='foo']" content="//span[@id='bar']" nocontent='ignore' />
+  </rules>
+
+  <theme base="http://example.com"> 
+    <html><head><title>Blah</title></head><body><div></div><div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+    </body></html>
+  </theme>
+
+  <content> 
+    <html><body>leading text <br/> more <p>inside p </p>trailing text</body> tail of body</html>
+  </content>
+  
+  <output>
+<html>
+  <head>
+    <title>Blah</title>
+  </head>
+  <body>
+    <div/>
+    <div id="foo"><span>Dummy Content</span><p>HI!</p></div>
+  </body>
+</html>
+  </output> 
+</deliverance-test>
+
+
+</deliverance-test-suite>
+

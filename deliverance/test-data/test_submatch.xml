@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<deliverance-test-suite>
+
+<!-- tests matching an element and also a decendant of that element, 
+     desirable behavior here is questionable ...  this is here for consistency 
+     checking at the moment.  --> 
+
+
+
+<!-- replace test --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <replace theme="//body/p" content="//div[@class='foo']" /> 
+  </rules>
+
+  <theme base="http://nycsr.org"> 
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>replaced text</p>
+      </body>
+    </html>
+  </theme>
+
+  <content>
+    <html>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+      </body>
+    </html> 
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+	<div class="foo">
+	    inner div 
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+<!-- copy test --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme="//body" content="//div[@class='foo']" /> 
+  </rules>
+
+  <theme base="http://nycsr.org"> 
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>replaced text</p>
+      </body>
+    </html>
+  </theme>
+
+  <content>
+    <html>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+      </body>
+    </html> 
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+	<div class="foo">
+	    inner div 
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+<!-- append test --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append theme="//body" content="//div[@class='foo']" /> 
+  </rules>
+
+  <theme base="http://nycsr.org"> 
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>some text</p>
+      </body>
+    </html>
+  </theme>
+
+  <content>
+    <html>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+      </body>
+    </html> 
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>some text</p>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+	<div class="foo">
+	    inner div 
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+
+<!-- append or replace (append) --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme="//body" content="//div[@class='foo']" /> 
+  </rules>
+
+  <theme base="http://nycsr.org"> 
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>replaced text</p>
+      </body>
+    </html>
+  </theme>
+
+  <content>
+    <html>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+      </body>
+    </html> 
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>replaced text</p>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+	<div class="foo">
+	    inner div 
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+<!-- append or replace (replace) --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <append-or-replace theme="//body" content="//div[@class='foo']" /> 
+  </rules>
+
+  <theme base="http://nycsr.org"> 
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>replaced text</p>
+	<div class="foo" message="replace-me">
+          replace-me 
+	</div>
+      </body>
+    </html>
+  </theme>
+
+  <content>
+    <html>
+      <body>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+      </body>
+    </html> 
+  </content>
+  
+  <output>
+    <html>
+      <head>
+	<title>test</title>
+      </head>
+      <body>
+	<p>replaced text</p>
+	<div class="foo">
+	  outer div
+	  <div class="foo">
+	    inner div 
+	  </div>
+	</div>
+	<div class="foo">
+	    inner div 
+	</div>
+      </body>
+    </html>
+  </output> 
+</deliverance-test>
+
+
+
+</deliverance-test-suite>

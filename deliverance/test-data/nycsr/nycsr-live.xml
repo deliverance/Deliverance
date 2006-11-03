@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ 
+<rules xmlns:xi="http://www.w3.org/2001/XInclude" xmlns="http://www.plone.org/deliverance" >
+  <xi:include href="standardrules.xml" />
+
+  <!-- This rule isn't working for me; the div that contains
+       everything on nycsr.org seems to have an id of 'body'
+       not 'container'...? - ianb  -->
+
+  <!-- <copy theme="//div[@id='container']"
+        content="//*[@id='portal-columns']" /> -->
+
+  <copy theme="//div[@id='body']"
+        content="//*[@id='portal-columns']" />
+
+</rules>
