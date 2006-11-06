@@ -1,0 +1,330 @@
+==============================
+Deliverance
+==============================
+Content deliver for CMS systems
+------------------------------
+
+*Note: Work in progress.  Some of the ideas, particulary the content
+ map, are in flux.*
+
+CMS systems, particularly in Zope, excel at the structured environment
+of content *production*.  This area places a strong emphasis on
+security, workflow, metadata, and other content services.
+
+For content *delivery* on public sites, though, some of this machinery
+is overkill.  The framework for content production has a nasty side
+effect of killing performance for content delivery, making reliability
+and debugging a challenge, and forcing other audiences (like web
+designers in charge of look-and-feel) to learn another way to do
+things.
+
+For this reason, many ECM packages make a formal distinction between
+content production and content delivery.
+
+Deliverance is a lightweight, semi-static system for content delivery
+of CMS resources.  It runs in mod_python, generating branded pages and
+navigation elements, giving high-performance throughput to anonymous
+visitors.  Its primary benefits:
+
+  o High performance
+
+  o Simple re-branding
+
+  o Trusted stack
+
+  o Extreme productivity
+
+It is focused on audiencces that want:
+
+  o Predictable delivery to anonymous visitors
+
+  o Some portion of an airgap (logical/physical) between the CMS and
+  the live site
+
+  o Integration with mainstream systems and technologies
+
+This document discusses how the system works, then revisits the
+benefits in detail.
+
+Overview
+---------
+
+Deliverance has two major parts:
+
+  o *Themes*.  These apply a consistent look-and-feel to content that
+  streams through Apache.  This content can be on the filesystem, in
+  Zope with mod_proxy, or using the other part of Deliverance.  In a
+  nutshell, a theme is an HTML file (plus the CSS, images, etc.)
+  containing boxes that get filled by content.
+
+  o *Content maps*.  A description of the content on a site, including
+  metadata and different organization schemes.  The content map also
+  has views that, inside Deliverance, can generate HTML for navigation
+  and other purposes.
+
+Each of these can be used without the other.
+
+
+How It Works
+-----------
+
+In a nutshell, Deliverance gets an XML map describing all the
+published content at a point in time.  It uses this map to draw
+navigation elements and issue HTTP requests for content of single
+resources.  Finally, a "theme" provides the HTML to return with named
+boxes to be filled by rules.
+
+Let's first introduce some major concepts, then walk a request through
+from start to finish, using these concepts.
+
+1) *Theme*.  Web designers don't want to learn anything new.  ZPT
+tried to embrace this, but by the time the ZPT developer has injected
+all the tal and refactored everything into macros, the web designer
+can't possible continue.
+
+A theme is the corporate identity for a site.  It is *not* a template,
+as it has zero stuff in it beyond HTML.
+
+A theme is created by saving the customer's home page and identifying
+the boxes to be replaced.  For example, <div id="sitemenu"> identifies
+a place where a generated menu should go.  Web designers are familiar
+with this, as CSS uses such selectors to apply style.
+
+Deliverance has a ruleset that does the merge between the theme file
+and the generated content.  In essense, this rule file says: "Find
+'site-menu' in the theme and replace its children with the generated
+contents with an id of 'generated-menu'."
+
+The ruleset is under the control of the integrator, who bridges the
+gap between what the CMS provides and what the UI designer makes
+available.  This is done, though, without touching anything on either
+side of the equation.
+
+This allows the theme to be applied to all pages, without touching the
+pages.  The theme engine uses XSLT (via lxml) to perform the merge.
+
+2) *Map*.  By design, content delivery is separated from content
+management.  In fact, this separation acts as insulation.  At various
+intervals, the CMS makes an "edition" or a snapshot of its contents,
+providing a map with metadata for all the contents that should be
+visible.  (In fact, the map could point at a certain *version* of a
+resource that should be visible.)
+
+This map is read by mod_python using lxml.  It serves two functions:
+
+a. *Navigation elements*.  We can draw site menus and trees without
+visiting the server.  Since these can be done in XSLT, not only is the
+performance very good, but we can draw many other kinds of pages.  For
+example, we can show all the contents modified in the last week, or
+all the contents in France.
+
+b. *Resource lookup*.  The map controls how an incoming, virtual URL
+gets mapped to a real resource.  This means the URL space can be
+placeless.  Content can appear in multiple places.  Equally, content
+from multiple CMSs, even multiple remote hosts, can be integrated into
+the same map.
+
+The identifier used for retrieving the content for the resource can be
+a normal GET or a more complicated QUERY_STRING or even xml-rpc kind
+of lookup.
+
+Note that the contents for many CMS resources are, in fact, very small
+amounts of data.  They could be cached inline in the content map and
+not looked up.  For frequent pages, this would provide a big win.
+
+Finally, some resources in the map might be virtual, meaning the page
+can be fully rendered in Deliverance.  For example, a URL to show all
+the content with the keyword of "CPS" can be serviced without a trip
+to the server.  All that is needed is an XSLT rule for generation.
+(Later, the XSLT could be eliminated with a Python extension function
+in lxml.)
+
+3) *Compilation*.  The goal is high performance.  There are certain
+aspects that never change between requests:
+
+a. The contents of the map.
+
+b. The theme and the rule file for merging.
+
+c. Site configuration, such as site menus.
+
+It makes no sense to re-parse DOMs and stylesheets on each request.
+Equally, it makes no sense to have a multi-stage pipeline when several
+parts never change.
+
+Deliverance gets a tremendous speedup by compiling the theme into a
+stylesheet.  It reads the XHTML file for the theme, identifies the
+nodes to be replaced, and generates an XSTL with xsl:value-of and
+xsl:apply-template statements in the right location.  Compilation also
+inlines the map data into the XSLT so it doesn't have to included
+later.
+
+Compilation thus gives two benefits:
+
+a.  You can re-brand stuff without learning XSLT and without touching
+the HTML of the theme file.
+
+b. Most of the work needed for per-request transformations is done on
+startup.  Specifically, we avoid the 50ms hit that the "identity
+transformation" pattern seemed to give.
+
+4) *Retrieval*.  mod_python has a Bobo-inspired publisher that walks
+the URL, traversing Python objects using a set of rules.
+
+Deliverance has a similar idea.  The URL provides an identifier into
+the map file to retrieve a map item.  The map item then gives
+instructions on how to find the content for the page and how to render
+it.
+
+In most cases, some Python code will be issued to retrieve a page from
+the CMS.  For this, a very stripped-down skin will be used in the CMS,
+or perhaps no skin at all.  For example, the URL in the map file might
+request the DAV view of the resource, thus giving just the data.  For
+CMF-based systems, this is a 10x speedup.
+
+In other cases, the map might point to a virtual page, as discussed
+above.
+
+The mapping provides some interesting possibilities for integration.
+First, Deliverance could leverage Apache's infrastructure for
+retrieval and caching.  Second, libxml2 has several Python extension
+facilities (XPath functions, custom resolvers) that allow the map to
+act as an integration facility.  Simply put some metadata on a map
+entry to make it look like a resource, with the actual retrieval being
+done with custom code.
+
+5) *Generation*.  Deliverance does not have a parser of any kind.  It
+uses XSLT to generate HTML.  As noted above, for important parts of
+usage, no XSLT knowledge is required.
+
+Using XSLT gives some benefits:
+
+  o Extremely optimized.
+
+  o Extremely documented.
+
+  o Rich tool chain.
+
+  o Maintenance burden belongs to others.
+
+XSLT has a negative reputation.  Thus, Deliverance works hard to allow
+people to avoid using it, except when they need something custom.  For
+example, navigation boxes don't have to be generated by XSLT, they
+could be in the HTML lookup up by the CMS and inserted into the theme.
+
+A Typical Request
+---------------
+
+With that background, how does Deliverance work, end-to-end?  The
+following section starts with an Apache restart, finishing with the
+last byte returned to the browser.
+
+*Note: This describes how things will be, not how they currently are.
+ lxml needs some more work for a couple of things mentioned herein.*
+
+First, Apache is started.  In the conf file, there is a section that
+maps part of the URL space to a mod_python handler.  This handler is
+part of Deliverance.
+
+When the handler module is imported, it performs some one-time
+optimizations on startup:
+
+a. Read the map file, the theme's XHTML, and the site configuration
+into XML DOMs.
+
+b. Read the "blank-compilerdoc" and the compiler stylesheet into a DOM
+and a processor, respectively.
+
+c. Merge everything from (a) into the blank-compilerdoc (later
+replaced by XInclude).
+
+d. Create a compiled theme processor by applying the compiler
+stylesheet against the blank-compilerdoc.  The output is, in fact,
+another XSLT stylesheet.  Namely, it is a "compiled" stylesheet, ready
+to be applied to each incoming request while doing the least amount of
+work needed.
+
+When a request comes in, Apache passes it off to the Python handler
+function in Deliverance.  The handler takes the relevant part of the
+URI and does an XPath lookup in the map, grabbing the node referenced
+by this URI fragment.  This map node contains instructions for the
+next two steps:
+
+  o Retrieve the contents.
+
+  o Format the contents.
+
+The handler then retrieves the X(H)TML for the contents and applies
+the compiled stylesheet.  The compiled stylesheet has a rule for
+handling anything unique about that resource type.
+
+The results are serialized and returned.
+
+Performance
+-----------
+
+Since much of the information needed for rendering a requests is
+statically contained in a specially-tuned, in-memory DOM, performance
+automatically gets a boost.  (This would be the same in Zope.)
+
+The use of XSLT, especially compiled into a well-tuned state, gives
+another big performance win.  Many operations, such as drawing a tree
+or site map, fit the XSLT pattern better than ZPT.  Also, libxslt is a
+much more actively developed project, used by 1,000x the number of
+people, than ZPT.
+
+Memory usage is likely to be an issue.  A content map with 400,000
+entries could occupy 150 Mb of real memory.  However:
+
+  o Few sites have 400,000 public resources.
+
+  o Those that do can afford a gigabyte of RAM.
+
+For requests that don't require a trip to the CMS, 130 requests/sec
+should be expected.
+
+Productivity
+-----------
+
+You can speed up a computer by buying a bigger box.  How do you speed
+up a programmer?  Unfortunately, Zope has accumulated layers and layer
+of idiosyncratic frameworks.  Some of this is hidden from the
+integrator and web designer, but some of it peeks through.
+
+Deliverance is a massive increase in UI productivity.  First and
+foremost, the entire UI can be developed outside of the CMS, using
+static models on disk.  As long as the CMS returns XML that looks the
+same as the sample documents and sample content map, everything should
+just work.
+
+Second, this approach gives multiple tools in the toolchain.  I like
+using Oxygen, a cheap but amazing XML/XSLT authoring environment.  I
+can edit the dynamic UI with files on disk, press a button, and see
+what it will look like when rendered.  If there is an error, I get a
+useful (non-ZPT!) error message, with the cursor sitting on the
+offending line.  I even get a stepwise debugger, where I can watch the
+output get rendered and set a breakpoint to see the evaluation
+context.
+
+Alternatively, someone can run an xsltproc command like this:
+
+xsltproc compiler.xsl blank-compiled.xml | xsltproc - ../tests/sampledoc1.xml
+
+...and see what the page will look like.  Finally, the simple Python
+scripts in Deliverance can be run from the command line to process
+real output in the map.  Each part of the process can be inspected to
+find the offending problem.
+
+More generally, the XML+XSLT approach is fundamentally easier.  In
+ZPT, the data model is exposed via baroque, undocumented APIs
+appearing in TAL expressions.  In XML, you just look at the file and
+visually see the data model.  XPath gives a wonderful, simple, but
+powerful way to manipulate the data model.  And although XSLT is
+baroque, so is the messy pile of deconstructed macros and slots
+appearing ad-hoc in most large-scale Zope apps.
+
+This approach gives other kinds of productivity.  For example, there
+are tons of books, and Google has an answer to every question you
+might have.  Why?  Because the installed base of XML and XSLT is four
+orders of magnitude higher than Zope+CMF+ZPT+[CPS/Plone/Silva].
+
