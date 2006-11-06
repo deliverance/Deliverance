@@ -1,20 +1,15 @@
 """
 Deliverance theming as WSGI middleware
-
-Deliverance applies a theme to content.
 """
 
 import re
 import urlparse
 import urllib
 from lxml import etree
-#from lxml.etree import HTML as parseHTML 
 from htmlserialize import decodeAndParseHTML as parseHTML
 from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
-#from interpreter import Renderer
-#from xslt import Renderer
 from htmlserialize import tostring
 from utils import DeliveranceError
 from utils import DELIVERANCE_ERROR_PAGE
@@ -28,8 +23,21 @@ DELIVERANCE_BASE_URL = 'deliverance.base-url'
 
 
 class DeliveranceMiddleware(object):
+    """
+    a DeliveranceMiddleware object exposes a single deliverance 
+    tranformation as a WSGI middleware component. 
+    """
 
     def __init__(self, app, theme_uri, rule_uri, renderer='py'):
+        """
+        initializer
+        
+        app: wsgi application which this middleware wraps. 
+        theme_uri: uri referring the the theme document 
+        rule_uri: uri referring to the deliverance rules document 
+        renderer: selects deliverance render class to utilize when 
+          performing transformations, may be 'py' or 'xslt'
+        """
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
@@ -48,6 +56,10 @@ class DeliveranceMiddleware(object):
             raise ValueError("Unknown Renderer: %s - Expecting 'py' or 'xslt'" % renderer)
 
     def get_renderer(self,environ):
+        """
+        retrieve the deliverance Renderer representing the transformation this 
+        middlware represents. Renderer may change according to caching rules. 
+        """
         try:
             self._lock.acquire()
             if not self._renderer or self.cache_expired():
@@ -58,6 +70,11 @@ class DeliveranceMiddleware(object):
             self._lock.release()
 
     def create_renderer(self,environ):
+        """
+        construct a new deliverance Renderer from the 
+        information passed to the initializer.  A new copy 
+        of the theme and rules is retrieved. 
+        """
         theme = self.theme(environ)
         rule = self.rule(environ)
         full_theme_uri = urlparse.urljoin(
@@ -96,9 +113,16 @@ class DeliveranceMiddleware(object):
 
         
     def cache_expired(self):
+        """
+        returns true if the stored Renderer should be refreshed 
+        """
         return self._cache_time + self._timeout < datetime.datetime.now()
 
     def rule(self, environ):
+        """
+        retrieves the data referred to by the rule_uri passed to the 
+        initializer. 
+        """
         try:
             return self.get_resource(environ,self.rule_uri)
         except Exception, message:
@@ -109,6 +133,10 @@ class DeliveranceMiddleware(object):
             raise DeliveranceError(newmessage)
 
     def theme(self, environ):
+        """
+        retrieves the data referred to by the theme_uri passed to the 
+        initializer. 
+        """
         try:
             return self.get_resource(environ,self.theme_uri)
         except Exception, message:
@@ -119,6 +147,13 @@ class DeliveranceMiddleware(object):
 
 
     def __call__(self, environ, start_response):
+        """
+        WSGI entrypoint, responds to the request in 
+        environ. responses from the wrapped WSGI 
+        application of type text/html are themed 
+        using the transformation specified in the 
+        initializer. 
+        """
         try:
             qs = environ.get('QUERY_STRING', '')
             environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
@@ -159,16 +194,28 @@ class DeliveranceMiddleware(object):
             return [ errpage ]
 
     def should_intercept(self, status, headers):
+        """
+        returns true if the status and headers given 
+        specify a response from the wrapped middleware 
+        which deliverance may need to theme. 
+        """
         type = header_value(headers, 'content-type')
         if type is None:
             return False
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
     def filter_body(self, environ, body):
+        """
+        returns the result of the deliverance transformation on the string 'body' 
+        in the context of environ. The result is a string containing HTML. 
+        """
         content = self.get_renderer(environ).render(parseHTML(body))
         return tostring(content)
 
     def get_resource(self, environ, uri):
+        """
+        retrieve the data referred to by the uri given. 
+        """
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
         uri = urlparse.urljoin(internalBaseURL, uri)
         
@@ -178,18 +225,30 @@ class DeliveranceMiddleware(object):
             return self.get_external_resource(uri)
 
     def relative_uri(self, uri):
+        """
+        returns true if uri is relative, false if 
+        the uri is absolute. 
+        """
         if re.search(r'^[a-zA-Z]+:', uri):
             return False
         else:
             return True
 
     def get_external_resource(self, uri):
+        """
+        get the data referred to by the uri given 
+        using urllib (not through the wrapped app)
+        """
         f = urllib.urlopen(uri)
         content = f.read()
         f.close()
         return content
 
     def get_internal_resource(self, environ, uri):
+        """
+        get the data referred to by the uri given 
+        by using the wrapped WSGI application 
+        """
         environ = environ.copy()
         if not uri.startswith('/'):
             uri = '/' + uri

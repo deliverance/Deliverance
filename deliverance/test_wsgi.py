@@ -25,6 +25,12 @@ url_app = StaticURLParser(url_data)
 
 
 def html_string_compare(astr, bstr):
+    """
+    compare to strings containing html based on html 
+    equivalence. Raises ValueError if the strings are 
+    not equivalent. 
+    """
+
     def reporter(x):
         print x
 

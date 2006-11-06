@@ -67,6 +67,11 @@ class RendererBase(object):
     NOCONTENT_KEY = "nocontent"
 
     def get_theme_el(self,rule,theme):
+        """
+        get the element referred to by the "theme" attribute of the 
+        rule given in the theme document given. theme and rule 
+        should be lxml etree structures. 
+        """
         theme_els = theme.xpath(rule.attrib[self.RULE_THEME_KEY])
         if len(theme_els)== 0:
             e = self.format_error("no element found in theme", rule)

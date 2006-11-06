@@ -41,12 +41,30 @@ class Renderer(RendererBase):
     content at render time
     """
 
-    def __init__(self,theme,theme_uri,rule, rule_uri, reference_resolver=None):
+    def __init__(self, theme, theme_uri, rule, rule_uri, reference_resolver=None):
+        """
+        initializer. 
+
+        theme: an lxml etree represenatation of the theme page 
+        theme_uri: a uri referring to the theme page, used to 
+                    make relative links in the theme absolute 
+        rule: an lxml etree representation of the deliverance rules
+               performed by this transformation 
+        rule_uri: a uri representing the location of the rules document
+
+        reference_resolver: a function taking a url a parse type and 
+         and an encoding type returning the data referred to by the url 
+         in the manner specified. if parse is set to 'xml', the result 
+         should be an lxml etree structure, otherwise if encoding 
+         is specified, the data should be decoded using this encoding 
+         before being returned. 
+                
+        """
         theme_copy = copy.deepcopy(theme)
         self.rules = rule
         self.rules_uri = rule_uri
 
-        self.fixup_links(theme_copy,theme_uri)
+        self.fixup_links(theme_copy, theme_uri)
         self.xsl_escape_comments(theme_copy)
 
         if reference_resolver:
@@ -70,7 +88,13 @@ class Renderer(RendererBase):
     
         
 
-    def render(self,content):
+    def render(self, content):
+        """
+        content: an lxml etree structure representing the content to render 
+        returns an lxml etree structure representing the result of the 
+                transformation represented by this class performed on the 
+                given content. 
+        """
         if content:
             if self.transform_drop:
                 content = self.transform_drop(content)
@@ -81,8 +105,12 @@ class Renderer(RendererBase):
             return self.transform(etree.Element("dummy")).getroot()
 
 
-    def apply_rules(self,rules,theme):
-
+    def apply_rules(self, rules, theme):
+        """
+        prepares an xslt transforms which accpet a content document. 
+        The transforms represent the application of 
+        the rules given in the context of the theme given. 
+        """
         drop_rules, other_rules = self.separate_drop_rules(rules)
 
         if len(drop_rules):
@@ -92,10 +120,14 @@ class Renderer(RendererBase):
             self.transform_drop = etree.XSLT(self.xslt_dropper)
 
         for rule in other_rules:
-            self.apply_rule(rule,theme)
+            self.apply_rule(rule, theme)
 
 
-    def apply_rule(self,rule,theme):
+    def apply_rule(self, rule, theme):
+        """
+        dispatch to proper rule handling function for 
+        the rule given. 
+        """
         if rule.tag == self.APPEND_RULE_TAG:
             self.apply_append(rule,theme)
         elif rule.tag == self.PREPEND_RULE_TAG:
@@ -117,14 +149,17 @@ class Renderer(RendererBase):
                 "Rule %s (%s) not understood" % (
                     rule.tag, etree.tostring(rule)))
 
-    def apply_append(self,rule,theme):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_append(self, rule, theme):
+        """
+        prepare transform elements for "append" rule 
+        """
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
         # add an element that produces an error in the theme if 
         # no content is matched 
-        self.add_conditional_missing_content_error(theme,rule)
+        self.add_conditional_missing_content_error(theme, rule)
 
 
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
@@ -133,14 +168,17 @@ class Renderer(RendererBase):
         self.debug_append(theme_el, copier, rule)
 
 
-    def apply_prepend(self,rule,theme):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_prepend(self, rule, theme):
+        """
+        prepare transform elements for "prepend" rule 
+        """
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
         # add an element that produces an error in the theme if 
         # no content is matched 
-        self.add_conditional_missing_content_error(theme,rule)
+        self.add_conditional_missing_content_error(theme, rule)
 
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
 
@@ -149,8 +187,11 @@ class Renderer(RendererBase):
         self.debug_prepend(theme_el, copier, rule)
 
 
-    def apply_replace(self,rule,theme):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_replace(self, rule, theme):
+        """
+        prepare transform elements for "replace" rule 
+        """
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
@@ -159,7 +200,7 @@ class Renderer(RendererBase):
                 theme, self.format_error("cannot replace whole theme", rule))            
             return
 
-        self.add_conditional_missing_content_error(theme,rule)      
+        self.add_conditional_missing_content_error(theme, rule)      
 
         copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
         copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
@@ -175,8 +216,12 @@ class Renderer(RendererBase):
         self.debug_replace(theme_el,choose,rule)
 
 
-    def apply_copy(self,rule,theme):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_copy(self, rule, theme):
+        """
+        prepare transform elements for "prepend" rule 
+        """
+
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
 
@@ -203,14 +248,17 @@ class Renderer(RendererBase):
                                           rule.attrib[self.RULE_CONTENT_KEY], 
                                           normal_theme_el, 
                                           copy_theme_el)
-        self.debug_replace(theme_el,choose,rule)
+        self.debug_replace(theme_el, choose,rule)
         copy_theme_el.tail = None
         normal_theme_el.tail = None
         
 
    
-    def apply_append_or_replace(self,rule,theme):
-        theme_el = self.get_theme_el(rule,theme)
+    def apply_append_or_replace(self, rule, theme):
+        """
+        prepare transform elements for "append-or-replace" rule 
+        """
+        theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
         remove_tag = self.get_tag_from_xpath(rule.attrib[self.RULE_CONTENT_KEY])
@@ -220,7 +268,7 @@ class Renderer(RendererBase):
 
         # add an element that produces an error in the theme if 
         # no content is matched 
-        self.add_conditional_missing_content_error(theme,rule)
+        self.add_conditional_missing_content_error(theme, rule)
 
         for el in theme_el:
             if el.tag == remove_tag:
@@ -236,8 +284,10 @@ class Renderer(RendererBase):
         self.debug_append(theme_el, copier, rule)
 
 
-    def apply_drop(self,rule,theme):
-        
+    def apply_drop(self, rule, theme):
+        """
+        prepare transform elements for "drop" rule 
+        """
         if self.RULE_THEME_KEY in rule.attrib:
             if len(theme.xpath(rule.attrib[self.RULE_THEME_KEY])) == 0:
                 if rule.get(self.NOCONTENT_KEY) == 'ignore':
@@ -265,7 +315,7 @@ class Renderer(RendererBase):
 
 
 
-    def xsl_escape_comments(self,doc):
+    def xsl_escape_comments(self, doc):
         """
         replaces comment nodes with xsl:comment nodes so they will 
         appear in the result of a transform rather than being 
@@ -275,7 +325,7 @@ class Renderer(RendererBase):
         for c in comment_nodes:
             escaped = etree.Element("{%s}comment" % nsmap["xsl"])
             escaped.text = c.text 
-            self.replace_element(c,escaped)
+            self.replace_element(c, escaped)
     
     def add_conditional_missing_content_error(self,theme,rule):
         """
@@ -292,7 +342,7 @@ class Renderer(RendererBase):
             conditional = etree.Element("{%s}if" % nsmap["xsl"])
             conditional.set("test", "count(%s)=0" % rule.attrib[self.RULE_CONTENT_KEY])
             conditional.append(err)
-            self.add_to_body_start(theme,conditional)
+            self.add_to_body_start(theme, conditional)
         
 
     def make_when_otherwise(self, test, whenbody, otherwisebody):

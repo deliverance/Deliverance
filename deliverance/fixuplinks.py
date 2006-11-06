@@ -1,3 +1,8 @@
+"""
+utilities for manipulating html links 
+"""
+
+
 from htmlserialize import decodeAndParseHTML, tostring
 import re
 
@@ -27,11 +32,15 @@ def fixup_links(doc, link_repl_func,
     fixup_css_links(doc, link_repl_func)
 
 def remove_base_tags_from_document(doc):
+    """
+    removes all html <base href=""> tags 
+    from the document given. 
+    """
     basetags = doc.xpath('//base[@href]')
     for b in basetags:
         b.getparent().remove(b)
     
-CSS_URL_PAT = re.compile(r'url\((.*?)\)',re.I)
+CSS_URL_PAT = re.compile(r'url\((.*?)\)', re.I)
 def fixup_css_links(doc, link_repl_func):
     """ 
     prepends url(...) in css style elements to be 

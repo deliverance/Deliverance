@@ -15,6 +15,24 @@ class Renderer(RendererBase):
     def __init__(self, theme, theme_uri,
                  rule, rule_uri,
                  reference_resolver=None):  
+        """
+        initializer. 
+
+        theme: an lxml etree represenatation of the theme page 
+        theme_uri: a uri referring to the theme page, used to 
+                    make relative links in the theme absolute 
+        rule: an lxml etree representation of the deliverance rules
+               performed by this transformation 
+        rule_uri: a uri representing the location of the rules document
+
+        reference_resolver: a function taking a url a parse type and 
+         and an encoding type returning the data referred to by the url 
+         in the manner specified. if parse is set to 'xml', the result 
+         should be an lxml etree structure, otherwise if encoding 
+         is specified, the data should be decoded using this encoding 
+         before being returned. 
+                
+        """
         self.theme = self.fixup_links(theme, theme_uri)
         self.rules = rule
         self.rules_uri = rule_uri
@@ -30,6 +48,12 @@ class Renderer(RendererBase):
 
 
     def render(self, content):
+        """
+        content: an lxml etree structure representing the content to render 
+        returns an lxml etree structure representing the result of the 
+                transformation represented by this class performed on the 
+                given content. 
+        """
         result = copy.deepcopy(self.theme)
         input = copy.deepcopy(content)
         self.apply_rules(self.rules, result, input)
@@ -37,7 +61,13 @@ class Renderer(RendererBase):
 
 
     def apply_rules(self, rules, theme, content):
-
+        """
+        applies the deliverance rules given on the 
+        theme and content given. drop rules are 
+        run before any other rules. 
+        rules, theme and content should be lxml etree 
+        structures. 
+        """
         drop_rules, other_rules = self.separate_drop_rules(rules)
 
         # process all drop rules first 
@@ -49,6 +79,12 @@ class Renderer(RendererBase):
 
 
     def apply_rule(self, rule, theme, content):
+        """
+        calls proper rule application function for 
+        the rule given on the theme and content 
+        given. rule, theme and content should be 
+        lxml etree structures. 
+        """
         if rule.tag == self.APPEND_RULE_TAG:
             self.apply_append(rule, theme, content)
         elif rule.tag == self.PREPEND_RULE_TAG:
@@ -71,6 +107,11 @@ class Renderer(RendererBase):
                     rule.tag, etree.tostring(rule)))
 
     def apply_append(self,rule,theme,content):
+        """
+        function that performs the deliverance "append" 
+        rule given by rule on the theme and content given. 
+        see deliverance specification 
+        """
         theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
@@ -113,7 +154,11 @@ class Renderer(RendererBase):
         theme_el.extend(non_text_els)
 
     def debug_append(self, theme_el, content_els, rule):
-        
+        """
+        debugging variant of the deliverance "append" 
+        rule (run when the rule has debugging enabled) 
+        see deliverance specification 
+        """
         comment_before,comment_after = self.make_debugging_comments(rule)
         content_els[:0] = [comment_before]
         content_els.append(comment_after)
@@ -127,6 +172,11 @@ class Renderer(RendererBase):
 
 
     def apply_prepend(self, rule, theme, content):
+        """
+        function that performs the deliverance "prepend" 
+        rule given by rule on the theme and content given. 
+        see deliverance specification 
+        """
         theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
@@ -179,7 +229,12 @@ class Renderer(RendererBase):
                 non_text_els[-1].tail = old_start_text
 
     def debug_prepend(self, theme_el, content_els, rule):        
-        
+        """
+        debugging variant of the deliverance "prepend" 
+        rule (run when the rule has debugging enabled) 
+        see deliverance specification 
+        """
+
         comment_before, comment_after = self.make_debugging_comments(rule)
         content_els[:0] = [comment_before]
         content_els.append(comment_after)
@@ -195,6 +250,11 @@ class Renderer(RendererBase):
         theme_el[:0] = non_text_els
 
     def apply_replace(self, rule, theme, content):
+        """
+        function that performs the deliverance "replace" 
+        rule given by rule on the theme and content given. 
+        see deliverance specification 
+        """
         theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
@@ -262,6 +322,11 @@ class Renderer(RendererBase):
                 non_text_els[0].tail = preserve_tail
 
     def debug_replace(self,theme_el,content_els,rule):
+        """
+        debugging variant of the deliverance "replace" 
+        rule (run when the rule has debugging enabled) 
+        see deliverance specification 
+        """
         comment_before, comment_after = self.make_debugging_comments(rule)
         content_els[:0] = [comment_before]
         content_els.append(comment_after)
@@ -280,6 +345,12 @@ class Renderer(RendererBase):
         parent[i+1:i+1] = non_text_els[1:]
         
     def _xpath_copy(self, source, xpath):
+        """
+        helper function that returns a deep copy of the 
+        element referred to by 'xpath' in the 'source'
+        document given. raises XPathSyntaxError if 
+        xpath is invalid. 
+        """
         try:
             found_element = source.xpath(xpath)
         except etree.XPathSyntaxError, e:
@@ -287,6 +358,11 @@ class Renderer(RendererBase):
         return copy.deepcopy(found_element)
 
     def apply_copy(self, rule, theme, content):
+        """
+        function that performs the deliverance "copy" 
+        rule given by rule on the theme and content given. 
+        see deliverance specification 
+        """
         theme_el = self.get_theme_el(rule,theme)
         if theme_el is None:
             return
@@ -323,6 +399,11 @@ class Renderer(RendererBase):
             
 
     def apply_append_or_replace(self, rule, theme, content):
+        """
+        function that performs the deliverance "append-or-replace" 
+        rule given by rule on the theme and content given. 
+        see deliverance specification 
+        """
         theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 
@@ -358,6 +439,11 @@ class Renderer(RendererBase):
 
 
     def apply_drop(self, rule, theme, content):
+        """
+        function that performs the deliverance "drop" 
+        rule given by rule on the theme and content given. 
+        see deliverance specification 
+        """
         for context in ('theme', 'content'):
             if context not in rule.attrib: continue
             document = locals()[context]
@@ -379,6 +465,10 @@ class Renderer(RendererBase):
 
 
     def strip_tails(self, els):
+        """
+        for each lxml etree element in the list els, 
+        set the tail of the element to None
+        """
         for el in els:
             el.tail = None
 
@@ -386,7 +476,7 @@ class Renderer(RendererBase):
     def attach_tails(self,els):
         """
         whereever an lxml element in the list is followed by 
-        a string, set the tail of the lxml element to the string 
+        a string, set the tail of the lxml element to that string 
         """
         for index,el in enumerate(els): 
             # if we run into a string after the current element, 
@@ -398,6 +488,10 @@ class Renderer(RendererBase):
 
 
     def make_debugging_comments(self, rule):
+        """
+        returns a pair of comments for insertion before and 
+        after work done by the rule given during debugging. 
+        """
         comment_before = etree.Comment("Deliverance: applying rule %s" % etree.tostring(rule))
         comment_after = etree.Comment("Deliverance: done applying rule %s" % etree.tostring(rule))
         return comment_before, comment_after
