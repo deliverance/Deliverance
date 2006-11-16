@@ -110,6 +110,13 @@ def cases(fn, renderer_class):
 
 
 def main(args=None):
+    # Kind of a crude way to pass info to nose...
+    os.environ.update(dict(
+        NOSE_WHERE=os.path.dirname(__file__),
+        NOSE_DETAILED_ERRORS='t',
+        NOSE_WITH_DOCTEST='t',
+        NOSE_DOCTEST_EXTENSION='.txt',
+        NOSE_WITH_MISSING_TESTS='t'))
     import nose; nose.main() 
 
 if __name__ == '__main__':
