@@ -3,7 +3,7 @@ import sys
 from lxml import etree
 from paste.fixture import TestApp
 from paste.urlparser import StaticURLParser
-from wsgifilter import DeliveranceMiddleware
+from deliverance.wsgimiddleware import DeliveranceMiddleware
 from formencode.doctest_xml_compare import xml_compare
 from htmlserialize import tostring
 

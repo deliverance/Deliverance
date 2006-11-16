@@ -4,7 +4,7 @@ passing the request to another HTTP server
 """
 
 from paste.proxy import TransparentProxy
-from deliverance import wsgifilter
+from deliverance.wsgimiddleware import DeliveranceMiddleware
 from deliverance.relocateresponse import RelocateMiddleware
 
 class ProxyDeliveranceApp(object):
@@ -18,7 +18,7 @@ class ProxyDeliveranceApp(object):
         self.transparent = transparent
         self.debug_headers = debug_headers
         self.subapp = self.make_app()
-        self.deliverance_app = wsgifilter.DeliveranceMiddleware(
+        self.deliverance_app = DeliveranceMiddleware(
             self.subapp, theme_uri, rule_uri, renderer)
         self.relocate_content = relocate_content
 
