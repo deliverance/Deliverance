@@ -4,6 +4,7 @@ utilities for manipulating html links
 
 
 from htmlserialize import decodeAndParseHTML, tostring
+import urlparse
 import re
 
 def fixup_text_links(doc, link_repl_func, remove_base_tags=True):
@@ -22,7 +23,7 @@ def fixup_links(doc, link_repl_func,
     output of that function replaces the link.
     """
     if remove_base_tags:
-        remove_base_tags_from_document(doc)
+        resolve_base_tags_in_document(doc)
 
     for attrib in 'href', 'src':
         els = doc.xpath('//*[@%s]' % attrib)
@@ -31,14 +32,23 @@ def fixup_links(doc, link_repl_func,
 
     fixup_css_links(doc, link_repl_func)
 
-def remove_base_tags_from_document(doc):
+def resolve_base_tags_in_document(doc):
     """
     removes all html <base href=""> tags 
     from the document given. 
     """
+    base_href = None
     basetags = doc.xpath('//base[@href]')
     for b in basetags:
+        base_href = b.attrib['href']
         b.getparent().remove(b)
+    if base_href is None:
+        return
+    # Now that we have a base_href (blech) we have to fix up all the
+    # links in the document with this new information.
+    def link_repl(href):
+        return urlparse.urljoin(base_href, href)
+    fixup_links(doc, link_repl, remove_base_tags=False)
     
 CSS_URL_PAT = re.compile(r'url\((.*?)\)', re.I)
 def fixup_css_links(doc, link_repl_func):

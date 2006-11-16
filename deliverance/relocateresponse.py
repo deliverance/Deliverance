@@ -2,10 +2,11 @@
 Takes a response (headers + content) and relocates it, changing domain
 names and paths.
 """
-import fixuplinks
 import urlparse
+import re
 from paste.request import construct_url
 from paste.response import header_value
+import fixuplinks
 
 def relocate_response(headers, content, base_href, old_href, new_href):
     """
@@ -29,8 +30,14 @@ def relocate_content(content, base_href, old_href, new_href):
         return relocate_href(href, base_href, old_href, new_href)
     return fixuplinks.fixup_text_links(content, sub_link)
 
+# This catches the case of http://foo, which is equivalent to
+# http://foo/ :
+_domain_no_slash_re = re.compile(r'^[a-z]+://[^/]+$', re.I)
+
 def relocate_href(href, base_href, old_href, new_href):
     real_href = urlparse.urljoin(base_href, href)
+    if _domain_no_slash_re.search(real_href):
+        real_href += '/'
     if not real_href.startswith(old_href):
         return href
     return new_href + real_href[len(old_href):]
