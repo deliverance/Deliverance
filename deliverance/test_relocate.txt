@@ -47,14 +47,23 @@ Relative links are handled::
     >>> relocate_href('index.html', **kw)
     'https://new/base/index.html'
 
-Now we look at header rewriting.  Note that Location is rewritten, but
-other headers are not.  (Set-Cookie should also get some rewriting,
-but does not yet)::
+Now we look at header rewriting.  Note that Location and Set-Cookie is
+rewritten, but other headers are not::
 
-    >>> relocate_headers([('X-Unknown', 'http://old'),
-    ...                   ('Location', 'http://old/foo/bar')],
-    ...                  **kw)
-    [('X-Unknown', 'http://old'), ('Location', 'https://new/foo/bar')]
+    >>> relocate_headers(
+    ...     [('X-Unknown', 'http://old'),
+    ...      ('Location', 'http://old/foo/bar'),
+    ...      ('Set-Cookie', 'foo=bar; domain=old')],
+    ...     **kw)
+    [('X-Unknown', 'http://old'), ('Location', 'https://new/foo/bar'), ('Set-Cookie', 'foo=bar; domain=new')]
+
+We'll even rewrite wildcard domains, though that might not be a good
+idea::
+
+    >>> relocate_headers(
+    ...     [('Set-Cookie', 'foo=bar; domain=*.old')],
+    ...     **kw)
+    [('Set-Cookie', 'foo=bar; domain=*.new')]
 
 But the location header won't be rewritten if it points to a
 third-party site::

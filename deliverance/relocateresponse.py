@@ -22,6 +22,16 @@ def relocate_headers(headers, base_href, old_href, new_href):
     for name, value in headers:
         if name.lower() == 'location':
             value = relocate_href(value, base_href, old_href, new_href)
+        if name.lower() == 'set-cookie':
+            if 'domain' in value:
+                # We have to rewrite the domain
+                old_domain = urlparse.urlsplit(old_href)[1].split(':')[0]
+                new_domain = urlparse.urlsplit(new_href)[1].split(':')[0]
+                def repl(match):
+                    return match.group(1)+new_domain
+                value = re.sub(
+                    r'(domain=[^ ",]*)%s' % re.escape(old_domain),
+                    repl, value)
         new_headers.append((name, value))
     return new_headers
 
