@@ -249,6 +249,11 @@ class DeliveranceMiddleware(object):
         get the data referred to by the uri given 
         by using the wrapped WSGI application 
         """
+        if 'paste.recursive.include' in environ:
+            # Try to do the redirect this way...
+            includer = environ['paste.recursive.include']
+            res = includer(uri)
+            return res.body
         environ = environ.copy()
         if not uri.startswith('/'):
             uri = '/' + uri
