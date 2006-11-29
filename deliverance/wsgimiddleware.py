@@ -36,7 +36,8 @@ class DeliveranceMiddleware(object):
         theme_uri: uri referring the the theme document 
         rule_uri: uri referring to the deliverance rules document 
         renderer: selects deliverance render class to utilize when 
-          performing transformations, may be 'py' or 'xslt'
+          performing transformations, may be 'py' or 'xslt' or a
+          Renderer class
         """
         self.app = app
         self.theme_uri = theme_uri
@@ -52,8 +53,10 @@ class DeliveranceMiddleware(object):
         elif renderer == 'xslt':
             import xslt
             self._rendererType = xslt.Renderer
-        else:
+        elif renderer is None or isinstance(renderer, basestring):
             raise ValueError("Unknown Renderer: %s - Expecting 'py' or 'xslt'" % renderer)
+        else:
+            self._rendererType = renderer
 
     def get_renderer(self,environ):
         """
