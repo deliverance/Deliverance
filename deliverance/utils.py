@@ -1,14 +1,22 @@
 from lxml import etree
 import re
 import urlparse
-import htmlserialize
+import copy
+from deliverance import htmlserialize
 
 # Test if the libxml2 fix is in place
 html = etree.HTML('<html><head><script>some text</script></head></html>')
 if html[0][0].text != 'some text':
     import warnings
     warnings.warn(
-        'Deliverance requires the CVS HEAD version of libxml2')
+        'Deliverance requires a newer version of libxml2 (1.1.18 or later)')
+
+# And another fix:
+html_comment = etree.Comment('test comment')
+if copy.deepcopy(html_comment) is None:
+    import warnings
+    warnings.warn(
+        'Deliverance requires a newer version of libxml2 (1.1.18 or later)')
 
 class DeliveranceError(Exception):
     """
