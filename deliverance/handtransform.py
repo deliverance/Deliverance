@@ -1,9 +1,9 @@
 import sys 
 from lxml import etree
-from htmlserialize import tostring
+from deliverance.htmlserialize import tostring
 import urllib
-from interpreter import Renderer as PythonRenderer
-from xslt import Renderer as XSLTRenderer
+from deliverance.interpreter import Renderer as PythonRenderer
+from deliverance.xslt import Renderer as XSLTRenderer
 from optparse import OptionParser
 import re
 import os 

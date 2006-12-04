@@ -5,7 +5,7 @@ from paste.fixture import TestApp
 from paste.urlparser import StaticURLParser
 from deliverance.wsgimiddleware import DeliveranceMiddleware
 from formencode.doctest_xml_compare import xml_compare
-from htmlserialize import tostring
+from deliverance.htmlserialize import tostring
 
 static_data = os.path.join(os.path.dirname(__file__), 'test-data', 'static')
 tasktracker_data = os.path.join(os.path.dirname(__file__), 'test-data', 'tasktracker')
@@ -73,7 +73,7 @@ def do_text(renderer_type, name):
     html_string_compare(res.body, res2.body)
 
 def do_tasktracker(renderer_type, name):
-    wsgi_app = DeliveranceMiddleware(tasktracker_app, 'http://www.nycsr.org/nyc/video.php', 
+    wsgi_app = DeliveranceMiddleware(tasktracker_app, 'http://codespeak.net/svn/z3/deliverance/trunk/deliverance/test-data/nycsr/nycsr_theme.html', 
                                      'tasktracker.xml',renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/content.html')
@@ -91,7 +91,7 @@ def do_xinclude(renderer_type, name):
 
 
 def do_nycsr(renderer_type, name):
-    wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://www.nycsr.org','nycsr.xml',
+    wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://codespeak.net/svn/z3/deliverance/trunk/deliverance/test-data/nycsr/nycsr_theme.html','nycsr.xml',
                                      renderer_type)
     app = TestApp(wsgi_app)
     res = app.get('/openplans.html')

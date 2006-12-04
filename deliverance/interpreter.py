@@ -1,9 +1,9 @@
 from lxml import etree
-import xinclude 
+from deliverance import xinclude 
 import copy
-import utils
-from utils import RuleSyntaxError
-from utils import RendererBase
+from deliverance import utils
+from deliverance.utils import RuleSyntaxError
+from deliverance.utils import RendererBase
 
 class Renderer(RendererBase):
     """

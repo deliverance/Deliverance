@@ -11,8 +11,8 @@ from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
 from htmlserialize import tostring
-from utils import DeliveranceError
-from utils import DELIVERANCE_ERROR_PAGE
+from deliverance.utils import DeliveranceError
+from deliverance.utils import DELIVERANCE_ERROR_PAGE
 import sys 
 import datetime
 import threading

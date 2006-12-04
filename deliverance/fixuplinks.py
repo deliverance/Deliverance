@@ -3,7 +3,7 @@ utilities for manipulating html links
 """
 
 
-from htmlserialize import decodeAndParseHTML, tostring
+from deliverance.htmlserialize import decodeAndParseHTML, tostring
 import urlparse
 import re
 

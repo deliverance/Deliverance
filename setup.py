@@ -23,6 +23,7 @@ setup(name="Deliverance",
 	'formencode',
 	'elementtree',
 	'nose',
+	'wsgifilter',
 	'setuptools'
       ],
       include_package_data=True,
