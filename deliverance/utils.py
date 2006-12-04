@@ -16,7 +16,7 @@ html_comment = etree.Comment('test comment')
 if copy.deepcopy(html_comment) is None:
     import warnings
     warnings.warn(
-        'Deliverance requires a newer version of libxml2 (1.1.18 or later)')
+        'Deliverance requires a newer version of lxml (1.2 or later)')
 
 class DeliveranceError(Exception):
     """
