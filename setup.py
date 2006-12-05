@@ -33,7 +33,7 @@ setup(name="Deliverance",
 
       [console_scripts]
       deliverance-proxy = deliverance.proxycommand:main
-      deliverance-tests = deliverance.tests:main
+      deliverance-tests = deliverance.testrunner:main
       deliverance-speed = deliverance.test_speed:main
       deliverance-handtransform = deliverance.handtransform:main
       """,

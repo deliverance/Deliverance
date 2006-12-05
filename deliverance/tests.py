@@ -1,5 +1,6 @@
 import unittest
 import os
+import sys
 from lxml import etree
 from formencode.doctest_xml_compare import xml_compare
 from deliverance.interpreter import Renderer as PyRenderer
@@ -8,6 +9,8 @@ import copy
 import urllib
 
 RENDERER_CLASSES = [ PyRenderer, XSLTRenderer ]
+
+select_tests = []
 
 class DeliveranceTestCase:
 
@@ -60,9 +63,12 @@ def test_examples():
                 yield case
 
 def cases(fn, renderer_class):
-    if not os.path.basename(fn).startswith('test_'):
+    basename = os.path.basename(fn)
+    if not basename.startswith('test_'):
         return
     if fn.endswith('~'):
+        return
+    if select_tests and basename not in select_tests:
         return
     try:
         doc = etree.parse(fn)
@@ -107,17 +113,3 @@ def cases(fn, renderer_class):
 
 
 
-
-
-def main(args=None):
-    # Kind of a crude way to pass info to nose...
-    os.environ.update(dict(
-        NOSE_WHERE=os.path.dirname(__file__),
-        NOSE_DETAILED_ERRORS='t',
-        NOSE_WITH_DOCTEST='t',
-        NOSE_DOCTEST_EXTENSION='.txt',
-        NOSE_WITH_MISSING_TESTS='t'))
-    import nose; nose.main() 
-
-if __name__ == '__main__':
-    main()
