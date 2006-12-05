@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deliverance-test-suite>
+
+<!-- tests that move="1" moves the content -->
+
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme="//div[@id='content']" content="//*[@id='body']" />
+    <copy theme="//div[@id='nav']" content="//*[@id='extra_nav']" move="1" />
+  </rules>
+
+  <theme base="http://example.com"> 
+   <html>
+    <head>
+     <title>Blah</title>
+    </head>
+    <body>
+     <div id="nav">
+      <div id="extra_nav">some nav</div>
+     </div>
+     <div id="content">Dummy Content</div>
+    </body>
+   </html>
+  </theme>
+
+  <content>
+   <html>
+    <body>
+     <div id="body">Real Content 
+      <div id="extra_nav">nav content</div>
+     </div>
+     <span class="bar">1</span>
+     <span class="quux">2</span>
+     <p>zzz</p>
+     <span class="bar">3</span>
+    </body>
+   </html>
+  </content>
+ 
+  <output>
+   <html>
+    <head>
+     <title>Blah</title>
+    </head>
+    <body>
+     <div id="nav">nav content</div>
+     <div id="body">Real Content</div>
+    </body>
+   </html>
+  </output> 
+</deliverance-test>
+
+<!-- tests that move doesn't effect content if the theme is missing -->
+
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme="//div[@id='content']" content="//*[@id='body']" />
+    <copy theme="//div[@id='nav']" content="//*[@id='extra_nav']" move="1" notheme="ignore" />
+  </rules>
+
+  <theme base="http://example.com"> 
+   <html>
+    <head>
+     <title>Blah</title>
+    </head>
+    <body>
+     <div id="content">Dummy Content</div>
+    </body>
+   </html>
+  </theme>
+
+  <content>
+   <html>
+    <body>
+     <div id="body">Real Content 
+      <div id="extra_nav">nav content</div>
+     </div>
+    </body>
+   </html>
+  </content>
+ 
+  <output>
+   <html>
+    <head>
+     <title>Blah</title>
+    </head>
+    <body>
+     <div id="body">Real Content
+      <div id="extra_nav">nav content</div>
+     </div>
+    </body>
+   </html>
+  </output> 
+</deliverance-test>
+
+<!-- tests move with append -->
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme="//div[@id='content']" content="//*[@id='body']" />
+    <append theme="//div[@id='nav']" content="//*[@id='extra_nav']" move="1" />
+  </rules>
+
+  <theme base="http://example.com"> 
+   <html>
+    <head>
+     <title>Blah</title>
+    </head>
+    <body>
+     <div id="nav">some nav</div>
+     <div id="content">Dummy Content</div>
+    </body>
+   </html>
+  </theme>
+
+  <content>
+   <html>
+    <body>
+     <div id="body">Real Content 
+      <div id="extra_nav">nav content</div>
+     </div>
+    </body>
+   </html>
+  </content>
+ 
+  <output>
+   <html>
+    <head>
+     <title>Blah</title>
+    </head>
+    <body>
+     <div id="nav">some nav
+       <div id="extra_nav">nav content</div>
+     </div>
+     <div id="body">Real Content</div>
+    </body>
+   </html>
+  </output> 
+</deliverance-test>
+
+
+
+
+</deliverance-test-suite>
