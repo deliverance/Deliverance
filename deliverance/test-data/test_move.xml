@@ -43,8 +43,8 @@
      <title>Blah</title>
     </head>
     <body>
-     <div id="nav">nav content</div>
-     <div id="body">Real Content</div>
+     <div id="nav"><div id="extra_nav">nav content</div></div>
+     <div id="content"><div id="body">Real Content</div></div>
     </body>
    </html>
   </output> 
@@ -72,9 +72,9 @@
   <content>
    <html>
     <body>
-     <div id="body">Real Content 
-      <div id="extra_nav">nav content</div>
-     </div>
+       <div id="body">Real Content 
+         <div id="extra_nav">nav content</div>
+       </div>
     </body>
    </html>
   </content>
@@ -85,8 +85,10 @@
      <title>Blah</title>
     </head>
     <body>
+     <div id="content">
      <div id="body">Real Content
       <div id="extra_nav">nav content</div>
+     </div>
      </div>
     </body>
    </html>
@@ -131,7 +133,7 @@
      <div id="nav">some nav
        <div id="extra_nav">nav content</div>
      </div>
-     <div id="body">Real Content</div>
+     <div id="content"><div id="body">Real Content</div></div>
     </body>
    </html>
   </output> 

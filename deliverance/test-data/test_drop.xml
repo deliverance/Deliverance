@@ -173,7 +173,7 @@
      should squash error messages -->
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">
-    <drop theme="//div[@id='foo']" nocontent='ignore'/>
+    <drop theme="//div[@id='foo']" notheme='ignore'/>
   </rules>
 
   <theme base="http://example.com"> 

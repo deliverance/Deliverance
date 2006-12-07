@@ -28,6 +28,35 @@ xslt_dropper_skel = """
 </xsl:transform>
 """
 
+xslt_bucket_mover_skel = """
+<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <!-- drops elements from the content specified in move rules, but leaves behind 
+       traces for error checking --> 
+
+  <xsl:template match="node()|@*">
+    <xsl:copy>
+      <xsl:apply-templates select="node()|@*"/>
+    </xsl:copy>
+  </xsl:template> 
+
+</xsl:transform>
+"""
+
+xslt_bucket_grabber_skel = """
+<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+<xsl:template match="/">
+  <buckets> 
+    <!-- bucket grabbers go here --> 
+  </buckets> 
+</xsl:template>
+
+</xsl:transform>
+"""
+
+
+
 nsmap = {
     "dv": "http://www.plone.org/deliverance",
     "html": "http://www.w3.org/1999/xhtml",
@@ -77,14 +106,19 @@ class Renderer(RendererBase):
             self.debug = False
 
         self.transform_drop = None
+        self.transform_move = None
+        self.transform_move_grabber = None
+        self.transform_get_buckets = None
+        self.next_bucket = 0
+        
         self.apply_rules(self.rules,theme_copy)
     
-        xslt_wrapper = etree.XML(xslt_wrapper_skel)
-        insertion_point = xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
+        self.xslt_wrapper = etree.XML(xslt_wrapper_skel)
+        insertion_point = self.xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
                                              nsmap)[0]
         insertion_point.append(theme_copy)
 
-        self.transform = etree.XSLT(xslt_wrapper)
+        self.transform = etree.XSLT(self.xslt_wrapper)
     
         
 
@@ -95,11 +129,28 @@ class Renderer(RendererBase):
                 transformation represented by this class performed on the 
                 given content. 
         """
+
+        #print "TRANSFORM: %s" % etree.tostring(self.xslt_wrapper)
         if content:
             if self.transform_drop:
                 content = self.transform_drop(content)
 
-            return self.transform(content).getroot()
+            # stash "moved" elements in the content in a separate document,
+            # but leave behind some traces to allow checking for existence 
+            if self.transform_move:
+                buckets = self.transform_get_buckets(content).getroot()
+                #print "!BUCKETS! %s" % etree.tostring(buckets)
+                content = self.transform_move(content)
+                #print "\n\nCONTENT POST BUCKET: %s\n\n" % etree.tostring(content)
+
+            output = self.transform(content).getroot()
+
+            # bind the buckets that are now littering the theme
+            # to the junk stashed above 
+            if self.transform_move:
+                output = self.fill_buckets(output,buckets)
+
+            return output
 
         else:
             return self.transform(etree.Element("dummy")).getroot()
@@ -112,12 +163,22 @@ class Renderer(RendererBase):
         the rules given in the context of the theme given. 
         """
         drop_rules, other_rules = self.separate_drop_rules(rules)
-
+        move_rules, other_rules = self.separate_move_rules(other_rules)
+        
         if len(drop_rules):
             self.xslt_dropper = etree.XML(xslt_dropper_skel)
             for rule in drop_rules:
                 self.apply_drop(rule, theme)
             self.transform_drop = etree.XSLT(self.xslt_dropper)
+
+        if len(move_rules):
+            self.xslt_mover = etree.XML(xslt_bucket_mover_skel)
+            self.xslt_bucket_grabber = etree.XML(xslt_bucket_grabber_skel)
+            for rule in move_rules:
+                self.apply_rule(rule,theme)
+                
+            self.transform_move = etree.XSLT(self.xslt_mover)
+            self.transform_get_buckets = etree.XSLT(self.xslt_bucket_grabber)
 
         for rule in other_rules:
             self.apply_rule(rule, theme)
@@ -128,6 +189,9 @@ class Renderer(RendererBase):
         dispatch to proper rule handling function for 
         the rule given. 
         """
+        #print "APPLY: %s " % etree.tostring(rule) 
+        self.check_move(rule,theme)
+        
         if rule.tag == self.APPEND_RULE_TAG:
             self.apply_append(rule,theme)
         elif rule.tag == self.PREPEND_RULE_TAG:
@@ -149,6 +213,8 @@ class Renderer(RendererBase):
                 "Rule %s (%s) not understood" % (
                     rule.tag, etree.tostring(rule)))
 
+
+
     def apply_append(self, rule, theme):
         """
         prepare transform elements for "append" rule 
@@ -161,10 +227,8 @@ class Renderer(RendererBase):
         # no content is matched 
         self.add_conditional_missing_content_error(theme, rule)
 
-
-        copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
-
+        copier = self.make_copy_node(rule)
+        
         self.debug_append(theme_el, copier, rule)
 
 
@@ -180,10 +244,8 @@ class Renderer(RendererBase):
         # no content is matched 
         self.add_conditional_missing_content_error(theme, rule)
 
-        copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
-
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])        
-
+        copier = self.make_copy_node(rule)
+        
         self.debug_prepend(theme_el, copier, rule)
 
 
@@ -202,23 +264,14 @@ class Renderer(RendererBase):
 
         self.add_conditional_missing_content_error(theme, rule)      
 
-        copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
+        copier = self.make_copy_node(rule, nocontent_fallback=[copy.deepcopy(theme_el)])
 
-
-        # if content is matched, replace the theme element, otherwise, keep the
-        # theme element 
-        choose = self.make_when_otherwise("count(%s)=0" % 
-                                          rule.attrib[self.RULE_CONTENT_KEY], 
-                                          copy.deepcopy(theme_el), 
-                                          copier)
-
-        self.debug_replace(theme_el,choose,rule)
+        self.debug_replace(theme_el,copier,rule)
 
 
     def apply_copy(self, rule, theme):
         """
-        prepare transform elements for "prepend" rule 
+        prepare transform elements for "copy" rule 
         """
 
         theme_el = self.get_theme_el(rule, theme)
@@ -229,28 +282,12 @@ class Renderer(RendererBase):
         # no content is matched 
         self.add_conditional_missing_content_error(theme,rule)
 
-        # create an element that is like the target theme element 
-        # with its children replaced by an xsl copy element 
-        copy_theme_el = copy.deepcopy(theme_el)
-        del(copy_theme_el[:])
-        copy_theme_el.text = None
-        copier = etree.SubElement(theme_el,
-                                    "{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])  
-        copy_theme_el.append(copier)
-
-        # create a copy of the current theme element 
-        normal_theme_el = copy.deepcopy(theme_el)
-
-        # create an xsl choose element that picks between them based 
-        # on whether content was matched 
-        choose = self.make_when_otherwise("count(%s)=0" % 
-                                          rule.attrib[self.RULE_CONTENT_KEY], 
-                                          normal_theme_el, 
-                                          copy_theme_el)
-        self.debug_replace(theme_el, choose,rule)
-        copy_theme_el.tail = None
-        normal_theme_el.tail = None
+        theme_copy = copy.deepcopy(theme_el)
+        fallback = theme_copy.xpath("text()|child::node()")
+        theme_el.text = None
+        del(theme_el[:])        
+        copier = self.make_copy_node(rule,nocontent_fallback=fallback)
+        self.debug_append(theme_el,copier,rule)
         
 
    
@@ -274,13 +311,12 @@ class Renderer(RendererBase):
             if el.tag == remove_tag:
                 conditional = etree.Element("{%s}if" % nsmap["xsl"])
                 conditional.set("test","count(%s) = 0" % 
-                                rule.attrib[self.RULE_CONTENT_KEY])
+                                self.get_content_test_xpath(rule))
                 conditional.append(copy.deepcopy(el))
                 self.replace_element(el,conditional)
  
-        copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
-   
+        copier = self.make_copy_node(rule)
+           
         self.debug_append(theme_el, copier, rule)
 
 
@@ -290,7 +326,7 @@ class Renderer(RendererBase):
         """
         if self.RULE_THEME_KEY in rule.attrib:
             if len(theme.xpath(rule.attrib[self.RULE_THEME_KEY])) == 0:
-                if rule.get(self.NOCONTENT_KEY) == 'ignore':
+                if rule.get(self.NOTHEME_KEY) == self.IGNORE_KEYWORD:
                     return 
                 else:
                     e = self.format_error("no theme matched", rule)
@@ -334,29 +370,34 @@ class Renderer(RendererBase):
         during the transformation; no message is produced
         if nocontent='ignore' attribute is set
         """
-        if rule.get(self.NOCONTENT_KEY) == 'ignore':
+        if rule.get(self.NOCONTENT_KEY) == self.IGNORE_KEYWORD:
             return
 
         err = self.format_error("no content matched", rule)
         if err:
+            # if the content was possibly moved, check for a marker instead of the content 
+            check_xpath = self.get_content_test_xpath(rule)
+                
             conditional = etree.Element("{%s}if" % nsmap["xsl"])
-            conditional.set("test", "count(%s)=0" % rule.attrib[self.RULE_CONTENT_KEY])
+            conditional.set("test", "count(%s)=0" % check_xpath)
             conditional.append(err)
             self.add_to_body_start(theme, conditional)
         
 
-    def make_when_otherwise(self, test, whenbody, otherwisebody):
+    def make_when_otherwise(self, test, when_els, otherwise_els):
         """
         makes a conditional xlst node. when placed into a document, 
         if the xslt expression represented by the string test evaluates 
-        to true, whenbody is produced, if false, otherwise body is produced 
+        to true, when_els are produced, if false, otherwise_els are produced
         """
+
         choose = etree.Element("{%s}choose" % nsmap["xsl"])
         when = etree.Element("{%s}when" % nsmap["xsl"])
         when.set("test", test)
-        when.append(copy.deepcopy(whenbody))
         otherwise = etree.Element("{%s}otherwise" % nsmap["xsl"])
-        otherwise.append(otherwisebody)
+
+        self.append_many(when,when_els)
+        self.append_many(otherwise,otherwise_els)
         choose.append(when)
         choose.append(otherwise)
         return choose
@@ -440,3 +481,85 @@ class Renderer(RendererBase):
         comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
         comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
         return comment_before, comment_after
+
+
+    def make_copy_node(self,rule, nocontent_fallback=None):
+
+        if rule.get(self.RULE_MOVE_KEY,None) is None: 
+            copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
+            copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
+        else:
+            copier = etree.Element("bucket")
+            bucket_id = "bucket_%d" % self.next_bucket
+            copier.set("id",bucket_id)
+            self.xslt_bucket_grabber[0][0].append(self.make_bucket_grabber(rule,bucket_id))
+            self.next_bucket += 1
+
+
+            
+        if nocontent_fallback is None:
+            return copier
+        else:
+            return self.make_when_otherwise("count(%s)=0" % 
+                                            self.get_content_test_xpath(rule), 
+                                            nocontent_fallback, 
+                                            [copier])            
+
+                       
+    def check_move(self,rule,theme):
+        if rule.get(self.RULE_MOVE_KEY,None) is None:
+            return
+        if rule.tag == self.DROP_RULE_TAG or rule.tag == self.SUBRULES_TAG:
+            e = self.format_error("rule does not support the move attribute", rule)
+            self.add_to_body_start(theme, e)
+            return
+
+        theme_els = theme.xpath(rule.get(self.RULE_THEME_KEY))
+        if theme_els is None or len(theme_els) == 0:
+            if rule.get(self.NOTHEME_KEY,None) == self.IGNORE_KEYWORD:
+                del(rule.attrib[self.RULE_MOVE_KEY]) # just process it normally
+            return
+        
+        # make a node that will drop the content, but leave behind a "bucket pointer" 
+        fwd_template = etree.Element("{%s}template" % nsmap["xsl"])
+        fwd_template.set("match", rule.get(self.RULE_CONTENT_KEY))
+        pointer = etree.SubElement(fwd_template,"bucket_pointer")
+        pointer.set('pointer',self.make_pointer(rule.get(self.RULE_CONTENT_KEY)))
+        self.xslt_mover[0:0] = [fwd_template]
+
+    def get_content_test_xpath(self, rule): 
+        if rule.get(self.RULE_MOVE_KEY):
+            return self.get_pointer_xpath(rule)
+        else:
+            return rule.get(self.RULE_CONTENT_KEY)
+        
+    def get_pointer_xpath(self, rule):
+        return "//bucket_pointer[@pointer='%s']" % self.make_pointer(rule.attrib[self.RULE_CONTENT_KEY])
+                
+    def make_bucket_grabber(self,rule,id):
+        bucket = etree.Element("bucket")
+        bucket.set("id",id)
+        copier = etree.SubElement(bucket,"{%s}copy-of" % nsmap["xsl"])
+        copier.set("select",rule.get(self.RULE_CONTENT_KEY))
+        return bucket
+
+    def make_pointer(self,xpath):
+        # XXX not robust 
+        return '%d' % hash(xpath)
+        
+    def fill_buckets(self,theme,buckets):
+        # XXX this method is temporary to get the ball rolling
+
+        for bucket in buckets:        
+            bucket_id = bucket.get('id')
+            #print "FILL BUCKET(%s)! %s" % (bucket_id,etree.tostring(bucket))        
+            theme_el = theme.xpath("//bucket[@id='%s']" % bucket_id)[0]
+            self.replace_many(theme_el,bucket.xpath("child::node()"))
+
+        # discard nasty bucket pointers 
+        bucket_pointers = theme.xpath("//bucket_pointer")
+        for ptr in bucket_pointers:
+            self.attach_text_to_previous(ptr,ptr.tail)
+            ptr.getparent().remove(ptr)
+
+        return theme

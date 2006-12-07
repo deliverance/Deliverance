@@ -60,6 +60,7 @@ class Renderer(RendererBase):
         return result
 
 
+
     def apply_rules(self, rules, theme, content):
         """
         applies the deliverance rules given on the 
@@ -69,11 +70,17 @@ class Renderer(RendererBase):
         structures. 
         """
         drop_rules, other_rules = self.separate_drop_rules(rules)
+        move_rules, other_rules = self.separate_move_rules(other_rules)
 
         # process all drop rules first 
         for rule in drop_rules:
             self.apply_rule(rule, theme, content) 
 
+        # process all move rules next 
+        for rule in move_rules: 
+            self.apply_rule(rule,theme,content)
+
+        # finally the rest
         for rule in other_rules:
             self.apply_rule(rule, theme, content)
 
@@ -105,6 +112,27 @@ class Renderer(RendererBase):
             raise RuleSyntaxError(
                 "Rule %s (%s) not understood" % (
                     rule.tag, etree.tostring(rule)))
+
+        # process possible "move" attribute 
+        self.check_content_removal(rule, theme, content)
+
+
+    def check_content_removal(self, rule, theme, content):
+        if rule.attrib.get(self.RULE_MOVE_KEY, None) is None:
+            return
+
+        if rule.tag == self.SUBRULES_TAG or rule.tag == self.DROP_RULE_TAG: 
+            self.add_to_body_start(
+                theme, self.format_error("invalid move attribute", rule))
+            return
+
+        # drop content elements if move was specified except when 
+        # notheme='ignore' was specified and no theme elements were matched 
+        theme_els = theme.xpath(rule.attrib.get(self.RULE_THEME_KEY)) 
+        if (theme_els is not None and len(theme_els) > 0) or \
+                rule.attrib.get(self.NOTHEME_KEY) != self.IGNORE_KEYWORD:
+            self.drop_els(content, content.xpath(rule.attrib.get(self.RULE_CONTENT_KEY)))
+
 
     def apply_append(self,rule,theme,content):
         """
@@ -278,48 +306,7 @@ class Renderer(RendererBase):
             self.debug_replace(theme_el, content_els, rule)
             return 
 
-        non_text_els = self.elements_in(content_els)
-        self.strip_tails(non_text_els)
-
-
-        # the xpath may return a mixture of strings and elements, handle strings 
-        # by attaching them to the proper element 
-        if (type(content_els[0]) is type(str())):
-            # text must be appended to the tail of the most recent sibling or appended 
-            # to the text of the parent of the replaced element
-            self.attach_text_to_previous(theme_el, content_els[0])
-
-        if len(non_text_els) == 0:
-            self.attach_text_to_previous(theme_el, theme_el.tail)
-            theme_el.getparent().remove(theme_el)
-            return
-        
-        self.attach_tails(content_els)
-
-        # this tail, if there is one, should stick around 
-        preserve_tail = non_text_els[0].tail 
-
-        #replaces first element
-        self.replace_element(theme_el, non_text_els[0])
-        temptail = non_text_els[0].tail 
-        non_text_els[0].tail = None
-        parent = non_text_els[0].getparent()
-
-        # appends the rest of the elements
-        i = parent.index(non_text_els[0])
-        parent[i+1:i+1] = non_text_els[1:]
-
-        if non_text_els[-1].tail:
-            non_text_els[-1].tail += temptail
-        else:
-            non_text_els[-1].tail = temptail
-        
-        # tack in any preserved tail we stored above
-        if preserve_tail:
-            if non_text_els[0].tail:
-                non_text_els[0].tail = preserve_tail + non_text_els[0].tail
-            else:
-                non_text_els[0].tail = preserve_tail
+        self.replace_many(theme_el,content_els)
 
     def debug_replace(self,theme_el,content_els,rule):
         """
@@ -390,12 +377,10 @@ class Renderer(RendererBase):
 
         if self.debug:
             comment_before,comment_after = self.make_debugging_comments(rule)
-            parent = theme_el.getparent()
-            index = parent.index(theme_el)
-            parent.insert(index-1, comment_before)
-            parent.insert(index+2, comment_after)
-            comment_after.tail = theme_el.tail
-            theme_el.tail = None
+            if theme_el.text:
+                comment_before.text = theme_el.text 
+            theme_el[0:0] = [comment_before]
+            theme_el.append(comment_after)
             
 
     def apply_append_or_replace(self, rule, theme, content):
@@ -438,53 +423,45 @@ class Renderer(RendererBase):
         theme_el.extend(content_els)
 
 
-    def apply_drop(self, rule, theme, content):
+
+    def drop_els(self,doc,els): 
+        """
+        helper to drop a list of elements without losing 
+        surrounding text 
+        """
+        removed = 0
+        for el in els: 
+            self.attach_text_to_previous(el,el.tail)
+            el.getparent().remove(el)
+            removed += 1
+        return removed
+
+    
+    def apply_drop(self, rule, theme, content):        
         """
         function that performs the deliverance "drop" 
         rule given by rule on the theme and content given. 
         see deliverance specification 
         """
-        for context in ('theme', 'content'):
-            if context not in rule.attrib: continue
-            document = locals()[context]
-            removed = False
-            for el in document.xpath(rule.attrib[context]):
-                self.attach_text_to_previous(el, el.tail)
-                el.getparent().remove(el)
-                removed = True
-            if not removed and rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
+        content_drop_xp = rule.attrib.get(self.RULE_CONTENT_KEY,None)
+        theme_drop_xp = rule.attrib.get(self.RULE_THEME_KEY,None)
+        
+        if (content_drop_xp is None and theme_drop_xp is None): 
+            self.add_to_body_start(
+                theme, self.format_error("No content or theme elements specified.",rule))
+            return
+                
+        if content_drop_xp: 
+            num_dropped = self.drop_els(self,content.xpath(content_drop_xp))
+            if num_dropped == 0 and not rule.attrib.get(self.NOCONTENT_KEY,None) == self.IGNORE_KEYWORD: 
                 self.add_to_body_start(
-                    theme, self.format_error("no %s matched" % context, rule))
+                    theme, self.format_error("no content matched", rule))
 
-    def elements_in(self, els):
-        """
-        return a list containing elements from els which are not strings 
-        """
-        return [x for x in els if type(x) is not type(str())]
-            
-
-
-    def strip_tails(self, els):
-        """
-        for each lxml etree element in the list els, 
-        set the tail of the element to None
-        """
-        for el in els:
-            el.tail = None
-
-
-    def attach_tails(self,els):
-        """
-        whereever an lxml element in the list is followed by 
-        a string, set the tail of the lxml element to that string 
-        """
-        for index,el in enumerate(els): 
-            # if we run into a string after the current element, 
-            # attach it to the current element as the tail 
-            if (type(el) is not type(str()) and 
-                index + 1 < len(els) and 
-                type(els[index+1]) is type(str())):
-                el.tail = els[index+1]   
+        if theme_drop_xp: 
+            num_dropped = self.drop_els(self,theme.xpath(theme_drop_xp))
+            if num_dropped == 0 and not rule.attrib.get(self.NOTHEME_KEY,None) == self.IGNORE_KEYWORD: 
+                self.add_to_body_start(
+                    theme, self.format_error("no theme matched", rule))
 
 
     def make_debugging_comments(self, rule):

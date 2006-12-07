@@ -154,9 +154,12 @@
   <output>
     <html>
       <body>before span
-         <!--Deliverance: applying rule <copy theme="//body/span" content="//body/div"/>
-         --><span><div>Real Content</div></span><!--Deliverance: done applying rule <copy theme="//body/span" content="//body/div"/>
-         -->after span
+        
+         <span> 
+	   <!--Deliverance: applying rule <copy theme="//body/span" content="//body/div"/> -->
+           <div>Real Content</div>
+           <!-- Deliverance: done applying rule <copy theme="//body/span" content="//body/div"/> --></span>
+         after span
 	   </body>
       </html>
   </output> 

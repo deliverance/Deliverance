@@ -71,8 +71,12 @@ class RendererBase(object):
 
     RULE_CONTENT_KEY = "content"
     RULE_THEME_KEY   = "theme" 
+    RULE_MOVE_KEY = "move"
 
     NOCONTENT_KEY = "nocontent"
+    NOTHEME_KEY = "notheme"
+
+    IGNORE_KEYWORD = "ignore"
 
     def get_theme_el(self,rule,theme):
         """
@@ -80,10 +84,11 @@ class RendererBase(object):
         rule given in the theme document given. theme and rule 
         should be lxml etree structures. 
         """
-        theme_els = theme.xpath(rule.attrib[self.RULE_THEME_KEY])
+        theme_els = theme.xpath(rule.get(self.RULE_THEME_KEY))
         if len(theme_els)== 0:
-            e = self.format_error("no element found in theme", rule)
-            self.add_to_body_start(theme, e)
+            if rule.get(self.NOTHEME_KEY) != self.IGNORE_KEYWORD: 
+                e = self.format_error("no element found in theme", rule)
+                self.add_to_body_start(theme, e)        
             return None
         elif len(theme_els)> 1:
             e = self.format_error("multiple elements found in theme", rule, theme_els)
@@ -99,7 +104,7 @@ class RendererBase(object):
         returns None
         """
 
-        if rule.attrib.get('onerror', None) == 'ignore':
+        if rule.get('onerror',None) == self.IGNORE_KEYWORD:
             return None
 
         d = etree.Element('div')
@@ -210,7 +215,25 @@ class RendererBase(object):
             else:
                 regular_rules.append(rule)
         return drop_rules, regular_rules
-        
+
+    
+    def separate_move_rules(self, rules):
+        """
+        separates out drop rules from a list of rules, returns two 
+        lists. 
+
+        first the list of all drop rules, second all other rules 
+        order is preserved. 
+        """
+        regular_rules = []
+        move_rules = []
+        for rule in rules:
+            if rule.get(self.RULE_MOVE_KEY): 
+                move_rules.append(rule)
+            else:
+                regular_rules.append(rule)
+        return move_rules, regular_rules
+
 
 
     CSS_URL_PAT = re.compile(r'url\([\"\']*(.*?)[\"\']*\)',re.I)
@@ -231,8 +254,22 @@ class RendererBase(object):
             if el.text:
                 el.text = re.sub(self.CSS_IMPORT_PAT,imp_absuri,el.text)
                 el.text = re.sub(self.CSS_URL_PAT,absuri,el.text)
-        
 
+
+    def append_text(self,parent,text):
+        if text is None:
+            return
+        if len(parent) == 0:
+            target = parent
+        else:
+            target = parent[-1]
+
+        if target.text:
+            target.text = target.text + text
+        else:
+            target.text = text
+
+                
 
     def attach_text_to_previous(self,el,text):
         """
@@ -254,5 +291,97 @@ class RendererBase(object):
                 el.getparent().text += text 
             else:
                 el.getparent().text = text
+
+    def elements_in(self, els):
+        """
+        return a list containing elements from els which are not strings 
+        """
+        return [x for x in els if type(x) is not type(str())]
+            
+
+
+    def strip_tails(self, els):
+        """
+        for each lxml etree element in the list els, 
+        set the tail of the element to None
+        """
+        for el in els:
+            el.tail = None
+
+
+    def attach_tails(self,els):
+        """
+        whereever an lxml element in the list is followed by 
+        a string, set the tail of the lxml element to that string 
+        """
+        for index,el in enumerate(els): 
+            # if we run into a string after the current element, 
+            # attach it to the current element as the tail 
+            if (type(el) is not type(str()) and 
+                index + 1 < len(els) and 
+                type(els[index+1]) is type(str())):
+                el.tail = els[index+1]   
+
+
+    def append_many(self, parent, children):
+    
+        if children is None or len(children) == 0:
+            return
+        
+        if type(children[0]) is type(str()):
+            self.append_text(parent,children[0])            
+            children = children[1:]
+
+        non_text_els = self.elements_in(children)
+        self.strip_tails(non_text_els)
+        self.attach_tails(children)
+        
+        for el in non_text_els:
+            parent.append(el)
+            
+
+    def replace_many(self, theme_el, content_els):
+        non_text_els = self.elements_in(content_els)
+        self.strip_tails(non_text_els)
+
+        # the xpath may return a mixture of strings and elements, handle strings 
+                # by attaching them to the proper element 
+        if (type(content_els[0]) is type(str())):
+            # text must be appended to the tail of the most recent sibling or appended 
+            # to the text of the parent of the replaced element
+            self.attach_text_to_previous(theme_el, content_els[0])
+
+        if len(non_text_els) == 0:
+            self.attach_text_to_previous(theme_el, theme_el.tail)
+            theme_el.getparent().remove(theme_el)
+            return
+        
+        self.attach_tails(content_els)
+
+        # this tail, if there is one, should stick around 
+        preserve_tail = non_text_els[0].tail 
+
+        #replaces first element
+        self.replace_element(theme_el, non_text_els[0])
+        temptail = non_text_els[0].tail 
+        non_text_els[0].tail = None
+        parent = non_text_els[0].getparent()
+
+        # appends the rest of the elements
+        i = parent.index(non_text_els[0])
+        parent[i+1:i+1] = non_text_els[1:]
+
+        if non_text_els[-1].tail:
+            non_text_els[-1].tail += temptail
+        else:
+            non_text_els[-1].tail = temptail
+        
+        # tack in any preserved tail we stored above
+        if preserve_tail:
+            if non_text_els[0].tail:
+                non_text_els[0].tail = preserve_tail + non_text_els[0].tail
+            else:
+                non_text_els[0].tail = preserve_tail
+
 
    
