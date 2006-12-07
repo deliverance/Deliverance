@@ -114,16 +114,16 @@ class Renderer(RendererBase):
                     rule.tag, etree.tostring(rule)))
 
         # process possible "move" attribute 
-        self.check_content_removal(rule, theme, content)
+        self.check_move(rule, theme, content)
 
 
-    def check_content_removal(self, rule, theme, content):
-        if rule.attrib.get(self.RULE_MOVE_KEY, None) is None:
+    def check_move(self, rule, theme, content):
+        if rule.get(self.RULE_MOVE_KEY, None) is None:
             return
 
         if rule.tag == self.SUBRULES_TAG or rule.tag == self.DROP_RULE_TAG: 
-            self.add_to_body_start(
-                theme, self.format_error("invalid move attribute", rule))
+            e = self.format_error("rule does not support the move attribute", rule)
+            self.add_to_body_start(theme, e)
             return
 
         # drop content elements if move was specified except when 

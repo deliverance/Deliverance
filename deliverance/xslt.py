@@ -168,7 +168,7 @@ class Renderer(RendererBase):
         if len(drop_rules):
             self.xslt_dropper = etree.XML(xslt_dropper_skel)
             for rule in drop_rules:
-                self.apply_drop(rule, theme)
+                self.apply_rule(rule, theme)
             self.transform_drop = etree.XSLT(self.xslt_dropper)
 
         if len(move_rules):
@@ -507,9 +507,10 @@ class Renderer(RendererBase):
 
                        
     def check_move(self,rule,theme):
-        if rule.get(self.RULE_MOVE_KEY,None) is None:
+        if rule.get(self.RULE_MOVE_KEY, None) is None:
             return
-        if rule.tag == self.DROP_RULE_TAG or rule.tag == self.SUBRULES_TAG:
+
+        if rule.tag == self.SUBRULES_TAG or rule.tag == self.DROP_RULE_TAG: 
             e = self.format_error("rule does not support the move attribute", rule)
             self.add_to_body_start(theme, e)
             return
