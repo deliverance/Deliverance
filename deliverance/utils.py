@@ -3,6 +3,7 @@ import re
 import urlparse
 import copy
 from deliverance import htmlserialize
+import sys
 
 # Test if the libxml2 fix is in place
 html = etree.HTML('<html><head><script>some text</script></head></html>')
@@ -17,6 +18,12 @@ if copy.deepcopy(html_comment) is None:
     import warnings
     warnings.warn(
         'Deliverance requires a newer version of lxml (1.2 or later)')
+
+if sys.version_info <= (2, 4, 1):
+    # There are reported threading issues for this version
+    import warnings
+    warnings.warn(
+        'lxml has threading problems for Python 2.4.1 and earlier')
 
 class DeliveranceError(Exception):
     """
