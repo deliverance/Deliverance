@@ -9,52 +9,29 @@ from deliverance.utils import RendererBase
 
 xslt_wrapper_skel = """
 <xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:template match="/">
+
+  <!-- empty templates for moved or dropped nodes are inserted here --> 
+
+  <!-- this is the top level rule --> 
+  <xsl:template match="/" priority="2">
     <!-- theme goes here --> 
   </xsl:template>
+
+  <!-- this copies whatever the current node is when apply-templates is called in normal mode --> 
+  <xsl:template match="node()|@*">
+    <xsl:copy>
+      <xsl:apply-templates select="node()|@*" />
+    </xsl:copy>
+  </xsl:template>
+
+  <!-- this copies whatever the current node is when apply-templates is called in move mode -->
+  <xsl:template match="node()|@*" mode="move" >
+    <xsl:copy>
+      <xsl:apply-templates select="node()|@*" />
+    </xsl:copy>
+  </xsl:template>
+  
 </xsl:transform>"""
-
-xslt_dropper_skel = """
-<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-
-  <!-- match nodes that do dropping are inserted here --> 
-
-  <xsl:template match="node()|@*">
-    <xsl:copy>
-      <xsl:apply-templates select="node()|@*"/>
-    </xsl:copy>
-  </xsl:template> 
-
-</xsl:transform>
-"""
-
-xslt_bucket_mover_skel = """
-<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-
-  <!-- drops elements from the content specified in move rules, but leaves behind 
-       traces for error checking --> 
-
-  <xsl:template match="node()|@*">
-    <xsl:copy>
-      <xsl:apply-templates select="node()|@*"/>
-    </xsl:copy>
-  </xsl:template> 
-
-</xsl:transform>
-"""
-
-xslt_bucket_grabber_skel = """
-<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-
-<xsl:template match="/">
-  <buckets> 
-    <!-- bucket grabbers go here --> 
-  </buckets> 
-</xsl:template>
-
-</xsl:transform>
-"""
-
 
 
 nsmap = {
@@ -105,15 +82,12 @@ class Renderer(RendererBase):
         else:
             self.debug = False
 
-        self.transform_drop = None
-        self.transform_move = None
-        self.transform_move_grabber = None
-        self.transform_get_buckets = None
-        self.next_bucket = 0
+        self.transform = None
         
+        self.xslt_wrapper = etree.XML(xslt_wrapper_skel)
         self.apply_rules(self.rules,theme_copy)
     
-        self.xslt_wrapper = etree.XML(xslt_wrapper_skel)
+
         insertion_point = self.xslt_wrapper.xpath("//xsl:transform/xsl:template[@match='/']",
                                              nsmap)[0]
         insertion_point.append(theme_copy)
@@ -132,26 +106,7 @@ class Renderer(RendererBase):
 
         #print "TRANSFORM: %s" % etree.tostring(self.xslt_wrapper)
         if content:
-            if self.transform_drop:
-                content = self.transform_drop(content)
-
-            # stash "moved" elements in the content in a separate document,
-            # but leave behind some traces to allow checking for existence 
-            if self.transform_move:
-                buckets = self.transform_get_buckets(content).getroot()
-                #print "!BUCKETS! %s" % etree.tostring(buckets)
-                content = self.transform_move(content)
-                #print "\n\nCONTENT POST BUCKET: %s\n\n" % etree.tostring(content)
-
-            output = self.transform(content).getroot()
-
-            # bind the buckets that are now littering the theme
-            # to the junk stashed above 
-            if self.transform_move:
-                output = self.fill_buckets(output,buckets)
-
-            return output
-
+            return self.transform(content).getroot()
         else:
             return self.transform(etree.Element("dummy")).getroot()
 
@@ -162,25 +117,7 @@ class Renderer(RendererBase):
         The transforms represent the application of 
         the rules given in the context of the theme given. 
         """
-        drop_rules, other_rules = self.separate_drop_rules(rules)
-        move_rules, other_rules = self.separate_move_rules(other_rules)
-        
-        if len(drop_rules):
-            self.xslt_dropper = etree.XML(xslt_dropper_skel)
-            for rule in drop_rules:
-                self.apply_rule(rule, theme)
-            self.transform_drop = etree.XSLT(self.xslt_dropper)
-
-        if len(move_rules):
-            self.xslt_mover = etree.XML(xslt_bucket_mover_skel)
-            self.xslt_bucket_grabber = etree.XML(xslt_bucket_grabber_skel)
-            for rule in move_rules:
-                self.apply_rule(rule,theme)
-                
-            self.transform_move = etree.XSLT(self.xslt_mover)
-            self.transform_get_buckets = etree.XSLT(self.xslt_bucket_grabber)
-
-        for rule in other_rules:
+        for rule in rules:
             self.apply_rule(rule, theme)
 
 
@@ -339,10 +276,15 @@ class Renderer(RendererBase):
                 el.getparent().remove(el)
 
         if self.RULE_CONTENT_KEY in rule.attrib:
-            drop_template = etree.Element("{%s}template" % nsmap["xsl"])
-            drop_template.set("match", rule.attrib[self.RULE_CONTENT_KEY])
-            self.xslt_dropper[0:0] = [drop_template]
+            empty_template = etree.Element("{%s}template" % nsmap["xsl"])
+            empty_template.set("priority","1")
+            empty_template.set("match",rule.get(self.RULE_CONTENT_KEY))
 
+            move_empty_template = copy.deepcopy(empty_template)
+            move_empty_template.set("mode","move")
+            
+            self.xslt_wrapper[0:0] = [empty_template,move_empty_template]
+            
             # add an element that produces an error if 
             # no content is matched 
             self.add_conditional_missing_content_error(theme,rule)
@@ -485,25 +427,25 @@ class Renderer(RendererBase):
 
     def make_copy_node(self,rule, nocontent_fallback=None):
 
-        if rule.get(self.RULE_MOVE_KEY,None) is None: 
-            copier = etree.Element("{%s}copy-of" % nsmap["xsl"])
-            copier.set("select",rule.attrib[self.RULE_CONTENT_KEY])
-        else:
-            copier = etree.Element("bucket")
-            bucket_id = "bucket_%d" % self.next_bucket
-            copier.set("id",bucket_id)
-            self.xslt_bucket_grabber[0][0].append(self.make_bucket_grabber(rule,bucket_id))
-            self.next_bucket += 1
+        apply = etree.Element("{%s}apply-templates" % nsmap["xsl"])
+        apply.set("select",rule.get(self.RULE_CONTENT_KEY))
+                  
+        if rule.get(self.RULE_MOVE_KEY,None) is not None:
+            apply.set("mode","move")
+            # in the normal mode it is ignored 
+            empty_template = etree.Element("{%s}template" % nsmap["xsl"])
+            empty_template.set("priority","1")
+            empty_template.set("match",rule.get(self.RULE_CONTENT_KEY))
 
-
+            self.xslt_wrapper[0:0] = [empty_template]
             
         if nocontent_fallback is None:
-            return copier
+            return apply 
         else:
             return self.make_when_otherwise("count(%s)=0" % 
                                             self.get_content_test_xpath(rule), 
                                             nocontent_fallback, 
-                                            [copier])            
+                                            [apply])            
 
                        
     def check_move(self,rule,theme):
@@ -520,47 +462,7 @@ class Renderer(RendererBase):
             if rule.get(self.NOTHEME_KEY,None) == self.IGNORE_KEYWORD:
                 del(rule.attrib[self.RULE_MOVE_KEY]) # just process it normally
             return
-        
-        # make a node that will drop the content, but leave behind a "bucket pointer" 
-        fwd_template = etree.Element("{%s}template" % nsmap["xsl"])
-        fwd_template.set("match", rule.get(self.RULE_CONTENT_KEY))
-        pointer = etree.SubElement(fwd_template,"bucket_pointer")
-        pointer.set('pointer',self.make_pointer(rule.get(self.RULE_CONTENT_KEY)))
-        self.xslt_mover[0:0] = [fwd_template]
 
     def get_content_test_xpath(self, rule): 
-        if rule.get(self.RULE_MOVE_KEY):
-            return self.get_pointer_xpath(rule)
-        else:
-            return rule.get(self.RULE_CONTENT_KEY)
+        return rule.get(self.RULE_CONTENT_KEY)
         
-    def get_pointer_xpath(self, rule):
-        return "//bucket_pointer[@pointer='%s']" % self.make_pointer(rule.attrib[self.RULE_CONTENT_KEY])
-                
-    def make_bucket_grabber(self,rule,id):
-        bucket = etree.Element("bucket")
-        bucket.set("id",id)
-        copier = etree.SubElement(bucket,"{%s}copy-of" % nsmap["xsl"])
-        copier.set("select",rule.get(self.RULE_CONTENT_KEY))
-        return bucket
-
-    def make_pointer(self,xpath):
-        # XXX not robust 
-        return '%d' % hash(xpath)
-        
-    def fill_buckets(self,theme,buckets):
-        # XXX this method is temporary to get the ball rolling
-
-        for bucket in buckets:        
-            bucket_id = bucket.get('id')
-            #print "FILL BUCKET(%s)! %s" % (bucket_id,etree.tostring(bucket))        
-            theme_el = theme.xpath("//bucket[@id='%s']" % bucket_id)[0]
-            self.replace_many(theme_el,bucket.xpath("child::node()"))
-
-        # discard nasty bucket pointers 
-        bucket_pointers = theme.xpath("//bucket_pointer")
-        for ptr in bucket_pointers:
-            self.attach_text_to_previous(ptr,ptr.tail)
-            ptr.getparent().remove(ptr)
-
-        return theme
