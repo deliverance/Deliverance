@@ -27,8 +27,8 @@ class Renderer(RendererBase):
 
         reference_resolver: a function taking a url a parse type and 
          and an encoding type returning the data referred to by the url 
-         in the manner specified. if parse is set to 'xml', the result 
-         should be an lxml etree structure, otherwise if encoding 
+         in the manner specified. if parse is set to 'xml' or 'html', 
+         the result should be an lxml etree structure, otherwise if encoding 
          is specified, the data should be decoded using this encoding 
          before being returned. 
                 
@@ -36,9 +36,14 @@ class Renderer(RendererBase):
         self.theme = self.fixup_links(theme, theme_uri)
         self.rules = rule
         self.rules_uri = rule_uri
+
+        self.resolve_uri = reference_resolver
+
         # perform xincludes on the rules
-        if reference_resolver:
-            xinclude.include(self.rules, self.rules_uri, loader=reference_resolver)
+        if self.resolve_uri:
+            xinclude.include(self.rules, self.rules_uri, loader=self.resolve_uri)
+
+
 
         debug = self.rules.get("debug", None)
         if debug and debug.lower() == "true":
@@ -55,7 +60,7 @@ class Renderer(RendererBase):
                 given content. 
         """
         result = copy.deepcopy(self.theme)
-        input = copy.deepcopy(content)
+        input = self.aggregate(self.resolve_uri,self.rules,copy.deepcopy(content))
         self.apply_rules(self.rules, result, input)
         return result
 
@@ -131,7 +136,7 @@ class Renderer(RendererBase):
         theme_els = theme.xpath(rule.attrib.get(self.RULE_THEME_KEY)) 
         if (theme_els is not None and len(theme_els) > 0) or \
                 rule.attrib.get(self.NOTHEME_KEY) != self.IGNORE_KEYWORD:
-            self.drop_els(content, content.xpath(rule.attrib.get(self.RULE_CONTENT_KEY)))
+            self.drop_els(content, content.xpath(self.get_content_xpath(rule)))
 
 
     def apply_append(self,rule,theme,content):
@@ -145,7 +150,7 @@ class Renderer(RendererBase):
             return 
 
         content_els = copy.deepcopy(
-            content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+            content.xpath(self.get_content_xpath(rule)))
 
         if len(content_els) == 0:
             if rule.get(self.NOCONTENT_KEY) != 'ignore':
@@ -209,7 +214,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        xpath = rule.attrib[self.RULE_CONTENT_KEY]
+        xpath = self.get_content_xpath(rule)
         content_els = copy.deepcopy(content.xpath(xpath))
 
         if len(content_els) == 0:
@@ -288,7 +293,7 @@ class Renderer(RendererBase):
             return 
 
         content_els = copy.deepcopy(
-            content.xpath(rule.attrib[self.RULE_CONTENT_KEY]))
+            content.xpath(self.get_content_xpath(rule)))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -354,7 +359,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return
 
-        content_els = self._xpath_copy(content, rule.attrib[self.RULE_CONTENT_KEY])
+        content_els = self._xpath_copy(content, self.get_content_xpath(rule))
 
         if len(content_els) == 0:
             if rule.attrib.get(self.NOCONTENT_KEY) != 'ignore':
@@ -393,7 +398,7 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        content_xpath = rule.attrib[self.RULE_CONTENT_KEY]
+        content_xpath = self.get_content_xpath(rule)
         remove_tag = self.get_tag_from_xpath(content_xpath)
 
         if remove_tag is None:
@@ -443,7 +448,7 @@ class Renderer(RendererBase):
         rule given by rule on the theme and content given. 
         see deliverance specification 
         """
-        content_drop_xp = rule.attrib.get(self.RULE_CONTENT_KEY,None)
+        content_drop_xp = self.get_content_xpath(rule)
         theme_drop_xp = rule.attrib.get(self.RULE_THEME_KEY,None)
         
         if (content_drop_xp is None and theme_drop_xp is None): 

@@ -73,8 +73,10 @@ class Renderer(RendererBase):
         self.fixup_links(theme_copy, theme_uri)
         self.xsl_escape_comments(theme_copy)
 
-        if reference_resolver:
-            xinclude.include(self.rules, self.rules_uri, loader=reference_resolver)
+        self.resolve_uri = reference_resolver
+        if self.resolve_uri:
+            xinclude.include(self.rules, self.rules_uri, loader=self.resolve_uri)
+
 
         debug = self.rules.get("debug", None)
         if debug and debug.lower() == "true":
@@ -106,6 +108,7 @@ class Renderer(RendererBase):
 
         #print "TRANSFORM: %s" % etree.tostring(self.xslt_wrapper)
         if content:
+            content = self.aggregate(self.resolve_uri, self.rules, content)
             return self.transform(content).getroot()
         else:
             return self.transform(etree.Element("dummy")).getroot()
@@ -248,7 +251,7 @@ class Renderer(RendererBase):
             if el.tag == remove_tag:
                 conditional = etree.Element("{%s}if" % nsmap["xsl"])
                 conditional.set("test","count(%s) = 0" % 
-                                self.get_content_test_xpath(rule))
+                                self.get_content_xpath(rule))
                 conditional.append(copy.deepcopy(el))
                 self.replace_element(el,conditional)
  
@@ -278,7 +281,7 @@ class Renderer(RendererBase):
         if self.RULE_CONTENT_KEY in rule.attrib:
             empty_template = etree.Element("{%s}template" % nsmap["xsl"])
             empty_template.set("priority","1")
-            empty_template.set("match",rule.get(self.RULE_CONTENT_KEY))
+            empty_template.set("match",self.get_content_xpath(rule))
 
             move_empty_template = copy.deepcopy(empty_template)
             move_empty_template.set("mode","move")
@@ -318,7 +321,7 @@ class Renderer(RendererBase):
         err = self.format_error("no content matched", rule)
         if err:
             # if the content was possibly moved, check for a marker instead of the content 
-            check_xpath = self.get_content_test_xpath(rule)
+            check_xpath = self.get_content_xpath(rule)
                 
             conditional = etree.Element("{%s}if" % nsmap["xsl"])
             conditional.set("test", "count(%s)=0" % check_xpath)
@@ -428,14 +431,14 @@ class Renderer(RendererBase):
     def make_copy_node(self,rule, nocontent_fallback=None):
 
         apply = etree.Element("{%s}apply-templates" % nsmap["xsl"])
-        apply.set("select",rule.get(self.RULE_CONTENT_KEY))
+        apply.set("select",self.get_content_xpath(rule))
                   
         if rule.get(self.RULE_MOVE_KEY,None) is not None:
             apply.set("mode","move")
             # in the normal mode it is ignored 
             empty_template = etree.Element("{%s}template" % nsmap["xsl"])
             empty_template.set("priority","1")
-            empty_template.set("match",rule.get(self.RULE_CONTENT_KEY))
+            empty_template.set("match",self.get_content_xpath(rule))
 
             self.xslt_wrapper[0:0] = [empty_template]
             
@@ -443,7 +446,7 @@ class Renderer(RendererBase):
             return apply 
         else:
             return self.make_when_otherwise("count(%s)=0" % 
-                                            self.get_content_test_xpath(rule), 
+                                            self.get_content_xpath(rule), 
                                             nocontent_fallback, 
                                             [apply])            
 
@@ -463,6 +466,5 @@ class Renderer(RendererBase):
                 del(rule.attrib[self.RULE_MOVE_KEY]) # just process it normally
             return
 
-    def get_content_test_xpath(self, rule): 
-        return rule.get(self.RULE_CONTENT_KEY)
+
         

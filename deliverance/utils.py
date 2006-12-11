@@ -79,11 +79,14 @@ class RendererBase(object):
     RULE_CONTENT_KEY = "content"
     RULE_THEME_KEY   = "theme" 
     RULE_MOVE_KEY = "move"
+    RULE_HREF_KEY = "href"
 
     NOCONTENT_KEY = "nocontent"
     NOTHEME_KEY = "notheme"
 
     IGNORE_KEYWORD = "ignore"
+
+    REQUEST_CONTENT = "deliverance:request-content"
 
     def get_theme_el(self,rule,theme):
         """
@@ -389,6 +392,74 @@ class RendererBase(object):
                 non_text_els[0].tail = preserve_tail + non_text_els[0].tail
             else:
                 non_text_els[0].tail = preserve_tail
+
+    def aggregate(self, resolve_uri, rules, content): 
+        """
+        aggregates the requested docuemnt and documents 
+        referred to in the "href" attribute of 
+        rules into a single document structured like: 
+
+        <content>
+          <document content="http://blah.org/foo">...</document>
+          <docuemnt content="deliverance:request-content">
+            ... 
+          </document>
+        </content>
+
+        content is an lxml etree structure representing the 
+        requested content which appears in the document node
+        with content attribute set to the value of REQUEST_CONTENT
+
+        the reference_relover is a function used to get the content of other 
+        documents referred to in rules, and is described in the 
+        initializer for renderers. 
+        """
+        root = etree.Element("content")
+
+
+        if content: 
+            request_doc = etree.SubElement(root,"document")
+            request_doc.set("content",self.REQUEST_CONTENT)
+            request_doc.append(content)
+
+        if resolve_uri is None:
+            return root
+
+        aggregated = {}
+        for rule in rules: 
+            href = rule.get(self.RULE_HREF_KEY,None)
+            if href is None or aggregated.has_key(href): 
+                continue
+            
+            doc = resolve_uri(href, parse="html")
+            aggregated[href] = True
+            if doc is None:
+                continue 
+
+            doc_node = etree.SubElement(root,"document")
+            doc_node.set("content",href)
+            doc_node.append(doc)
+        
+        return root
+
+    def get_content_xpath(self, rule): 
+        """
+        gets the xpath to lookup the content referred to by rule 
+        in the aggregated content document 
+        """
+        content_xpath = rule.get(self.RULE_CONTENT_KEY)
+
+        if content_xpath is None:
+            return None
+        
+        if not content_xpath.startswith('/'): 
+            content_xpath = '/%s' % content_xpath 
+
+        content_doc = rule.get(self.RULE_HREF_KEY,self.REQUEST_CONTENT)
+        new_xpath = "/content/document[@content='%s']%s" % (content_doc,content_xpath)
+
+        return new_xpath
+
 
 
    

@@ -88,8 +88,13 @@ class DeliveranceMiddleware(object):
             text = self.get_resource(environ,href)
             if parse == "xml":
                 return etree.XML(text)
-            elif encoding:
-                return text.decode(encoding)
+            if parse == "html":
+                return etree.HTML(text)
+            else:
+                if encoding:
+                    return text.decode(encoding)
+                else:
+                    return text
 
         try:
             parsedTheme = parseHTML(theme)
