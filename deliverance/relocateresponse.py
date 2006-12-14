@@ -5,7 +5,7 @@ names and paths.
 import urlparse
 import re
 from paste.request import construct_url
-from paste.response import header_value
+from paste.response import header_value, replace_header
 import fixuplinks
 
 def relocate_response(headers, content, base_href, old_href, new_href):
@@ -77,7 +77,6 @@ class RelocateMiddleware(object):
         app_iter = self.app(environ, repl_start_response)
         if skipped:
             return app_iter
-        start_response(*stat_headers)
         try:
             for chunk in app_iter:
                 written.append(chunk)
@@ -86,4 +85,7 @@ class RelocateMiddleware(object):
                 app_iter.close()
         content = ''.join(written)
         content = relocate_content(content, base_href, self.old_href, new_href)
+        headers = stat_headers[1]
+        replace_header(headers, 'content-length', str(len(content)))
+        start_response(*stat_headers)
         return [content]
