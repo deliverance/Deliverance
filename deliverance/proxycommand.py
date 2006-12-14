@@ -49,6 +49,7 @@ parser.add_option('--rewrite',
                   action="store_true",
                   dest="rewrite")
 parser.add_option('--renderer',
+                  dest="renderer",
                   help="Select which renderer to use: 'py' or 'xslt'",
                   default='py')
 
@@ -82,7 +83,8 @@ def main(args=None):
         proxy=proxy,
         transparent=options.transparent,
         debug_headers=debug_headers,
-        relocate_content=options.rewrite)
+        relocate_content=options.rewrite, 
+        renderer=options.renderer)
     if options.request_log:
         from paste.translogger import TransLogger
         app = TransLogger(app)
