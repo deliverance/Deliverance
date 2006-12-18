@@ -55,6 +55,9 @@ class ProxyDeliveranceApp(object):
 
 class DebugHeaders(object):
 
+    translate_keys = {'CONTENT_LENGTH': 'HTTP_CONTENT_LENGTH',
+                      'CONTENT_TYPE': 'HTTP_CONTENT_TYPE}
+
     def __init__(self, app):
         self.app = app
 
@@ -63,6 +66,7 @@ class DebugHeaders(object):
         print 'Incoming headers: (%s %s)' % (
             environ['REQUEST_METHOD'], construct_url(environ))
         for name, value in sorted(environ.items()):
+            name = self.translate_keys.get(name, name)
             if not name.startswith('HTTP_'):
                 continue
             name = name[5:].replace('_', '-').title()
