@@ -267,6 +267,10 @@ class DeliveranceMiddleware(object):
             uri = '/' + uri
         environ['PATH_INFO'] = uri
         environ['SCRIPT_NAME'] = environ[DELIVERANCE_BASE_URL]
+        environ['REQUEST_METHOD'] = 'GET'
+        environ['CONTENT_LENGTH'] = '0'
+        environ['wsgi.input'] = StringIO('')
+        environ['CONTENT_TYPE'] = ''
         if environ['QUERY_STRING']:
             environ['QUERY_STRING'] += '&notheme'
         else:
