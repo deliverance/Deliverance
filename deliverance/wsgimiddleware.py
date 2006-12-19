@@ -252,21 +252,23 @@ class DeliveranceMiddleware(object):
         f.close()
         return content
 
-    def get_internal_resource(self, environ, uri):
+    def get_internal_resource(self, in_environ, uri):
         """
         get the data referred to by the uri given 
         by using the wrapped WSGI application 
         """
-        if 'paste.recursive.include' in environ:
-            # Try to do the redirect this way...
-            includer = environ['paste.recursive.include']
-            res = includer(uri)
-            return res.body
-        environ = environ.copy()
+
+        print "get_internal_resource('%s')" % uri
+        
+        if 'paste.recursive.include' in in_environ:
+            environ = in_environ['paste.recursive.include'].original_environ.copy()
+        else:
+            environ = in_environ.copy()
+            
         if not uri.startswith('/'):
             uri = '/' + uri
         environ['PATH_INFO'] = uri
-        environ['SCRIPT_NAME'] = environ[DELIVERANCE_BASE_URL]
+        environ['SCRIPT_NAME'] = in_environ[DELIVERANCE_BASE_URL]
         environ['REQUEST_METHOD'] = 'GET'
         environ['CONTENT_LENGTH'] = '0'
         environ['wsgi.input'] = StringIO('')
@@ -275,6 +277,18 @@ class DeliveranceMiddleware(object):
             environ['QUERY_STRING'] += '&notheme'
         else:
             environ['QUERY_STRING'] = 'notheme'
+
+        if 'HTTP_ACCEPT_ENCODING' in environ:
+            print "Knocking out ACCEPT_ENCODING: (%s)" % environ['HTTP_ACCEPT_ENCODING']
+	    environ['HTTP_ACCEPT_ENCODING'] = '' 
+
+        if 'paste.recursive.include' in in_environ:
+            # Try to do the redirect this way...
+            includer = in_environ['paste.recursive.include']
+            res = includer(uri,environ)
+            print "did paste.recursive.include for %s: [%s]" % (uri,res.body)
+            return res.body
+
 
         path_info = environ['PATH_INFO']
         status, headers, body = intercept_output(environ, self.app)
