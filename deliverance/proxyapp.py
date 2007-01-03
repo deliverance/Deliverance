@@ -56,7 +56,7 @@ class ProxyDeliveranceApp(object):
 class DebugHeaders(object):
 
     translate_keys = {'CONTENT_LENGTH': 'HTTP_CONTENT_LENGTH',
-                      'CONTENT_TYPE': 'HTTP_CONTENT_TYPE}
+                      'CONTENT_TYPE': 'HTTP_CONTENT_TYPE'}
 
     def __init__(self, app):
         self.app = app
