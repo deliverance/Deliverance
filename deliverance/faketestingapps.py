@@ -21,7 +21,7 @@ class Switcher(object):
     Usage::
 
         [filter-app:switchedapp]
-        paste.filter_app_factory = deliverance.faketestingapps.Switcher
+        paste.filter_app_factory = deliverance.faketestingapps:Switcher
         /bad_content.html = 10
         next = static
 
@@ -61,7 +61,7 @@ class Pauser(object):
     Usage::
 
         [filter-app:pauser]
-        paste.filter_app_factory = deliverance.faketestingapps.Pauser
+        paste.filter_app_factory = deliverance.faketestingapps:Pauser
         # 10% of the time:
         probability = 10
         # pause 5 seconds:

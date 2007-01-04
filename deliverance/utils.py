@@ -246,7 +246,7 @@ class RendererBase(object):
 
 
 
-    CSS_URL_PAT = re.compile(r'url\([\"\']*(.*?)[\"\']*\)',re.I)
+    CSS_URL_PAT = re.compile(r'url\(\s*[\"\']*(.*?)[\"\']*\s*\)',re.I)
     CSS_IMPORT_PAT = re.compile(r'\@import\s*[\"\'](.*?)[\"\']',re.I)
     def fixup_css_links(self, elts, base_uri):
         """ 
