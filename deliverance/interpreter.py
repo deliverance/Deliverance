@@ -428,6 +428,13 @@ class Renderer(RendererBase):
         theme_el.extend(content_els)
 
 
+    def get_content_els(rule, content): 
+        xpath = self.get_content_xpath(rule)
+        if xpath: 
+            return copy.deepcopy(content.xpath(self.get_content_xpath(rule)))
+        else: 
+            return copy.deepcopy(rule.xpath("./*"))
+
 
     def drop_els(self,doc,els): 
         """
