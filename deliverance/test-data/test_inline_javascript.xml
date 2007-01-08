@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deliverance-test-suite>
+
+<!-- tests copy of some inline javascript --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme="//body" content="//body/*" />
+  </rules>
+
+  <theme base="http://example.com"> 
+     <html><head><title>Blah</title></head><body>Dummy Content</body></html>
+  </theme>
+
+  <content> 
+     <html><head></head><body>
+<form ACTION="http://lb.bcentral.com/ex/manage/subscriberprefs.aspx" target="popupwindow" METHOD="POST" onsubmit="window.open('http://lb.bcentral.com', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" name="customerid" value="58965" />
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="if(this.form.email.value == 'Your email') { alert('Please enter your email'); return false; }" value="Go" />	
+	
+</form>
+
+	<p><span class="new">NEW: </span>Daily email digests</p>
+<form action="http://www.feedburner.com/fb/a/emailverify" method="post" target="popupwindow" onsubmit="window.open('http://www.feedburner.com', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" value="http://feeds.feedburner.com/~e?ffid=357498" name="url"/>
+
+	<input type="hidden" value="StreetsBlog" name="title"/>
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="if(this.form.email.value == 'Your email') { alert('Please enter your email'); return false; }" value="Go" />	
+</form>
+
+<form id="subscribeForm" method="post" target="popupwindow">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" name="customerid" value="58965" />
+	
+	<input type="hidden" value="http://feeds.feedburner.com/~e?ffid=357498" name="url"/>
+
+	<input type="hidden" value="StreetsBlog" name="title"/>
+	
+	<input type="radio" name="subscription" value="newsletter" />
+	<input type="radio" name="subscription" value="digest" />
+
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="subscribe(this.form); return false;" value="Go" />	
+</form>
+</body>
+</html>
+  </content>
+ 
+  <output>
+     <html><head><title>Blah</title></head>
+     <body>
+
+
+<form ACTION="http://lb.bcentral.com/ex/manage/subscriberprefs.aspx" target="popupwindow" METHOD="POST" onsubmit="window.open('http://lb.bcentral.com', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" name="customerid" value="58965" />
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="if(this.form.email.value == 'Your email') { alert('Please enter your email'); return false; }" value="Go" />	
+	
+</form>
+
+	<p><span class="new">NEW: </span>Daily email digests</p>
+<form action="http://www.feedburner.com/fb/a/emailverify" method="post" target="popupwindow" onsubmit="window.open('http://www.feedburner.com', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" value="http://feeds.feedburner.com/~e?ffid=357498" name="url"/>
+
+	<input type="hidden" value="StreetsBlog" name="title"/>
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="if(this.form.email.value == 'Your email') { alert('Please enter your email'); return false; }" value="Go" />	
+</form>
+
+<form id="subscribeForm" method="post" target="popupwindow">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" name="customerid" value="58965" />
+	
+	<input type="hidden" value="http://feeds.feedburner.com/~e?ffid=357498" name="url"/>
+
+	<input type="hidden" value="StreetsBlog" name="title"/>
+	
+	<input type="radio" name="subscription" value="newsletter" />
+	<input type="radio" name="subscription" value="digest" />
+
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="subscribe(this.form); return false;" value="Go" />	
+</form>
+     </body></html>
+  </output> 
+</deliverance-test>
+
+<!-- tests some inline javascript in the theme --> 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme="//body" content="//body/node()" />
+  </rules>
+
+  <content >
+     <html><head><title>Blah</title></head><body>Content</body></html>
+  </content>
+
+  <theme base="http://example.com"> 
+     <html><head></head><body>
+<form ACTION="http://lb.bcentral.com/ex/manage/subscriberprefs.aspx" target="popupwindow" METHOD="POST" onsubmit="window.open('http://lb.bcentral.com', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" name="customerid" value="58965" />
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="if(this.form.email.value == 'Your email') { alert('Please enter your email'); return false; }" value="Go" />	
+	
+</form>
+
+	<p><span class="new">NEW: </span>Daily email digests</p>
+<form action="http://www.feedburner.com/fb/a/emailverify" method="post" target="popupwindow" onsubmit="window.open('http://www.feedburner.com', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" value="http://feeds.feedburner.com/~e?ffid=357498" name="url"/>
+
+	<input type="hidden" value="StreetsBlog" name="title"/>
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="if(this.form.email.value == 'Your email') { alert('Please enter your email'); return false; }" value="Go" />	
+</form>
+
+<form id="subscribeForm" method="post" target="popupwindow">
+	<input type="text" value="Your email" name="email" style="width:134px;" class="text" onblur="if(this.value=='') this.value='Your email';" onfocus="if(this.value=='Your email') this.value='';" />
+
+	<input type="hidden" name="customerid" value="58965" />
+	
+	<input type="hidden" value="http://feeds.feedburner.com/~e?ffid=357498" name="url"/>
+
+	<input type="hidden" value="StreetsBlog" name="title"/>
+	
+	<input type="radio" name="subscription" value="newsletter" />
+	<input type="radio" name="subscription" value="digest" />
+
+	<input type="image" src="http://www.streetsblog.org/wp-content/themes/streetsblog/images/go.gif" onclick="subscribe(this.form); return false;" value="Go" />	
+</form>
+</body>
+</html>
+  </theme>
+ 
+  <output>
+     <html><head></head>
+     <body>
+       Content
+     </body></html>
+  </output> 
+</deliverance-test>
+
+
+
+</deliverance-test-suite>

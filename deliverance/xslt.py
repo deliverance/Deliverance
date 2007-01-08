@@ -72,6 +72,7 @@ class Renderer(RendererBase):
 
         self.fixup_links(theme_copy, theme_uri)
         self.xsl_escape_comments(theme_copy)
+        self.avt_escape(theme_copy)
 
         self.resolve_uri = reference_resolver
         if self.resolve_uri:
@@ -466,5 +467,18 @@ class Renderer(RendererBase):
                 del(rule.attrib[self.RULE_MOVE_KEY]) # just process it normally
             return
 
+    def avt_escape(self,elt): 
+        """
+        replaces all instances of { or } with {{ and }} to avoid 
+        being interpreted as an Attribute Value Template by XSLT 
+        """
+        
+        for (k,v) in elt.attrib.items():
+            escaped = v.replace('{','{{')
+            escaped = escaped.replace('}','}}')
+            elt.attrib[k] = escaped 
+
+        for child in elt: 
+            self.avt_escape(child)
 
         

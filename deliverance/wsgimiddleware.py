@@ -258,7 +258,6 @@ class DeliveranceMiddleware(object):
         by using the wrapped WSGI application 
         """
 
-        print "get_internal_resource('%s')" % uri
         
         if 'paste.recursive.include' in in_environ:
             environ = in_environ['paste.recursive.include'].original_environ.copy()
@@ -279,14 +278,12 @@ class DeliveranceMiddleware(object):
             environ['QUERY_STRING'] = 'notheme'
 
         if 'HTTP_ACCEPT_ENCODING' in environ:
-            print "Knocking out ACCEPT_ENCODING: (%s)" % environ['HTTP_ACCEPT_ENCODING']
 	    environ['HTTP_ACCEPT_ENCODING'] = '' 
 
         if 'paste.recursive.include' in in_environ:
             # Try to do the redirect this way...
             includer = in_environ['paste.recursive.include']
             res = includer(uri,environ)
-            print "did paste.recursive.include for %s: [%s]" % (uri,res.body)
             return res.body
 
 
