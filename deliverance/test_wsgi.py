@@ -90,6 +90,18 @@ def do_xinclude(renderer_type, name):
     res2 = app.get('/xinclude_expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
+def do_with_spaces(renderer_type, name):
+    wsgi_app = DeliveranceMiddleware(static_app, 'xinclude_theme.html', 'xinclude_rules.xml',
+                                     renderer_type)
+    app = TestApp(wsgi_app)
+    expected = app.get('/xinclude_expected.html?notheme').body
+    res = app.get('/example%20with%20spaces.html')
+    html_string_compare(res.body, expected)
+    wsgi_app = DeliveranceMiddleware(static_app, 'xinclude_theme.html', 'xinclude_rules%20with%20spaces.xml',
+                                     renderer_type)
+    app = TestApp(wsgi_app)
+    res2 = app.get('/example.html')
+    html_string_compare(res2.body, expected)
 
 def do_nycsr(renderer_type, name):
     wsgi_app = DeliveranceMiddleware(nycsr_app, 'http://codespeak.net/svn/z3/deliverance/trunk/deliverance/test-data/nycsr/nycsr_theme.html','nycsr.xml',
@@ -137,7 +149,7 @@ def do_aggregate(renderer_type, name):
     html_string_compare(res.body, res2.body)
 
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate ] 
+TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
