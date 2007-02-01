@@ -21,7 +21,13 @@ class InternalResourceFetcher(object):
         if not self.uri.startswith('/'):
             self.uri = '/' + self.uri
 
-        self.environ['PATH_INFO'] = uri
+        uri_parts = urlparse.urlparse(uri)
+
+        self.environ['PATH_INFO'] = uri_parts[2]
+        if len(uri_parts[4]) > 0: 
+            self.environ['QUERY_STRING'] = uri_parts[4] + '&notheme'
+        else: 
+            self.environ['QUERY_STRING'] = 'notheme'
 
         base_url = in_environ['deliverance.base-url']
         if base_url is not None:
@@ -37,7 +43,7 @@ class InternalResourceFetcher(object):
         self.environ['CONTENT_LENGTH'] = '0'
         self.environ['wsgi.input'] = StringIO('')
         self.environ['CONTENT_TYPE'] = ''
-        self.environ['QUERY_STRING'] = 'notheme'
+
 
         if 'HTTP_ACCEPT_ENCODING' in self.environ:
 	    self.environ['HTTP_ACCEPT_ENCODING'] = '' 
@@ -52,7 +58,9 @@ class InternalResourceFetcher(object):
             return (res.status, res.headers, res.body)
         else: 
             print "Doing intercept"
-            return intercept_output(self.environ, self.app)
+            status, headers, body = intercept_output(self.environ, self.app)
+            print "  => %s" % status 
+            return (status, headers, body)
 
 
     def get(self): 
