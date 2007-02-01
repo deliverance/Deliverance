@@ -1,5 +1,7 @@
 import re
 from paste.response import header_value, replace_header
+from paste.httpheaders import EXPIRES 
+from time import time as now
 from sets import Set
 
 
@@ -23,50 +25,77 @@ def merge_cache_headers(self, response_info, new_headers):
     (a map of urls to wsgi response triples) 
     """
 
-    cache_info = {}
+    headers_map = {}
     for uri, response in response_info.items(): 
-        cache_info[uri] = response[1]
+        headers_map[uri] = response[1]
+        
+    cache_control_map = merge_cache_control(headers_map.values(), upgrade_expires=True)
+    if len(cache_control_map):         
+        replace_header(new_headers, 'cache-control', 
+                       flatten_directive_map(cache_control_map))
+        # provide an Expires header if there is a cache-control max-age 
+        if 'max-age' in cache_control_map: 
+            expire_delta = int(new_cache_ctl['max-age'])
+            EXPIRES.update(new_headers, delta=expire_delta)
 
-    cache_control = merge_cache_control(cache_info.values())
-    if cache_control:         
-        replace_header(new_headers, 'cache-control', cache_control)
-
-    etag = merge_etags_from_headers(cache_info)
+    etag = merge_etags_from_headers(headers_map)
     if etag is not None: 
         replace_header(new_headers, 'etag', etag )
 
-    vary = merge_vary_from_headers(cache_info)
+    vary = merge_vary_from_headers(headers_map)
     if vary is not None: 
         replace_header(new_headers, 'vary', vary)
 
-    # XXX Expires 
 
 
-
-
-def merge_cache_control(header_sets): 
+def merge_cache_control(header_sets, upgrade_expires=False): 
     """
     computes a value for the cache-control header based on the 
     values of the cache-control headers found in the list of 
-    wsgi-style response header lists. 
+    wsgi-style response header lists. returns a map of 
+    cache-control directive names to values. use 
+    flatten_directive_map to compute value suitable for 
+    the cache-control header. 
+    
+    if upgrade_expires is True, if there is a header set with 
+    an Expires header, but no cache-control header, it is treated as a 
+    cache-control: public, max-age: <expire difference from now>  
 
     >>> headerses = []
     >>> headerses.append([ ('cache-control', "public, max-age = 10") ])
     >>> headerses.append([ ('cache-control', "public, max-age = 5") ])
     >>> headerses.append([ ('cache-control', "public, max-age = 2") ])
-    >>> merge_cache_control(headerses)
+    >>> flatten_directive_map(merge_cache_control(headerses))
     'public, max-age = 2'
 
     >>> headerses = []
     >>> headerses.append([ ('cache-control', "public, max-age = 10") ])
     >>> headerses.append([ ('cache-control', "private, max-age = 5") ])
     >>> headerses.append([ ('cache-control', "public, max-age = 2") ])
-    >>> merge_cache_control(headerses)
+    >>> flatten_directive_map(merge_cache_control(headerses))
     'private, max-age = 2'
 
-    """
+    >>> headerses = [[],[('cache-control', "public, max-age = 100")]]
+    >>> from paste.httpheaders import EXPIRES
+    >>> EXPIRES.update(headerses[0], time=( int(now()) + 20))
+    >>> flatten_directive_map(merge_cache_control(headerses, upgrade_expires=True))
+    'public, max-age = 20'
     
+
+    """    
+
     cache_ctls = [parse_cache_directives(header_value(x,'cache-control')) for x in header_sets]
+
+    if upgrade_expires: 
+        # if there is a header set with no cache-control, but an Expires, 
+        # upgrade it to a cache-control: max-age = <expires offset>, public
+        for i,cc in enumerate(cache_ctls):
+            if len(cc) == 0:
+                expire_val = header_value(header_sets[i],'expires')
+                if expire_val is not None:
+                    expire_secs = int(EXPIRES.parse(expire_val) - int(now()))
+                    cc['public'] = None
+                    cc['max-age'] = expire_secs
         
     # apply cache-control merging policies 
     new_cache_ctl = dict() 
@@ -81,7 +110,7 @@ def merge_cache_control(header_sets):
     merge_minimum('max-age', new_cache_ctl, cache_ctls)
     merge_minimum('smax-age', new_cache_ctl, cache_ctls)
 
-    return flatten_directive_map(new_cache_ctl)
+    return new_cache_ctl 
 
     
 def merge_etags_from_headers(headers_map): 
@@ -120,7 +149,6 @@ def merge_vary_from_headers(headers_map):
     else: 
         return None
 
-    
 def parse_merged_etag(composite_tag): 
     """
     given a composite etag computed by merge_etags, 
