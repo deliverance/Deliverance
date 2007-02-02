@@ -156,6 +156,8 @@ def do_aggregate(renderer_type, name):
     html_string_compare(res.body, res2.body)
 
 def do_cache(renderer_type, name): 
+    # XXX this should be busted up into multiple tests I spose 
+
     theme_data = """ 
         <html>
           <head><title>theme</title></head>
@@ -260,7 +262,52 @@ def do_cache(renderer_type, name):
     status = res.status
     assert(status == 200)
     
+    # test a mixture 
+    theme_info.etag = None
+    rule_info.etag = 'joop'
+    content_info.etag = 'win' 
+    theme_info.mod_time = then - 20 
+    rule_info.mod_time = None
+    content_info.mod_time = None
+ 
+    # get the new etag, make sure things are ok for non-cachey req 
+    res = app.get('/content.html')
+    composite_etag = header_value(res.headers, 'etag')
+    assert(composite_etag is not None and len(composite_etag) > 0)
+    assert(res.status == 200)
 
+    # should be not modified with the etags and a date after the mod date 
+    res = app.get('/content.html', 
+                  headers={'If-Modified-Since': formatdate(then-15), 
+                           'If-None-Match': composite_etag})
+    status = res.status
+    assert(status == 304)
+
+    # should be modified if the date is after the mod date since there is 
+    # no etag for theme 
+    res = app.get('/content.html', 
+                  headers={'If-Modified-Since': formatdate(then-25), 
+                           'If-None-Match': composite_etag})
+    status = res.status
+    assert(status == 200)
+
+    # should be modified since there is no etag specified and no 
+    # moddate for rules / content 
+    res = app.get('/content.html', 
+                  headers={'If-Modified-Since': formatdate(then-15)})
+    status = res.status
+    assert(status == 200)
+
+    # should be modified since there is no etag for theme 
+    res = app.get('/content.html', 
+                  headers={'If-None-Match': composite_etag})
+    status = res.status
+    assert(status == 200)
+
+
+    
+
+    
     
     
                                           
