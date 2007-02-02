@@ -49,17 +49,13 @@ class InternalResourceFetcher(object):
 	    self.environ['HTTP_ACCEPT_ENCODING'] = '' 
 
     def wsgi_get(self): 
-        print "Internal Resource get: %s" % self.uri
         if 'paste.recursive.include' in self.environ: 
-            print "Doing paste.recursive.include"
             # Try to do the redirect this way...
             includer = self.environ['paste.recursive.include']
             res = includer(self.uri, self.environ)
             return (res.status, res.headers, res.body)
         else: 
-            print "Doing intercept"
             status, headers, body = intercept_output(self.environ, self.app)
-            print "  => %s" % status 
             return (status, headers, body)
 
 
@@ -115,7 +111,6 @@ class ExternalResourceFetcher(object):
         #        self.environ['SERVER_PORT'] = '80'
 
     def wsgi_get(self): 
-        print "External Resource get: %s" % self.uri
         proxy_app = TransparentProxy() 
         return intercept_output(self.environ, proxy_app)
 

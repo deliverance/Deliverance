@@ -9,11 +9,11 @@ from sets import Set
 utilities for fusing cache related HTTP headers from 
 multiple sources 
 
-XXX there is probably a good amount of work in here 
-that Paste could simplify 
+XXX 
+there is probably a good amount of work in here that Paste could simplify 
+tests that depend on set ordering 
 
 TODO: 
-handle expires 
 handle last-modified
 """
 
@@ -470,6 +470,8 @@ def merge_minimum(directive, newcc, cc):
             return
 
     newcc[directive] = str(min)
+
+
 
 def flatten_directive_map(d): 
     """ 

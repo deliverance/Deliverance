@@ -50,10 +50,6 @@ class DeliveranceMiddleware(object):
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
-        self._renderer = None
-        self._cache_time = datetime.datetime.now()
-        self._timeout = datetime.timedelta(0,10)
-        self._lock = threading.Lock()
 
         if renderer == 'py':
             import interpreter
@@ -67,18 +63,7 @@ class DeliveranceMiddleware(object):
             self._rendererType = renderer
 
     def get_renderer(self, environ):
-        """
-        retrieve the deliverance Renderer representing the transformation this 
-        middlware represents. Renderer may change according to caching rules. 
-        """
-        try:
-            self._lock.acquire()
-            if not self._renderer or self.cache_expired():
-                self._renderer = self.create_renderer(environ)
-                self._cache_time = datetime.datetime.now()
-            return self._renderer
-        finally:
-            self._lock.release()
+        return self.create_renderer(environ)
 
     def create_renderer(self, environ):
         """
@@ -126,13 +111,6 @@ class DeliveranceMiddleware(object):
             rule=parsedRule, 
             rule_uri=self.rule_uri,
             reference_resolver=reference_resolver)
-
-        
-    def cache_expired(self):
-        """
-        returns true if the stored Renderer should be refreshed 
-        """
-        return self._cache_time + self._timeout < datetime.datetime.now()
 
     def rule(self, environ):
         """
@@ -193,8 +171,6 @@ class DeliveranceMiddleware(object):
                 return body
 
             # perform actual themeing 
-            print "Doing themeing" 
-
             body = self.filter_body(environ, body)
 
             replace_header(headers, 'content-length', str(len(body)))
@@ -240,10 +216,14 @@ class DeliveranceMiddleware(object):
 
 
     def rebuild_check(self, environ, start_response): 
-        print "===== rebuild check ====="
         # perform the request for content  
 
         content_url = construct_url(environ)
+
+        etag_map = {}
+        if 'HTTP_IF_NONE_MATCH' in environ: 
+            etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+            environ['HTTP_IF_NONE_MATCH'] = etag_map.get(content_url,None)
 
         status, headers, body = intercept_output(environ, self.app,
                                                  self.should_intercept,
@@ -252,11 +232,9 @@ class DeliveranceMiddleware(object):
 
         if status is None: 
             # should_intercept says this isn't HTML, we're done
-            print "ignore non-html: %s" % construct_url(environ)
             return (None, None, body)
 
         if self.should_ignore_url(content_url): 
-            print "ignore blacklisted url: %s" % construct_url(environ)
             start_response(status, headers)
             return (None, None, [body])
 
@@ -265,11 +243,8 @@ class DeliveranceMiddleware(object):
         
         # it was modified or an error, give it back for themeing 
         if not status.startswith('304'): 
-            print "Content %s modified, continue..." % content_url 
-
             # if it's not a full HTML page, skip it 
             if not self.hasHTMLTag(body): 
-                print "ignore non-html-tagged: %s" % construct_url(environ)
                 start_response(status, headers)
                 return (None, None, [body])
 
@@ -278,11 +253,10 @@ class DeliveranceMiddleware(object):
             
         # got 304 Not Modified for content, check other resources 
         rules = etree.XML(self.rule(environ))
-        resources = self.get_resource_uris(rules)
-        if self.any_modified(environ, resources): 
+        resources = self.get_resource_uris(rules)        
+        if self.any_modified(environ, resources, etag_map): 
             # something changed, 
             # get the content explicitly and give it back 
-            print "explicitly requesting %s" % construct_url(environ)
             if 'HTTP_IF_MODIFIED_SINCE' in environ: 
                 environ['HTTP_IF_MODIFIED_SINCE'] = ''
             if 'HTTP_IF_NONE_MATCH' in environ: 
@@ -293,8 +267,6 @@ class DeliveranceMiddleware(object):
 
             if not self.hasHTMLTag(body): 
                 # XXX yarg, we didn't care about it!
-                print "ARG ignore non-html: status: %s, %s" % (status, construct_url(environ))
-                #print "Environ: " , environ , " Headers: ", headers 
                 start_response(status, headers)
                 return (None, None, [body])
 
@@ -302,7 +274,6 @@ class DeliveranceMiddleware(object):
             return (status, headers, body)
 
         # nothing was modified, give back a 304 
-        print "giving back 304: %s" % construct_url(environ)
         cache_utils.merge_cache_headers(environ, 
                                         environ[DELIVERANCE_CACHE], 
                                         headers)
@@ -310,7 +281,7 @@ class DeliveranceMiddleware(object):
 
         return (None,None,[])
         
-    def any_modified(self, environ, resources): 
+    def any_modified(self, environ, resources, etag_map): 
         """
         returns a tuple containing a boolean and map of uris to HTTP response headers.  
         the first value represents whether any resource in resources has been 
@@ -319,16 +290,10 @@ class DeliveranceMiddleware(object):
         second element of the tuple. 
         """
 
-        print "====== rebuild check ======"
         moddate = None
-        etag_map = {}
 
         if 'HTTP_IF_MODIFIED_SINCE' in environ: 
-            print "using modification date: %s" % environ['HTTP_IF_MODIFIED_SINCE']
             moddate = environ['HTTP_IF_MODIFIED_SINCE']            
-        if 'HTTP_IF_NONE_MATCH' in environ: 
-            print "using composite etag: %s" % environ['HTTP_IF_NONE_MATCH']
-            etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
             
         for uri in resources:
             if (self.check_modification(environ, uri, 
@@ -348,10 +313,8 @@ class DeliveranceMiddleware(object):
         if uri in environ[DELIVERANCE_CACHE]: 
             response = environ[DELIVERANCE_CACHE][uri]
             if response[0].startswith('200'): 
-                print "using previously fetched content for %s" % uri 
                 return response[2]
 
-        print "fetching resource from scratch: %s" % uri 
         fetcher = self.get_fetcher(environ, uri)
         
         # eliminate validation headers, we want the content 
@@ -418,7 +381,6 @@ class DeliveranceMiddleware(object):
 
         """
 
-        print "[!] Checking modification for: [%s] w/ [%s,%s]" % (uri, httpdate_since, etag)
 
         fetcher = self.get_fetcher(environ, uri)
         
@@ -436,10 +398,6 @@ class DeliveranceMiddleware(object):
 
         status, headers, body = fetcher.wsgi_get()
         environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
-
-        print "status was: [%s]" % status
-        if not (status.startswith('200') or status.startswith('304')): 
-            print "status(%s), environ => %s, headers => %s" % (status, fetcher.environ, headers)
 
         if status.startswith('304'): # Not Modified 
             return False 
