@@ -107,10 +107,8 @@ class DeliveranceMiddleware(object):
         try:
             parsedRule = etree.XML(rule)
         except Exception, message:
-            newmessage = "Unable to parse rules (" + self.rule_uri + ")"
-            if message:
-                newmessage += ":" + str(message)
-            raise DeliveranceError(newmessage)
+            message.public_html = 'Cannot parse rules (%s)' % message
+            raise
 
         return self._rendererType(
             theme=parsedTheme,
@@ -132,7 +130,7 @@ class DeliveranceMiddleware(object):
         initializer. 
         """
         try:
-            return self.get_resource(environ,self.rule_uri)
+            return self.get_resource(environ, self.rule_uri)
         except Exception, message:
             newmessage = "Unable to retrieve rules from " + self.rule_uri 
             if message:
@@ -148,11 +146,9 @@ class DeliveranceMiddleware(object):
         try:
             return self.get_resource(environ,self.theme_uri)
         except Exception, message:
-            newmessage = "Unable to retrieve theme page from " + self.theme_uri 
-            if message:
-                newmessage += ": " + str(message)
-            raise DeliveranceError(newmessage)
-
+            message.public_html = 'Unable to retrieve theme page from %s: %s' % (
+                self.theme_uri, message)
+            raise
 
     def __call__(self, environ, start_response):
         """
@@ -226,7 +222,7 @@ class DeliveranceMiddleware(object):
         """
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
         uri = urlparse.urljoin(internalBaseURL, uri)
-        
+
         if  internalBaseURL and uri.startswith(internalBaseURL):
             return self.get_internal_resource(environ, uri[len(internalBaseURL):])
         else:
@@ -257,7 +253,6 @@ class DeliveranceMiddleware(object):
         get the data referred to by the uri given 
         by using the wrapped WSGI application 
         """
-
         
         if 'paste.recursive.include' in in_environ:
             environ = in_environ['paste.recursive.include'].original_environ.copy()
@@ -267,7 +262,9 @@ class DeliveranceMiddleware(object):
         if not uri.startswith('/'):
             uri = '/' + uri
         environ['PATH_INFO'] = uri
-        environ['SCRIPT_NAME'] = in_environ[DELIVERANCE_BASE_URL]
+        base = in_environ[DELIVERANCE_BASE_URL]
+        scheme, netloc, path, qs, fragment = urlparse.urlsplit(base)
+        environ['SCRIPT_NAME'] = path
         environ['REQUEST_METHOD'] = 'GET'
         environ['CONTENT_LENGTH'] = '0'
         environ['wsgi.input'] = StringIO('')
@@ -283,7 +280,7 @@ class DeliveranceMiddleware(object):
         if 'paste.recursive.include' in in_environ:
             # Try to do the redirect this way...
             includer = in_environ['paste.recursive.include']
-            res = includer(uri,environ)
+            res = includer(uri, environ)
             return res.body
 
 
