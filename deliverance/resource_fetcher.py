@@ -15,6 +15,7 @@ class InternalResourceFetcher(object):
 
         if 'paste.recursive.include' in in_environ:
             self.environ = in_environ['paste.recursive.include'].original_environ.copy()
+            self.environ['paste.recursive.include'] = in_environ['paste.recursive.include']
         else:
             self.environ = in_environ.copy()
             
