@@ -148,53 +148,40 @@ class DeliveranceMiddleware(object):
         using the transformation specified in the 
         initializer. 
         """
-        try:
-            qs = environ.get('QUERY_STRING', '')
-            environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
-            environ[DELIVERANCE_CACHE] = {} 
-            notheme = 'notheme' in qs
-            if notheme:
-                return self.app(environ, start_response)
-
-            # unsupported 
-            if 'HTTP_ACCEPT_ENCODING' in environ:
-                environ['HTTP_ACCEPT_ENCODING'] = '' 
-            if 'HTTP_IF_MATCH' in environ: 
-                environ['HTTP_IF_MATCH'] = '' 
-            if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
-                environ['HTTP_IF_UNMODIFIED_SINCE'] = '' 
-            
-            status, headers, body = self.rebuild_check(environ, start_response)
-
-            # non-html responses, or rebuild is not necessary: bail out 
-            if status is None:
-                return body
-
-            # perform actual themeing 
-            body = self.filter_body(environ, body)
-
-            replace_header(headers, 'content-length', str(len(body)))
-            replace_header(headers, 'content-type', 'text/html; charset=utf-8')
-
-            cache_utils.merge_cache_headers(environ, 
-                                            environ[DELIVERANCE_CACHE], 
-                                            headers)
-
-            start_response(status, headers)
-            return [body]
+        qs = environ.get('QUERY_STRING', '')
+        environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
+        environ[DELIVERANCE_CACHE] = {} 
+        notheme = 'notheme' in qs
+        if notheme:
+            return self.app(environ, start_response)
         
-        except DeliveranceError, message:            
-            stack = StringIO()
-            traceback.print_exception(sys.exc_info()[0],
-                                      sys.exc_info()[1],
-                                      sys.exc_info()[2],
-                                      file=stack)
-            status = "500 Internal Server Error"
-            headers = [('Content-type','text/html')]
-            start_response(status,headers)
-            errpage = DELIVERANCE_ERROR_PAGE % (message,stack.getvalue())
-            return [ errpage ]
+        # unsupported 
+        if 'HTTP_ACCEPT_ENCODING' in environ:
+            environ['HTTP_ACCEPT_ENCODING'] = '' 
+        if 'HTTP_IF_MATCH' in environ: 
+            environ['HTTP_IF_MATCH'] = '' 
+        if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
+            environ['HTTP_IF_UNMODIFIED_SINCE'] = '' 
+            
+        status, headers, body = self.rebuild_check(environ, start_response)
 
+        # non-html responses, or rebuild is not necessary: bail out 
+        if status is None:
+            return body
+
+        # perform actual themeing 
+        body = self.filter_body(environ, body)
+
+        replace_header(headers, 'content-length', str(len(body)))
+        replace_header(headers, 'content-type', 'text/html; charset=utf-8')
+
+        cache_utils.merge_cache_headers(environ, 
+                                        environ[DELIVERANCE_CACHE], 
+                                        headers)
+
+        start_response(status, headers)
+        return [body]
+        
     def should_intercept(self, status, headers):
         """
         returns true if the status and headers given 
