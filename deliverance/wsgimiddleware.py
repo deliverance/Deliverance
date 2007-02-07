@@ -28,7 +28,8 @@ DELIVERANCE_BASE_URL = 'deliverance.base-url'
 DELIVERANCE_CACHE = 'deliverance.cache'
 
 IGNORE_EXTENSIONS = ['js','css','gif','jpg','jpeg','pdf','ps','doc','png','ico','mov','mpg','mpeg', 'mp3','m4a', 
-                     'txt','rtf']
+                     'txt','rtf', 'swf', 'wav', 'zip', 'wmv', 'ppt', 'gz', 'tgz', 'jar', 'xls', 'bmp', 'tif', 'tga', 
+                     'hqx', 'avi']
 
 IGNORE_URL_PATTERN = re.compile("^.*\.(%s)$" % '|'.join(IGNORE_EXTENSIONS))
 
