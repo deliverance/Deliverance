@@ -1,3 +1,5 @@
+
+
 """
 Deliverance theming as WSGI middleware
 """
@@ -36,7 +38,7 @@ class DeliveranceMiddleware(object):
     tranformation as a WSGI middleware component. 
     """
 
-    def __init__(self, app, theme_uri, rule_uri, renderer='py'):
+    def __init__(self, app, theme_uri, rule_uri, renderer='py', merge_cache_control=False):
         """
         initializer
         
@@ -46,10 +48,15 @@ class DeliveranceMiddleware(object):
         renderer: selects deliverance render class to utilize when 
           performing transformations, may be 'py' or 'xslt' or a
           Renderer class
+        merge_cache_control: if set to True, the cache-control header will 
+        be calculated from the cache-control headers of all component pages 
+        during rendering. If set to False, the requested content's 
+        cache-control headers will be used. (does not affect etag merging)
         """
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
+        self.merge_cache_control = merge_cache_control
 
         if renderer == 'py':
             import interpreter
@@ -153,15 +160,16 @@ class DeliveranceMiddleware(object):
         environ[DELIVERANCE_CACHE] = {} 
         notheme = 'notheme' in qs
         if notheme:
+	    environ['QUERY_STRING'] = '' # XXX
             return self.app(environ, start_response)
         
         # unsupported 
         if 'HTTP_ACCEPT_ENCODING' in environ:
             environ['HTTP_ACCEPT_ENCODING'] = '' 
         if 'HTTP_IF_MATCH' in environ: 
-            environ['HTTP_IF_MATCH'] = '' 
+            del environ['HTTP_IF_MATCH'] 
         if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
-            environ['HTTP_IF_UNMODIFIED_SINCE'] = '' 
+            del environ['HTTP_IF_UNMODIFIED_SINCE'] 
             
         status, headers, body = self.rebuild_check(environ, start_response)
 
@@ -177,7 +185,8 @@ class DeliveranceMiddleware(object):
 
         cache_utils.merge_cache_headers(environ, 
                                         environ[DELIVERANCE_CACHE], 
-                                        headers)
+                                        headers, 
+                                        self.merge_cache_control)
 
         start_response(status, headers)
         return [body]
@@ -210,7 +219,13 @@ class DeliveranceMiddleware(object):
         etag_map = {}
         if 'HTTP_IF_NONE_MATCH' in environ: 
             etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
-            environ['HTTP_IF_NONE_MATCH'] = etag_map.get(content_url,None)
+	    tag = etag_map.get(content_url, None)
+	    environ['HTTP_IF_NONE_MATCH'] = tag
+	    if tag: 
+                environ['HTTP_IF_NONE_MATCH'] = tag
+            else:
+	        del environ['HTTP_IF_NONE_MATCH']
+
 
         status, headers, body = intercept_output(environ, self.app,
                                                  self.should_intercept,
@@ -245,9 +260,9 @@ class DeliveranceMiddleware(object):
             # something changed, 
             # get the content explicitly and give it back 
             if 'HTTP_IF_MODIFIED_SINCE' in environ: 
-                environ['HTTP_IF_MODIFIED_SINCE'] = ''
+                del environ['HTTP_IF_MODIFIED_SINCE']
             if 'HTTP_IF_NONE_MATCH' in environ: 
-                environ['HTTP_IF_NONE_MATCH'] = '' 
+                del environ['HTTP_IF_NONE_MATCH'] 
             environ['CACHE-CONTROL'] = 'no-cache'
 
             status, headers, body = intercept_output(environ, self.app)
@@ -263,7 +278,8 @@ class DeliveranceMiddleware(object):
         # nothing was modified, give back a 304 
         cache_utils.merge_cache_headers(environ, 
                                         environ[DELIVERANCE_CACHE], 
-                                        headers)
+                                        headers, 
+                                        self.merge_cache_control)
         start_response('304 Not Modified', headers)
 
         return (None,None,[])
@@ -303,14 +319,16 @@ class DeliveranceMiddleware(object):
                 return response[2]
 
         fetcher = self.get_fetcher(environ, uri)
-        
+         
+
         # eliminate validation headers, we want the content 
         if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
-            fetcher.environ['HTTP_IF_MODIFIED_SINCE'] = ''
+            del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
         if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
-            fetcher.environ['HTTP_IF_NONE_MATCH'] = '' 
+            del fetcher.environ['HTTP_IF_NONE_MATCH'] 
         fetcher.environ['CACHE-CONTROL'] = 'no-cache'
         
+
         status, headers, body = fetcher.wsgi_get()         
         
         if not status.startswith('200'): 
@@ -368,25 +386,24 @@ class DeliveranceMiddleware(object):
 
         """
 
-
         fetcher = self.get_fetcher(environ, uri)
         
         if httpdate_since: 
             fetcher.environ['HTTP_IF_MODIFIED_SINCE'] = httpdate_since 
         else: 
-            fetcher.environ['HTTP_IF_MODIFIED_SINCE'] = ''
+            del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
         
 
         if etag: 
             fetcher.environ['HTTP_IF_NONE_MATCH'] = etag
         else: 
-            fetcher.environ['HTTP_IF_NONE_MATCH'] = ''
+            del fetcher.environ['HTTP_IF_NONE_MATCH']
 
 
         status, headers, body = fetcher.wsgi_get()
         environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
 
-        if status.startswith('304'): # Not Modified 
+        if status.startswith('304'): # Not Modified             
             return False 
 
         return True

@@ -1,6 +1,6 @@
 import re
 from paste.response import header_value, replace_header
-from paste.httpheaders import EXPIRES 
+from paste.httpheaders import EXPIRES, LAST_MODIFIED
 from time import time as now
 from sets import Set
 
@@ -13,30 +13,31 @@ XXX
 there is probably a good amount of work in here that Paste could simplify 
 tests that depend on set ordering 
 
-TODO: 
-handle last-modified
 """
 
 
-def merge_cache_headers(self, response_info, new_headers): 
+def merge_cache_headers(self, response_info, new_headers, merge_cache_control=True): 
     """
     replaces cache related headers in new_headers 
     with caching info calculated cache_info 
     (a map of urls to wsgi response triples) 
+    if merge_cache_control is False, the cache-control header is 
+    not calculated and only etags, last-modified and vary headers are merged. 
     """
 
     headers_map = {}
     for uri, response in response_info.items(): 
         headers_map[uri] = response[1]
         
-    cache_control_map = merge_cache_control(headers_map.values(), upgrade_expires=True)
-    if len(cache_control_map):         
-        replace_header(new_headers, 'cache-control', 
-                       flatten_directive_map(cache_control_map))
-        # provide an Expires header if there is a cache-control max-age 
-        if 'max-age' in cache_control_map: 
-            expire_delta = int(new_cache_ctl['max-age'])
-            EXPIRES.update(new_headers, delta=expire_delta)
+    if merge_cache_control: 
+        cache_control_map = merge_cache_control(headers_map.values(), upgrade_expires=True)
+        if len(cache_control_map):         
+            replace_header(new_headers, 'cache-control', 
+                           flatten_directive_map(cache_control_map))
+            # provide an Expires header if there is a cache-control max-age 
+            if 'max-age' in cache_control_map: 
+                expire_delta = int(new_cache_ctl['max-age'])
+                EXPIRES.update(new_headers, delta=expire_delta)
 
     etag = merge_etags_from_headers(headers_map)
     if etag is not None: 
@@ -45,6 +46,10 @@ def merge_cache_headers(self, response_info, new_headers):
     vary = merge_vary_from_headers(headers_map)
     if vary is not None: 
         replace_header(new_headers, 'vary', vary)
+    
+    last_mod = merge_last_modified_from_headers(headers_map)
+    if last_mod is not None: 
+        replace_header(new_headers, 'last-modified', last_mod)
 
 
 
@@ -112,6 +117,30 @@ def merge_cache_control(header_sets, upgrade_expires=False):
 
     return new_cache_ctl 
 
+
+def merge_last_modified_from_headers(headers_map): 
+    """
+    accepts a map from uris to wsgi-style header lists 
+    returns the value for the last-modified header
+    representing the latest modification date present 
+    in any of the header lists 
+    """
+    latest_mod = None 
+    for uri, headers in headers_map.items(): 
+        last_mod = header_value(headers,'last-modified')
+        if last_mod is not None: 
+            mod_secs = LAST_MODIFIED.parse(last_mod)
+            if latest_mod is None: 
+                latest_mod = mod_secs
+            elif mod_secs > latest_mod: 
+                latest_mod = mod_secs
+    if latest_mod is not None: 
+        tmp = []
+        LAST_MODIFIED.update(tmp, time=latest_mod)
+        return tmp[0][1]
+    else: 
+        return None
+                
     
 def merge_etags_from_headers(headers_map): 
     """

@@ -53,8 +53,7 @@ class InternalResourceFetcher(object):
         if 'paste.recursive.include' in self.environ: 
             # Try to do the redirect this way...
             includer = self.environ['paste.recursive.include']
-            res = includer(self.uri, self.environ)
-            return (res.status, res.headers, res.body)
+            return intercept_output(self.environ, includer.application)
         else: 
             status, headers, body = intercept_output(self.environ, self.app)
             return (status, headers, body)
