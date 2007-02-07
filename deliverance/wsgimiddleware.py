@@ -286,11 +286,11 @@ class DeliveranceMiddleware(object):
         
     def any_modified(self, environ, resources, etag_map): 
         """
-        returns a tuple containing a boolean and map of uris to HTTP response headers.  
-        the first value represents whether any resource in resources has been 
-        modified based on the checks contained in environ.  The uris in the list 
-        resources are associated with their respective response headers in the 
-        second element of the tuple. 
+        returns a boolean indicating whether any of the uris in the resources 
+        list have been modified. if an entry for the uri exists in the map
+        etag_map, the value will be used to check the resource using an 
+        if-none-match http header. if an if-not-modified check is desired, 
+        it should be present in environ. 
         """
 
         moddate = None
@@ -349,6 +349,10 @@ class DeliveranceMiddleware(object):
             
 
     def get_fetcher(self, environ, uri): 
+        """
+        retrieve an object which is appropriate for fetching the 
+        uri specified. 
+        """
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
         uri = urlparse.urljoin(internalBaseURL, uri)        
 
@@ -383,6 +387,9 @@ class DeliveranceMiddleware(object):
 
         if etag is set to an etag for the resource, the If-None-Match HTTP header 
           is used to check for modification 
+
+        the resulting (status, headers, body) tuple for the request is stored in 
+        environ[DELIVERANCE_CACHE][uri]. 
 
         """
 
