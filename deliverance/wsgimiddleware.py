@@ -160,7 +160,11 @@ class DeliveranceMiddleware(object):
         environ[DELIVERANCE_CACHE] = {} 
         notheme = 'notheme' in qs
         if notheme:
-	    environ['QUERY_STRING'] = '' # XXX
+            # eliminate the deliverance notheme query argument for the subrequest
+            if qs == 'notheme': 
+                environ['QUERY_STRING'] = ''
+            if qs.endswith('&notheme'): 
+                environ['QUERY_STRING'] = qs[:-len('&notheme')]
             return self.app(environ, start_response)
         
         # unsupported 
