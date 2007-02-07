@@ -163,7 +163,7 @@ class DeliveranceMiddleware(object):
             # eliminate the deliverance notheme query argument for the subrequest
             if qs == 'notheme': 
                 environ['QUERY_STRING'] = ''
-            if qs.endswith('&notheme'): 
+            elif qs.endswith('&notheme'): 
                 environ['QUERY_STRING'] = qs[:-len('&notheme')]
             return self.app(environ, start_response)
         
