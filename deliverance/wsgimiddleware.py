@@ -224,7 +224,8 @@ class DeliveranceMiddleware(object):
 	    if tag: 
                 environ['HTTP_IF_NONE_MATCH'] = tag
             else:
-	        del environ['HTTP_IF_NONE_MATCH']
+                if 'HTTP_IF_NONE_MATCH' in environ: 
+                    del environ['HTTP_IF_NONE_MATCH']
 
 
         status, headers, body = intercept_output(environ, self.app,
@@ -398,13 +399,15 @@ class DeliveranceMiddleware(object):
         if httpdate_since: 
             fetcher.environ['HTTP_IF_MODIFIED_SINCE'] = httpdate_since 
         else: 
-            del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
+            if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
+                del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
         
 
         if etag: 
             fetcher.environ['HTTP_IF_NONE_MATCH'] = etag
         else: 
-            del fetcher.environ['HTTP_IF_NONE_MATCH']
+            if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
+                del fetcher.environ['HTTP_IF_NONE_MATCH']
 
 
         status, headers, body = fetcher.wsgi_get()
