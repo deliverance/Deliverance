@@ -1,5 +1,5 @@
 import re
-from paste.response import header_value, replace_header
+from paste.response import header_value, replace_header, remove_header
 from paste.httpheaders import EXPIRES, LAST_MODIFIED
 from time import time as now
 from sets import Set
@@ -42,6 +42,8 @@ def merge_cache_headers(self, response_info, new_headers, merge_cache_control=Tr
     etag = merge_etags_from_headers(headers_map)
     if etag is not None: 
         replace_header(new_headers, 'etag', etag )
+    else: 
+        remove_header(new_headers, 'etag')
 
     vary = merge_vary_from_headers(headers_map)
     if vary is not None: 
@@ -146,13 +148,19 @@ def merge_etags_from_headers(headers_map):
     """
     accepts a map from uris to wsgi-style header lists 
     returns the value for the etag merged from all 
-    etag headers present in the header lists 
+    etag headers present in the header lists. 
+    
+    if any entry in the map does not have an 
+    etag, the resulting etag is None. 
     """
     etag_map = {}
+
     for uri, headers in headers_map.items(): 
         etag = header_value(headers,'etag')
         if etag is not None and len(etag) != 0: 
             etag_map[uri] = etag
+        else: 
+            return None
     return merge_etags(etag_map)
     
 
