@@ -52,6 +52,8 @@ def merge_cache_headers(self, response_info, new_headers, merge_cache_control=Tr
     last_mod = merge_last_modified_from_headers(headers_map)
     if last_mod is not None: 
         replace_header(new_headers, 'last-modified', last_mod)
+    else: 
+    	remove_header(new_headers, 'last-modified')
 
 
 
@@ -125,7 +127,9 @@ def merge_last_modified_from_headers(headers_map):
     accepts a map from uris to wsgi-style header lists 
     returns the value for the last-modified header
     representing the latest modification date present 
-    in any of the header lists 
+    in any of the header lists. If any header set does
+    not specify a last-modified date, the result is 
+    None.
     """
     latest_mod = None 
     for uri, headers in headers_map.items(): 
@@ -136,6 +140,8 @@ def merge_last_modified_from_headers(headers_map):
                 latest_mod = mod_secs
             elif mod_secs > latest_mod: 
                 latest_mod = mod_secs
+	else:
+	    return None
     if latest_mod is not None: 
         tmp = []
         LAST_MODIFIED.update(tmp, time=latest_mod)
