@@ -213,7 +213,9 @@ class DeliveranceMiddleware(object):
         in the context of environ. The result is a string containing HTML. 
         """
         content = self.get_renderer(environ).render(parseHTML(body))
-        return tostring(content)
+
+        return tostring(content, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
+                                               "http://www.w3.org/TR/html4/loose.dtd"))
 
 
     def rebuild_check(self, environ, start_response): 
