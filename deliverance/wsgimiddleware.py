@@ -1,3 +1,5 @@
+
+
 """
 Deliverance theming as WSGI middleware
 """
@@ -13,14 +15,23 @@ from paste.response import header_value, replace_header
 from htmlserialize import tostring
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
+from deliverance.resource_fetcher import InternalResourceFetcher, ExternalResourceFetcher
+from deliverance import cache_utils
 import sys 
 import datetime
 import threading
 import traceback
 from StringIO import StringIO
+from sets import Set
 
 DELIVERANCE_BASE_URL = 'deliverance.base-url'
+DELIVERANCE_CACHE = 'deliverance.cache'
 
+IGNORE_EXTENSIONS = ['js','css','gif','jpg','jpeg','pdf','ps','doc','png','ico','mov','mpg','mpeg', 'mp3','m4a', 
+                     'txt','rtf', 'swf', 'wav', 'zip', 'wmv', 'ppt', 'gz', 'tgz', 'jar', 'xls', 'bmp', 'tif', 'tga', 
+                     'hqx', 'avi']
+
+IGNORE_URL_PATTERN = re.compile("^.*\.(%s)$" % '|'.join(IGNORE_EXTENSIONS))
 
 class DeliveranceMiddleware(object):
     """
@@ -28,7 +39,7 @@ class DeliveranceMiddleware(object):
     tranformation as a WSGI middleware component. 
     """
 
-    def __init__(self, app, theme_uri, rule_uri, renderer='py'):
+    def __init__(self, app, theme_uri, rule_uri, renderer='py', merge_cache_control=False):
         """
         initializer
         
@@ -38,14 +49,15 @@ class DeliveranceMiddleware(object):
         renderer: selects deliverance render class to utilize when 
           performing transformations, may be 'py' or 'xslt' or a
           Renderer class
+        merge_cache_control: if set to True, the cache-control header will 
+        be calculated from the cache-control headers of all component pages 
+        during rendering. If set to False, the requested content's 
+        cache-control headers will be used. (does not affect etag merging)
         """
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
-        self._renderer = None
-        self._cache_time = datetime.datetime.now()
-        self._timeout = datetime.timedelta(0,10)
-        self._lock = threading.Lock()
+        self.merge_cache_control = merge_cache_control
 
         if renderer == 'py':
             import interpreter
@@ -58,21 +70,10 @@ class DeliveranceMiddleware(object):
         else:
             self._rendererType = renderer
 
-    def get_renderer(self,environ):
-        """
-        retrieve the deliverance Renderer representing the transformation this 
-        middlware represents. Renderer may change according to caching rules. 
-        """
-        try:
-            self._lock.acquire()
-            if not self._renderer or self.cache_expired():
-                self._renderer = self.create_renderer(environ)
-                self._cache_time = datetime.datetime.now()
-            return self._renderer
-        finally:
-            self._lock.release()
+    def get_renderer(self, environ):
+        return self.create_renderer(environ)
 
-    def create_renderer(self,environ):
+    def create_renderer(self, environ):
         """
         construct a new deliverance Renderer from the 
         information passed to the initializer.  A new copy 
@@ -85,7 +86,7 @@ class DeliveranceMiddleware(object):
             self.theme_uri)
 
         def reference_resolver(href, parse, encoding=None):
-            text = self.get_resource(environ,href)
+            text = self.get_resource(environ, href)
             if parse == "xml":
                 return etree.XML(text)
             if parse == "html":
@@ -117,13 +118,6 @@ class DeliveranceMiddleware(object):
             rule_uri=self.rule_uri,
             reference_resolver=reference_resolver)
 
-        
-    def cache_expired(self):
-        """
-        returns true if the stored Renderer should be refreshed 
-        """
-        return self._cache_time + self._timeout < datetime.datetime.now()
-
     def rule(self, environ):
         """
         retrieves the data referred to by the rule_uri passed to the 
@@ -144,7 +138,7 @@ class DeliveranceMiddleware(object):
         initializer. 
         """
         try:
-            return self.get_resource(environ,self.theme_uri)
+            return self.get_resource(environ, self.theme_uri)
         except Exception, message:
             message.public_html = 'Unable to retrieve theme page from %s: %s' % (
                 self.theme_uri, message)
@@ -158,45 +152,46 @@ class DeliveranceMiddleware(object):
         using the transformation specified in the 
         initializer. 
         """
-        try:
-            qs = environ.get('QUERY_STRING', '')
-            environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
-            notheme = 'notheme' in qs
-            if notheme:
-                return self.app(environ, start_response)
-            if 'HTTP_ACCEPT_ENCODING' in environ:
-                del environ['HTTP_ACCEPT_ENCODING']
-
-            status, headers, body = intercept_output(
-                environ, self.app,
-                self.should_intercept,
-                start_response)
-
-            # ignore non-html responses 
-            if status is None:
-                return body
-
-            # don't theme html snippets 
-            if self.hasHTMLTag(body):
-                body = self.filter_body(environ, body)
-
-            replace_header(headers, 'content-length', str(len(body)))
-            replace_header(headers, 'content-type', 'text/html; charset=utf-8')
-            start_response(status, headers)
-            return [body]
+        qs = environ.get('QUERY_STRING', '')
+        environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
+        environ[DELIVERANCE_CACHE] = {} 
+        notheme = 'notheme' in qs
+        if notheme:
+            # eliminate the deliverance notheme query argument for the subrequest
+            if qs == 'notheme': 
+                environ['QUERY_STRING'] = ''
+            elif qs.endswith('&notheme'): 
+                environ['QUERY_STRING'] = qs[:-len('&notheme')]
+            return self.app(environ, start_response)
         
-        except DeliveranceError, message:            
-            stack = StringIO()
-            traceback.print_exception(sys.exc_info()[0],
-                                      sys.exc_info()[1],
-                                      sys.exc_info()[2],
-                                      file=stack)
-            status = "500 Internal Server Error"
-            headers = [('Content-type','text/html')]
-            start_response(status,headers)
-            errpage = DELIVERANCE_ERROR_PAGE % (message,stack.getvalue())
-            return [ errpage ]
+        # unsupported 
+        if 'HTTP_ACCEPT_ENCODING' in environ:
+            environ['HTTP_ACCEPT_ENCODING'] = '' 
+        if 'HTTP_IF_MATCH' in environ: 
+            del environ['HTTP_IF_MATCH'] 
+        if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
+            del environ['HTTP_IF_UNMODIFIED_SINCE'] 
+            
+        status, headers, body = self.rebuild_check(environ, start_response)
 
+        # non-html responses, or rebuild is not necessary: bail out 
+        if status is None:
+            return body
+
+        # perform actual themeing 
+        body = self.filter_body(environ, body)
+
+        replace_header(headers, 'content-length', str(len(body)))
+        replace_header(headers, 'content-type', 'text/html; charset=utf-8')
+
+        cache_utils.merge_cache_headers(environ, 
+                                        environ[DELIVERANCE_CACHE], 
+                                        headers, 
+                                        self.merge_cache_control)
+
+        start_response(status, headers)
+        return [body]
+        
     def should_intercept(self, status, headers):
         """
         returns true if the status and headers given 
@@ -205,7 +200,7 @@ class DeliveranceMiddleware(object):
         """
         type = header_value(headers, 'content-type')
         if type is None:
-            return False
+            return True # yerg, 304s can have no content-type 
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
     def filter_body(self, environ, body):
@@ -214,79 +209,133 @@ class DeliveranceMiddleware(object):
         in the context of environ. The result is a string containing HTML. 
         """
         content = self.get_renderer(environ).render(parseHTML(body))
-        return tostring(content)
+
+        return tostring(content, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
+                                               "http://www.w3.org/TR/html4/loose.dtd"))
+
+
+    def rebuild_check(self, environ, start_response): 
+        # perform the request for content  
+
+        content_url = construct_url(environ)
+
+        etag_map = {}
+        if 'HTTP_IF_NONE_MATCH' in environ: 
+            etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+	    tag = etag_map.get(content_url, None)
+	    environ['HTTP_IF_NONE_MATCH'] = tag
+	    if tag: 
+                environ['HTTP_IF_NONE_MATCH'] = tag
+            else:
+                if 'HTTP_IF_NONE_MATCH' in environ: 
+                    del environ['HTTP_IF_NONE_MATCH']
+
+
+        status, headers, body = intercept_output(environ, self.app,
+                                                 self.should_intercept,
+                                                 start_response)            
+
+
+        if status is None: 
+            # should_intercept says this isn't HTML, we're done
+            return (None, None, body)
+
+        if self.should_ignore_url(content_url): 
+            start_response(status, headers)
+            return (None, None, [body])
+
+        # cache the response so we can look at its headers later 
+        environ[DELIVERANCE_CACHE][content_url] = (status, headers, body)
+
+        # it was modified or an error, give it back for themeing 
+        if not status.startswith('304'): 
+            # if it's not a full HTML page, skip it 
+            if not self.hasHTMLTag(body): 
+                start_response(status, headers)
+                return (None, None, [body])
+
+            # send it back for rebuild 
+            return (status, headers, body)
+            
+        # got 304 Not Modified for content, check other resources 
+        rules = etree.XML(self.rule(environ))
+        resources = self.get_resource_uris(rules)        
+        if self.any_modified(environ, resources, etag_map): 
+            # something changed, 
+            # get the content explicitly and give it back 
+            if 'HTTP_IF_MODIFIED_SINCE' in environ: 
+                del environ['HTTP_IF_MODIFIED_SINCE']
+            if 'HTTP_IF_NONE_MATCH' in environ: 
+                del environ['HTTP_IF_NONE_MATCH'] 
+            environ['CACHE-CONTROL'] = 'no-cache'
+
+            status, headers, body = intercept_output(environ, self.app)
+
+            if not self.hasHTMLTag(body): 
+                # XXX yarg, we didn't care about it!
+                start_response(status, headers)
+                return (None, None, [body])
+
+            environ[DELIVERANCE_CACHE][content_url] = (status, headers, body)
+            return (status, headers, body)
+
+        # nothing was modified, give back a 304 
+        cache_utils.merge_cache_headers(environ, 
+                                        environ[DELIVERANCE_CACHE], 
+                                        headers, 
+                                        self.merge_cache_control)
+        start_response('304 Not Modified', headers)
+
+        return (None,None,[])
+        
+    def any_modified(self, environ, resources, etag_map): 
+        """
+        returns a boolean indicating whether any of the uris in the resources 
+        list have been modified. if an entry for the uri exists in the map
+        etag_map, the value will be used to check the resource using an 
+        if-none-match http header. if an if-not-modified check is desired, 
+        it should be present in environ. 
+        """
+        moddate = None
+
+        if 'HTTP_IF_MODIFIED_SINCE' in environ: 
+            moddate = environ['HTTP_IF_MODIFIED_SINCE']            
+            
+        for uri in resources:
+            if (self.check_modification(environ, uri, 
+                                        moddate, 
+                                        etag_map.get(uri,None))): 
+                return True
+
+        return False 
+
 
     def get_resource(self, environ, uri):
         """
-        retrieve the data referred to by the uri given. 
+        retrieve the content from the uri given, 
+        uses cache if possible. throws exception if 
+        response is not 200 
         """
-        internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
-        uri = urlparse.urljoin(internalBaseURL, uri)
+        if uri in environ[DELIVERANCE_CACHE]: 
+            response = environ[DELIVERANCE_CACHE][uri]
+            if response[0].startswith('200'): 
+                return response[2]
 
-        if  internalBaseURL and uri.startswith(internalBaseURL):
-            return self.get_internal_resource(environ, uri[len(internalBaseURL):])
-        else:
-            return self.get_external_resource(uri)
+        fetcher = self.get_fetcher(environ, uri)
+         
 
-    def relative_uri(self, uri):
-        """
-        returns true if uri is relative, false if 
-        the uri is absolute. 
-        """
-        if re.search(r'^[a-zA-Z]+:', uri):
-            return False
-        else:
-            return True
-
-    def get_external_resource(self, uri):
-        """
-        get the data referred to by the uri given 
-        using urllib (not through the wrapped app)
-        """
-        f = urllib.urlopen(uri)
-        content = f.read()
-        f.close()
-        return content
-
-    def get_internal_resource(self, in_environ, uri):
-        """
-        get the data referred to by the uri given 
-        by using the wrapped WSGI application 
-        """
+        # eliminate validation headers, we want the content 
+        if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
+            del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
+        if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
+            del fetcher.environ['HTTP_IF_NONE_MATCH'] 
+        fetcher.environ['CACHE-CONTROL'] = 'no-cache'
         
-        if 'paste.recursive.include' in in_environ:
-            environ = in_environ['paste.recursive.include'].original_environ.copy()
-        else:
-            environ = in_environ.copy()
-            
-        if not uri.startswith('/'):
-            uri = '/' + uri
-        environ['PATH_INFO'] = uri
-        base = in_environ[DELIVERANCE_BASE_URL]
-        scheme, netloc, path, qs, fragment = urlparse.urlsplit(base)
-        environ['SCRIPT_NAME'] = path
-        environ['REQUEST_METHOD'] = 'GET'
-        environ['CONTENT_LENGTH'] = '0'
-        environ['wsgi.input'] = StringIO('')
-        environ['CONTENT_TYPE'] = ''
-        if environ['QUERY_STRING']:
-            environ['QUERY_STRING'] += '&notheme'
-        else:
-            environ['QUERY_STRING'] = 'notheme'
 
-        if 'HTTP_ACCEPT_ENCODING' in environ:
-	    environ['HTTP_ACCEPT_ENCODING'] = '' 
-
-        if 'paste.recursive.include' in in_environ:
-            # Try to do the redirect this way...
-            includer = in_environ['paste.recursive.include']
-            res = includer(uri, environ)
-            return res.body
-
-
-        path_info = environ['PATH_INFO']
-        status, headers, body = intercept_output(environ, self.app)
-        if not status.startswith('200'):
+        status, headers, body = fetcher.wsgi_get()         
+        
+        if not status.startswith('200'): 
+            path_info = uri 
             loc = header_value(headers, 'location')
             if loc:
                 loc = ' location=%r' % loc
@@ -296,7 +345,82 @@ class DeliveranceMiddleware(object):
                 "Request for internal resource at %s (%r) failed with status code %r%s"
                 % (construct_url(environ), path_info, status,
                    loc))
+
+        environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
+
         return body
+            
+
+    def get_fetcher(self, environ, uri): 
+        """
+        retrieve an object which is appropriate for fetching the 
+        uri specified. 
+        """
+        internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
+        uri = urlparse.urljoin(internalBaseURL, uri)        
+
+        if  internalBaseURL and uri.startswith(internalBaseURL):
+            return InternalResourceFetcher(environ, uri[len(internalBaseURL):],
+                                           self.app)
+        else:
+            return ExternalResourceFetcher(uri)        
+
+
+    def get_resource_uris(self, rules): 
+        """
+        retrieves a list of uris pointing to the resources that 
+        are components of rendering (excluding content) 
+        """
+        resources = Set()
+        resources.add(self.rule_uri)
+        resources.add(self.theme_uri)
+
+        for rule in rules: 
+            href = rule.get("href",None)
+            if href is not None:
+                resources.add(href)
+
+        return list(resources)
+
+            
+    def check_modification(self, environ, uri, httpdate_since=None, etag=None): 
+        """
+        if httpdate_since is set to an httpdate the If-Modified-Since HTTP header 
+          is used to check for modification 
+
+        if etag is set to an etag for the resource, the If-None-Match HTTP header 
+          is used to check for modification 
+
+        the resulting (status, headers, body) tuple for the request is stored in 
+        environ[DELIVERANCE_CACHE][uri]. 
+
+        """
+
+        fetcher = self.get_fetcher(environ, uri)
+        
+        if httpdate_since: 
+            fetcher.environ['HTTP_IF_MODIFIED_SINCE'] = httpdate_since 
+        else: 
+            if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
+                del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
+        
+
+        if etag: 
+            fetcher.environ['HTTP_IF_NONE_MATCH'] = etag
+        else: 
+            if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
+                del fetcher.environ['HTTP_IF_NONE_MATCH']
+
+
+        status, headers, body = fetcher.wsgi_get()
+        environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
+
+        if status.startswith('304'): # Not Modified             
+            return False 
+
+        return True
+
+
 
     HTML_DOC_PAT = re.compile(r"^.*<\s*html(\s*|>).*$",re.I|re.M)
     def hasHTMLTag(self, body):
@@ -307,6 +431,11 @@ class DeliveranceMiddleware(object):
         ambiguous tags 
         """
         return self.HTML_DOC_PAT.search(body) is not None
+
+
+    def should_ignore_url(self, url): 
+        # blacklisting can happen here as well 
+        return re.match(IGNORE_URL_PATTERN, url) is not None
 
 def make_filter(app, global_conf,
                 theme_uri=None, rule_uri=None):

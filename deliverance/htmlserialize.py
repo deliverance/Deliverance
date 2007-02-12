@@ -3,29 +3,22 @@ import re
 
 html_xsl = """
 <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:output method="html" encoding="UTF-8" />
+  <xsl:output method="html" encoding="UTF-8" /> 
   <xsl:template match="/">
     <xsl:copy-of select="."/>
   </xsl:template>
 </xsl:transform>
 """
 
-# TODO: this should do real formatting 
-pretty_html_xsl = """
-<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:output method="html" indent="yes" />
-  <xsl:template match="/">
-    <xsl:copy-of select="."/>
-  </xsl:template>
-</xsl:transform>
-"""
+# TODO: this should be xsl for real formatting 
+pretty_html_xsl = html_xsl
 
 html_transform = etree.XSLT(etree.XML(html_xsl))
 pretty_html_transform = etree.XSLT(etree.XML(pretty_html_xsl))
 
 
 
-def tostring(doc,pretty = False):
+def tostring(doc, pretty = False, doctype_pair=None):
     """
     return HTML string representation of the document given 
  
@@ -34,9 +27,15 @@ def tostring(doc,pretty = False):
     """
 
     if pretty:
-        return str(pretty_html_transform(doc))
+        doc = str(pretty_html_transform(doc))
     else:
-        return str(html_transform(doc))
+        doc = str(html_transform(doc))
+
+    if doctype_pair: 
+        doc = """<!DOCTYPE html PUBLIC "%s" "%s">\n%s""" % (doctype_pair[0], doctype_pair[1], doc) 
+
+    return doc
+
                   
 
 

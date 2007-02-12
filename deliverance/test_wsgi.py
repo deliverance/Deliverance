@@ -3,9 +3,14 @@ import sys
 from lxml import etree
 from paste.fixture import TestApp
 from paste.urlparser import StaticURLParser
+from paste.response import header_value
 from deliverance.wsgimiddleware import DeliveranceMiddleware
 from formencode.doctest_xml_compare import xml_compare
 from deliverance.htmlserialize import tostring
+from deliverance.cache_fixture import CacheFixtureResponseInfo, CacheFixtureApp
+from deliverance import cache_utils
+from time import time as now
+from rfc822 import formatdate
 
 static_data = os.path.join(os.path.dirname(__file__), 'test-data', 'static')
 tasktracker_data = os.path.join(os.path.dirname(__file__), 'test-data', 'tasktracker')
@@ -24,6 +29,8 @@ guidesearch_app = StaticURLParser(guidesearch_data)
 ajax_app = StaticURLParser(ajax_data)
 url_app = StaticURLParser(url_data)
 aggregate_app = StaticURLParser(aggregate_data)
+
+
 
 def html_string_compare(astr, bstr):
     """
@@ -148,8 +155,124 @@ def do_aggregate(renderer_type, name):
     res2 = app.get('/expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
+def do_cache(renderer_type, name): 
+    # XXX this should be busted up into multiple tests I spose 
+
+    theme_data = """ 
+        <html>
+          <head><title>theme</title></head>
+          <body><div id="replaceme"></div></body>
+        </html>
+    """
+    rule_data = """ 
+        <rules xmlns="http://www.plone.org/deliverance">
+          <replace theme="//*[@id='replaceme']" content="//*[@id='content']" />
+        </rules>
+    """
+    
+    content_data = """
+         <html><head></head><body><div id="content">foo</div></body></html>
+    """
+
+    expected_data = """
+        <html>
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <title>theme</title></head>
+          <body><div id="content">foo</div></body>
+        </html>
+    """
+
+    theme_info = CacheFixtureResponseInfo(theme_data)
+    rule_info = CacheFixtureResponseInfo(rule_data)
+    content_info = CacheFixtureResponseInfo(content_data)
+    expected_info = CacheFixtureResponseInfo(expected_data)
+
+    capp = CacheFixtureApp()
+    capp.map_url('/theme.html',theme_info)
+    capp.map_url('/rules.xml',rule_info)
+    capp.map_url('/content.html',content_info)
+    capp.map_url('/expected.html',expected_info)
+
+    wsgi_app = DeliveranceMiddleware(capp, '/theme.html', '/rules.xml', 
+                                     renderer_type)
+
+    # check that everything works straight up 
+    app = TestApp(wsgi_app)
+    res = app.get('/content.html')
+    res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+    # set some etags on the fixture 
+    theme_info.etag = "theme_etag"
+    rule_info.etag = "rule_etag"
+    content_info.etag = "content_etag"
+
+
+    # grab the page and make sure an etag comes back 
+    res = app.get('/content.html')
+    composite_etag = header_value(res.headers, 'etag')
+    assert(composite_etag is not None and len(composite_etag) > 0)
+
+    # check that deliverance gives 304 when the composite etag is given
+    res = app.get('/content.html', headers={'If-None-Match': composite_etag})
+    status = res.status
+    assert(status == 304)
+
+    theme_info.etag = 'something_else'
+    # check that deliverance rebuilds when one of the etags changes 
+    res = app.get('/content.html', headers={'If-None-Match': composite_etag})
+    status = res.status
+    # make sure the response etag changed 
+    assert(header_value(res.headers, 'etag') != composite_etag)
+    assert(status == 200)
+
+    # clear etags 
+    theme_info.etag = None
+    rule_info.etag = None
+    content_info.etag = None
+
+    # make sure there is no more etag 
+    res = app.get('/content.html')
+    composite_etag = header_value(res.headers, 'etag')
+    assert(composite_etag is None or len(composite_etag) == 0)
+
+    # test modification dates 
+    then = now() 
+    theme_info.mod_time = then - 10 
+    rule_info.mod_time = then - 20 
+    content_info.mod_time = then - 30 
+    
+    res = app.get('/content.html')
+    status = res.status
+    assert(status == 200)
+
+    res = app.get('/content.html', 
+                  headers={'If-Modified-Since': formatdate(then)})
+    status = res.status
+    assert(status == 304)
+
+    res = app.get('/content.html', 
+                  headers={'If-Modified-Since': formatdate(then-60)})
+    status = res.status
+    assert(status == 200)
+
+    res = app.get('/content.html', 
+                  headers={'If-Modified-Since': formatdate(then-15)})
+    status = res.status
+    assert(status == 200)
+    
+
+
+    
+
+    
+    
+    
+                                          
+
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate ] 
+TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_cache ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
