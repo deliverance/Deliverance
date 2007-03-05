@@ -4,6 +4,7 @@ from paste.wsgilib import intercept_output
 from paste.proxy import TransparentProxy 
 from paste.request import construct_url
 from paste.response import header_value
+from paste.fileapp import FileApp
 import urlparse
 from deliverance.utils import DeliveranceError
 
@@ -75,6 +76,54 @@ class InternalResourceFetcher(object):
                    loc))
         return body
 
+class FileResourceFetcher(object):
+    def __init__(self, environ, uri, headers_only=False):
+        self.environ = environ.copy()
+        self.uri = uri
+
+        uri_parts = urlparse.urlparse(self.uri)
+        self.environ['PATH_INFO'] = uri_parts[2]
+        self.environ['SCRIPT_INFO'] = '' 
+        self.environ['wsgi.scheme'] = 'file'
+        if len(uri_parts[4]) > 0: 
+            self.environ['QUERY_STRING'] = uri_parts[4] + '&notheme'
+        else: 
+            self.environ['QUERY_STRING'] = 'notheme'
+
+        if headers_only:
+            self.environ['REQUEST_METHOD'] = 'HEAD'
+        else:
+            self.environ['REQUEST_METHOD'] = 'GET'
+
+        self.environ['CONTENT_LENGTH'] = '0'
+        self.environ['wsgi.input'] = StringIO('')
+        self.environ['CONTENT_TYPE'] = '' 
+
+        if 'HTTP_ACCEPT_ENCODING' in self.environ:
+            del self.environ['HTTP_ACCEPT_ENCODING']
+
+    def wsgi_get(self):
+        path = urlparse.urlparse(self.uri)[2]
+        file_app = FileApp(path)
+
+        return intercept_output(self.environ, file_app)
+        
+
+    def get(self):
+        path_info = self.environ['PATH_INFO']
+        status, headers, body = self.wsgi_get()
+
+        if not status.startswith('200'):
+            loc = header_value(headers, 'location')
+            if loc:
+                loc = ' location=%r' % loc
+            else:
+                loc = ''
+            raise DeliveranceError(
+                "Request for file at %s (%r) failed with status code %r%s"
+                % (construct_url(self.environ), path_info, status,
+                   loc))
+        return body
 
 class ExternalResourceFetcher(object): 
     def __init__(self, uri, headers_only=False): 

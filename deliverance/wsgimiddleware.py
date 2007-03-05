@@ -15,7 +15,7 @@ from paste.response import header_value, replace_header
 from htmlserialize import tostring
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
-from deliverance.resource_fetcher import InternalResourceFetcher, ExternalResourceFetcher
+from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
 import sys 
 import datetime
@@ -359,7 +359,10 @@ class DeliveranceMiddleware(object):
         internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
         uri = urlparse.urljoin(internalBaseURL, uri)        
 
-        if  internalBaseURL and uri.startswith(internalBaseURL):
+        if urlparse.urlparse(uri)[0] == 'file':
+            return FileResourceFetcher(environ, uri)
+
+        elif  internalBaseURL and uri.startswith(internalBaseURL):
             return InternalResourceFetcher(environ, uri[len(internalBaseURL):],
                                            self.app)
         else:

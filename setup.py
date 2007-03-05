@@ -18,7 +18,7 @@ setup(name="Deliverance",
       packages=find_packages(exclude=[]),
       zip_safe=False,
       install_requires=[
-        'lxml',
+        'lxml==1.2',
         'Paste',
 	'FormEncode',
 	'elementtree',
