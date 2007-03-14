@@ -1,3 +1,4 @@
+import urllib
 import deliverance.wsgimiddleware 
 from StringIO import StringIO
 from paste.wsgilib import intercept_output
@@ -25,7 +26,7 @@ class InternalResourceFetcher(object):
 
         uri_parts = urlparse.urlparse(uri)
 
-        self.environ['PATH_INFO'] = uri_parts[2]
+        self.environ['PATH_INFO'] = urllib.unquote(uri_parts[2])
         if len(uri_parts[4]) > 0: 
             self.environ['QUERY_STRING'] = uri_parts[4] + '&notheme'
         else: 
@@ -33,7 +34,7 @@ class InternalResourceFetcher(object):
 
         base_url = in_environ['deliverance.base-url']
         if base_url is not None:
-            self.environ['SCRIPT_NAME'] = urlparse.urlparse(base_url)[2]
+            self.environ['SCRIPT_NAME'] = urllib.unquote(urlparse.urlparse(base_url)[2])
         else: 
             self.environ['SCRIPT_NAME'] = ''
 
