@@ -18,7 +18,7 @@ setup(name="Deliverance",
       packages=find_packages(exclude=[]),
       zip_safe=False,
       install_requires=[
-        'lxml==1.2',
+        'lxml>=1.2',
         'Paste',
 	'FormEncode',
 	'elementtree',
@@ -29,7 +29,7 @@ setup(name="Deliverance",
       include_package_data=True,
       entry_points="""
       [paste.filter_app_factory]
-      main = deliverance.wsgifilter:make_filter
+      main = deliverance.wsgimiddleware:make_filter
 
       [console_scripts]
       deliverance-proxy = deliverance.proxycommand:main
