@@ -1,3 +1,4 @@
+import os
 import optparse
 import pkg_resources
 import sys
@@ -15,6 +16,10 @@ help = """\
 parser = optparse.OptionParser(
     version=str(my_package),
     usage="%%prog [OPTIONS]\n\n%s" % help)
+parser.add_option('--new-layout',
+                  dest="new_layout",
+                  metavar="DEST_DIR",
+                  help="Create a self-contained layout for running the proxy server, with a pre-built theme, rules, and configuration file")
 parser.add_option('-s', '--serve',
                   help="The interface to serve on (default 0.0.0.0:80)",
                   dest="serve",
@@ -63,6 +68,9 @@ def main(args=None):
     if args is None:
         args = sys.argv[1:]
     options, args = parser.parse_args(args)
+    if options.new_layout:
+        make_new_layout(options.new_layout)
+        return
     serve = strip('http://', options.serve)
     if ':' not in serve:
         serve += ':80'
@@ -103,3 +111,10 @@ def main(args=None):
         print 'Exiting.'
         sys.exit()
     
+def make_new_layout(dest_dir):
+    source = os.path.join(os.path.dirname(__file__), 'new_layout_template')
+    from paste.script import copydir
+    copydir.copy_dir(
+        source, dest_dir, {}, 1, simulate=False, interactive=True,
+        svn_add=False)
+

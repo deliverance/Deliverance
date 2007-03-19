@@ -31,11 +31,15 @@ setup(name="Deliverance",
       [paste.filter_app_factory]
       main = deliverance.wsgimiddleware:make_filter
 
+      [paste.app_factory]
+      proxy = deliverance.proxyapp:make_proxy
+
       [console_scripts]
       deliverance-proxy = deliverance.proxycommand:main
       deliverance-tests = deliverance.testrunner:main
       deliverance-speed = deliverance.test_speed:main
       deliverance-handtransform = deliverance.handtransform:main
+      deliverance-static = deliverance.staticcommand:main
       """,
       )
 
