@@ -156,6 +156,8 @@ class DeliveranceMiddleware(object):
         environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
         environ[DELIVERANCE_CACHE] = {} 
         notheme = 'notheme' in qs
+        if environ.get('HTTP_X_REQUESTED_WITH', '') == 'XMLHttpRequest':
+            notheme = True
         if notheme:
             # eliminate the deliverance notheme query argument for the subrequest
             if qs == 'notheme': 
