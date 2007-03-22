@@ -442,8 +442,10 @@ class Renderer(RendererBase):
         surrounding text 
         """
         removed = 0
-        for el in els: 
-            self.attach_text_to_previous(el,el.tail)
+        for el in els:
+            if isinstance(el, basestring):
+                continue
+            self.attach_text_to_previous(el, el.tail)
             el.getparent().remove(el)
             removed += 1
         return removed
