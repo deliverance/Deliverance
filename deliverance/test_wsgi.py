@@ -225,6 +225,7 @@ def do_cache(renderer_type, name):
     status = res.status
     # make sure the response etag changed 
     assert(header_value(res.headers, 'etag') != composite_etag)
+    print "status is", status
     assert(status == 200)
 
     # clear etags 
@@ -262,17 +263,94 @@ def do_cache(renderer_type, name):
     status = res.status
     assert(status == 200)
     
+import time
+class PausingMiddleware: 
+    def __init__(self, app, sleep_time): 
+        self.app = app 
+        self.sleep_time = sleep_time
+
+    def __call__(self, environ, start_response): 
+        try:
+            time.sleep(self.sleep_time)
+        except KeyboardInterrupt:
+            return self.app(environ, start_response)
+        return self.app(environ, start_response)
 
 
+from transcluder.tasklist import TaskList
+the_tasklist = TaskList()
+def test_parallel_gets(): 
+    base_dir = os.path.dirname(__file__)
+    test_dir = os.path.join(base_dir, 'test-data', '304')
+
+    sleep_time = 1
+    cache_app = CacheFixtureApp()
+    sleep_app = PausingMiddleware(cache_app, sleep_time)
+    transcluder = DeliveranceMiddleware(sleep_app, '/theme.html', '/rules.xml', tasklist = the_tasklist)
+    static_test_app = TestApp(cache_app)
+    test_app = TestApp(transcluder)
+
+    page_list = ['index.html', 'index2.html', 'page1.html', 'page2.html', 'page2_1.html', 'page3.html', 'page4.html', 'expected5.html']
+    pages = {}
+    for page in page_list:
+        pages[page] = CacheFixtureResponseInfo(open(os.path.join(test_dir, page)).read())
+        cache_app.map_url('/' + page, pages[page])
+        pages[page].etag = page
     
+    #load up the deptracker
+    start = time.time() 
+    result = test_app.get('/index.html')
+    end = time.time() 
+    #print "took %s sleep_times" % ((end - start) / sleep_time) 
+    assert  2*sleep_time <= end - start < 3*sleep_time, the_tasklist.doprint(2, end - start)
 
+    etag = header_value(result.headers, 'ETAG')
+    assert etag is not None
+
+    #test parallel fetch from correct tracked deps
+    start = time.time() 
+    result = test_app.get('/index.html', extra_environ={'HTTP_IF_NONE_MATCH' : etag})
+    end = time.time() 
+    #print "took %s sleep_times" % ((end - start) / sleep_time) 
+    assert  sleep_time <= end - start < 2*sleep_time, the_tasklist.doprint(1, end - start)
+    assert result.status == 304
+
+    pages['page1.html'].etag = 'page1.new'
+    start = time.time() 
+    result = test_app.get('/index.html', extra_environ={'HTTP_IF_NONE_MATCH' : etag})    
+    end = time.time() 
+    #print "took %s sleep_times" % ((end - start) / sleep_time) 
+
+    assert  2*sleep_time <= end - start < 3*sleep_time, the_tasklist.doprint(2, end - start)
+    etag = header_value(result.headers, 'ETAG')
+
+    assert result.status == 200 
+
+    # change the content of the index page, this will make it depend on page3 
+    cache_app.map_url('/index.html',pages['index2.html'])
+    start = time.time() 
+    result = test_app.get('/index.html', extra_environ={'HTTP_IF_NONE_MATCH' : etag})
+    end = time.time() 
+    #print "took %s sleep_times" % ((end - start) / sleep_time) 
+    assert  2*sleep_time <= end - start < 3*sleep_time, the_tasklist.doprint(2, end - start)
+
+    # change dependency to have a dependency 
+    cache_app.map_url('/page2.html', pages['page2_1.html'])
+    start = time.time() 
+    result = test_app.get('/index.html', extra_environ={'HTTP_IF_NONE_MATCH' : etag})
+    expected = static_test_app.get('/expected5.html')
+    html_string_compare(result.body, expected.body)
+    end = time.time() 
     
+    #print "took %s sleep_times" % ((end - start) / sleep_time) 
+    assert  2*sleep_time <= end - start < 3*sleep_time, the_tasklist.doprint(2, end - start)
     
     
                                           
 
 RENDERER_TYPES = ['py', 'xslt']
 TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_cache ] 
+#TEST_FUNCS = [ do_url] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
@@ -280,5 +358,7 @@ def test_all():
             
 
 if __name__ == '__main__':
+    for x in test_all():
+        x[0](*x[1:])
     pass
 

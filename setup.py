@@ -24,7 +24,10 @@ setup(name="Deliverance",
 	'elementtree',
 	'nose',
 	'WSGIFilter',
-	'setuptools'
+	'setuptools',
+        'enum',
+        'pyavl',
+        'decorator'
       ],
       include_package_data=True,
       entry_points="""

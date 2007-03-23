@@ -17,12 +17,16 @@ from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
 from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
+from wsgifilter.resource_fetcher import *
 import sys 
 import datetime
 import threading
 import traceback
 from StringIO import StringIO
 from sets import Set
+from transcluder.tasklist import PageManager, TaskList
+from transcluder.deptracker import DependencyTracker
+from transcluder.cookie_wrapper import * 
 
 DELIVERANCE_BASE_URL = 'deliverance.base-url'
 DELIVERANCE_CACHE = 'deliverance.cache'
@@ -39,7 +43,7 @@ class DeliveranceMiddleware(object):
     tranformation as a WSGI middleware component. 
     """
 
-    def __init__(self, app, theme_uri, rule_uri, renderer='py', merge_cache_control=False):
+    def __init__(self, app, theme_uri, rule_uri, renderer='py', merge_cache_control=False, deptracker = None, tasklist = None):
         """
         initializer
         
@@ -58,6 +62,16 @@ class DeliveranceMiddleware(object):
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
         self.merge_cache_control = merge_cache_control
+
+        if tasklist:
+            self.tasklist = tasklist
+        else:
+            self.tasklist = TaskList()
+
+        if deptracker:
+            self.deptracker = deptracker
+        else:
+            self.deptracker = DependencyTracker()
 
         if renderer == 'py':
             import interpreter
@@ -108,6 +122,7 @@ class DeliveranceMiddleware(object):
         try:
             parsedRule = etree.XML(rule)
         except Exception, message:
+            print "trying to parse %s" % rule
             message.public_html = 'Cannot parse rules (%s)' % message
             raise
 
@@ -173,12 +188,39 @@ class DeliveranceMiddleware(object):
             del environ['HTTP_IF_MATCH'] 
         if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
             del environ['HTTP_IF_UNMODIFIED_SINCE'] 
-            
+    
+
+        environ['transcluder.outcookies'] = {}
+        if environ.has_key('HTTP_COOKIE'):
+            environ['transcluder.incookies'] = expire_cookies(unwrap_cookies(environ['HTTP_COOKIE']))
+        else:
+            environ['transcluder.incookies'] = {}
+
+
+        if environ.has_key('HTTP_IF_NONE_MATCH'): 
+            print "etags are", cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+            environ['transcluder.etags'] = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+        else: 
+            environ['transcluder.etags'] = {}
+
+        old_get_resource = self.get_resource
+        get_resource = lambda url, env: old_get_resource(env, url)
+
+        pm = PageManager(environ[DELIVERANCE_BASE_URL], environ, self.deptracker, lambda document, document_url: self.find_deps(environ, document, document_url), self.tasklist, self.etree_subrequest)
+
+        def simple_fetch(env, url):
+            body = pm.fetch(url)[2]
+            return body
+
+        self.get_resource = simple_fetch
+
         status, headers, body = self.rebuild_check(environ, start_response)
 
         # non-html responses, or rebuild is not necessary: bail out 
         if status is None:
             return body
+
+        pm.begin_speculative_gets()
 
         # perform actual themeing 
         body = self.filter_body(environ, body)
@@ -191,8 +233,56 @@ class DeliveranceMiddleware(object):
                                         headers, 
                                         self.merge_cache_control)
 
+
         start_response(status, headers)
         return [body]
+
+    def is_html(self, status, headers):
+        type = header_value(headers, 'content-type')
+        return type and (type.startswith('text/html') or type.startswith('application/xhtml+xml'))
+
+    def etree_subrequest(self, url, environ):
+
+        url = urllib.unquote(url)
+
+        url_parts = urlparse.urlparse(url)
+        env = environ.copy()
+
+        env['PATH_INFO'] = url_parts[2]
+        if len(url_parts[4]):
+            env['QUERY_STRING'] = url_parts[4]
+
+        request_url = construct_url(environ, with_path_info=False, with_query_string=False)
+        request_url_parts = urlparse.urlparse(request_url)
+
+        #import pdb;pdb.set_trace()
+
+        if request_url_parts[0:2] == url_parts[0:2]:
+            status, headers, body = get_internal_resource(url, env, self.app)
+        elif url_parts[0:2] == ('', ''):
+            status, headers, body = get_internal_resource(urlparse.urlunparse(request_url_parts[0:2] + url_parts[2:]), env, self.app)
+        else:
+            status, headers, body = get_external_resource(url, env)
+        
+
+
+        if status.startswith('200') and self.is_html(status, headers):
+            parsed = etree.HTML(body)
+        else:
+            parsed = None
+        return status, headers, body, parsed
+
+    def find_deps(self, environ, document, document_url):
+        print "document url %s, dep url is %s" % (document_url, construct_url(environ))
+        if document_url == construct_url(environ):
+            return [self.theme_uri, self.rule_uri]
+        elif document_url == self.theme_uri:
+            return []
+        else:
+            #FIXME: check rules for xincludes.
+            return []
+
+        
         
     def should_intercept(self, status, headers):
         """
@@ -210,8 +300,8 @@ class DeliveranceMiddleware(object):
         returns the result of the deliverance transformation on the string 'body' 
         in the context of environ. The result is a string containing HTML. 
         """
-        content = self.get_renderer(environ).render(parseHTML(body))
 
+        content = self.get_renderer(environ).render(parseHTML(body))
         return tostring(content, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
                                                "http://www.w3.org/TR/html4/loose.dtd"))
 
@@ -225,7 +315,6 @@ class DeliveranceMiddleware(object):
         if 'HTTP_IF_NONE_MATCH' in environ: 
             etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
 	    tag = etag_map.get(content_url, None)
-	    environ['HTTP_IF_NONE_MATCH'] = tag
 	    if tag: 
                 environ['HTTP_IF_NONE_MATCH'] = tag
             else:
