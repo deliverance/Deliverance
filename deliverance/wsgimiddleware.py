@@ -27,6 +27,7 @@ from sets import Set
 from transcluder.tasklist import PageManager, TaskList
 from transcluder.deptracker import DependencyTracker
 from transcluder.cookie_wrapper import * 
+from transcluder.middleware import is_conditional_get
 
 DELIVERANCE_BASE_URL = 'deliverance.base-url'
 DELIVERANCE_CACHE = 'deliverance.cache'
@@ -207,18 +208,34 @@ class DeliveranceMiddleware(object):
         get_resource = lambda url, env: old_get_resource(env, url)
 
         pm = PageManager(environ[DELIVERANCE_BASE_URL], environ, self.deptracker, lambda document, document_url: self.find_deps(environ, document, document_url), self.tasklist, self.etree_subrequest)
-
+        self.pm = pm
         def simple_fetch(env, url):
-            body = pm.fetch(url)[2]
+            body = self.pm.fetch(url)[2]
             return body
 
         self.get_resource = simple_fetch
 
-        status, headers, body = self.rebuild_check(environ, start_response)
+        print "about to rebuild_check", construct_url(environ), environ.get('HTTP_IF_NONE_MATCH')
+
+        #AHA!  rebuild_check is calling fetch, which is always an unconditional
+        #request.  I should be calling is_modified, but that probably will fail too. 
+
+        if is_conditional_get(environ) and not pm.is_modified():
+            headers = [] 
+            pm.merge_headers_into(headers)
+            start_response('304 Not Modified', headers)
+            return []
+
+
+        status, headers, body, parsed = pm.fetch(construct_url(environ))
+
+        #status, headers, body = self.rebuild_check(environ, start_response)
+
+        #print "got from rebuild_check", status
 
         # non-html responses, or rebuild is not necessary: bail out 
-        if status is None:
-            return body
+#        if status is None:
+#            return body
 
         pm.begin_speculative_gets()
 
@@ -272,6 +289,7 @@ class DeliveranceMiddleware(object):
             parsed = None
         return status, headers, body, parsed
 
+    #fixme: is this the same as get_resource_uris?
     def find_deps(self, environ, document, document_url):
         print "document url %s, dep url is %s" % (document_url, construct_url(environ))
         if document_url == construct_url(environ):
@@ -312,20 +330,27 @@ class DeliveranceMiddleware(object):
         content_url = construct_url(environ)
 
         etag_map = {}
-        if 'HTTP_IF_NONE_MATCH' in environ: 
-            etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
-	    tag = etag_map.get(content_url, None)
-	    if tag: 
-                environ['HTTP_IF_NONE_MATCH'] = tag
-            else:
-                if 'HTTP_IF_NONE_MATCH' in environ: 
-                    del environ['HTTP_IF_NONE_MATCH']
+        #I think this is all done above with the incookies stuff
+        #if 'HTTP_IF_NONE_MATCH' in environ: 
+        #    etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+	#    tag = etag_map.get(content_url, None)
+	#    if tag: 
+        #        environ['HTTP_IF_NONE_MATCH'] = tag
+        #    else:
+        #        if 'HTTP_IF_NONE_MATCH' in environ: 
+        #            del environ['HTTP_IF_NONE_MATCH']
 
 
-        status, headers, body = intercept_output(environ, self.app,
-                                                 self.should_intercept,
-                                                 start_response)            
+        #hm, fetch returned 200 instead of 304.  Is this because of deps?
+        #no, I think it's because we fuck with the environ... no, we don't.  
 
+        status, headers, body, parsed = self.pm.fetch(content_url)
+
+#        status, headers, body = intercept_output(environ, self.app,
+#                                                 self.should_intercept,
+#                                                 start_response)            
+        #fixme: probably need to set status to none for non-html?
+        print "fetched %s, status is" % content_url, status
 
         if status is None: 
             # should_intercept says this isn't HTML, we're done
@@ -340,6 +365,7 @@ class DeliveranceMiddleware(object):
 
         # it was modified or an error, give it back for themeing 
         if not status.startswith('304'): 
+            print "about to return for theming"
             # if it's not a full HTML page, skip it 
             if not self.hasHTMLTag(body): 
                 start_response(status, headers)
@@ -351,6 +377,7 @@ class DeliveranceMiddleware(object):
         # got 304 Not Modified for content, check other resources 
         rules = etree.XML(self.rule(environ))
         resources = self.get_resource_uris(rules)        
+
         if self.any_modified(environ, resources, etag_map): 
             # something changed, 
             # get the content explicitly and give it back 
@@ -490,6 +517,7 @@ class DeliveranceMiddleware(object):
 
         """
 
+        print "CHECK_MOD", uri
         fetcher = self.get_fetcher(environ, uri)
         
         if httpdate_since: 
