@@ -229,6 +229,12 @@ class DeliveranceMiddleware(object):
 
         status, headers, body, parsed = pm.fetch(construct_url(environ))
 
+        #ajax
+        if not self.hasHTMLTag(body): 
+            start_response(status, headers)
+            return [body]
+
+
         #status, headers, body = self.rebuild_check(environ, start_response)
 
         #print "got from rebuild_check", status
@@ -240,7 +246,10 @@ class DeliveranceMiddleware(object):
         pm.begin_speculative_gets()
 
         # perform actual themeing 
+        old_body = body
         body = self.filter_body(environ, body)
+        if old_body == body:
+            print "no change in filter_body for", construct_url
 
         replace_header(headers, 'content-length', str(len(body)))
         replace_header(headers, 'content-type', 'text/html; charset=utf-8')
@@ -291,7 +300,6 @@ class DeliveranceMiddleware(object):
 
     #fixme: is this the same as get_resource_uris?
     def find_deps(self, environ, document, document_url):
-        print "document url %s, dep url is %s" % (document_url, construct_url(environ))
         if document_url == construct_url(environ):
             return [self.theme_uri, self.rule_uri]
         elif document_url == self.theme_uri:
