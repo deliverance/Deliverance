@@ -17,6 +17,7 @@ from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
 from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
+from wsgifilter.cache_utils import parse_merged_etag #this version must be a bit difference than the deli version
 from wsgifilter.resource_fetcher import *
 import sys 
 import datetime
@@ -199,33 +200,25 @@ class DeliveranceMiddleware(object):
 
 
         if environ.has_key('HTTP_IF_NONE_MATCH'): 
-            print "etags are", cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
-            environ['transcluder.etags'] = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+            environ['transcluder.etags'] = parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
         else: 
             environ['transcluder.etags'] = {}
 
         old_get_resource = self.get_resource
         get_resource = lambda url, env: old_get_resource(env, url)
 
-        pm = PageManager(environ[DELIVERANCE_BASE_URL], environ, self.deptracker, lambda document, document_url: self.find_deps(environ, document, document_url), self.tasklist, self.etree_subrequest)
+        pm = PageManager(construct_url(environ), environ, self.deptracker, lambda document, document_url: self.find_deps(environ, document, document_url), self.tasklist, self.etree_subrequest)
         self.pm = pm
         def simple_fetch(env, url):
             body = self.pm.fetch(url)[2]
             return body
 
         self.get_resource = simple_fetch
-
-        print "about to rebuild_check", construct_url(environ), environ.get('HTTP_IF_NONE_MATCH')
-
-        #AHA!  rebuild_check is calling fetch, which is always an unconditional
-        #request.  I should be calling is_modified, but that probably will fail too. 
-
         if is_conditional_get(environ) and not pm.is_modified():
             headers = [] 
             pm.merge_headers_into(headers)
             start_response('304 Not Modified', headers)
             return []
-
 
         status, headers, body, parsed = pm.fetch(construct_url(environ))
 
@@ -234,30 +227,21 @@ class DeliveranceMiddleware(object):
             start_response(status, headers)
             return [body]
 
-
-        #status, headers, body = self.rebuild_check(environ, start_response)
-
-        #print "got from rebuild_check", status
-
-        # non-html responses, or rebuild is not necessary: bail out 
-#        if status is None:
-#            return body
-
         pm.begin_speculative_gets()
 
         # perform actual themeing 
         old_body = body
         body = self.filter_body(environ, body)
-        if old_body == body:
-            print "no change in filter_body for", construct_url
 
         replace_header(headers, 'content-length', str(len(body)))
         replace_header(headers, 'content-type', 'text/html; charset=utf-8')
 
-        cache_utils.merge_cache_headers(environ, 
-                                        environ[DELIVERANCE_CACHE], 
-                                        headers, 
-                                        self.merge_cache_control)
+        pm.merge_headers_into(headers)
+
+#        cache_utils.merge_cache_headers(environ, 
+#                                        environ[DELIVERANCE_CACHE], 
+#                                        headers, 
+#                                        self.merge_cache_control)
 
 
         start_response(status, headers)
@@ -358,7 +342,6 @@ class DeliveranceMiddleware(object):
 #                                                 self.should_intercept,
 #                                                 start_response)            
         #fixme: probably need to set status to none for non-html?
-        print "fetched %s, status is" % content_url, status
 
         if status is None: 
             # should_intercept says this isn't HTML, we're done
@@ -373,7 +356,6 @@ class DeliveranceMiddleware(object):
 
         # it was modified or an error, give it back for themeing 
         if not status.startswith('304'): 
-            print "about to return for theming"
             # if it's not a full HTML page, skip it 
             if not self.hasHTMLTag(body): 
                 start_response(status, headers)
