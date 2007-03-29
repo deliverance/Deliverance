@@ -225,7 +225,6 @@ def do_cache(renderer_type, name):
     status = res.status
     # make sure the response etag changed 
     assert(header_value(res.headers, 'etag') != composite_etag)
-    print "status is", status
     assert(status == 200)
 
     # clear etags 
@@ -350,7 +349,7 @@ def test_parallel_gets():
 
 RENDERER_TYPES = ['py', 'xslt']
 TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_cache ] 
-#TEST_FUNCS = [ do_url] 
+TEST_FUNCS = [do_aggregate] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 

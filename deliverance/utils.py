@@ -447,6 +447,11 @@ class RendererBase(object):
         gets the xpath to lookup the content referred to by rule 
         in the aggregated content document 
         """
+
+        import htmlserialize
+
+        print "xpath for rule %s" % htmlserialize.tostring(rule)
+
         content_xpath = rule.get(self.RULE_CONTENT_KEY)
 
         if content_xpath is None:

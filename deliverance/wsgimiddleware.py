@@ -169,6 +169,7 @@ class DeliveranceMiddleware(object):
         using the transformation specified in the 
         initializer. 
         """
+
         qs = environ.get('QUERY_STRING', '')
         environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
         environ[DELIVERANCE_CACHE] = {} 

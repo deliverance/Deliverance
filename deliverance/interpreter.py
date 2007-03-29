@@ -152,6 +152,9 @@ class Renderer(RendererBase):
         content_els = copy.deepcopy(
             content.xpath(self.get_content_xpath(rule)))
 
+
+        print "apply_append", rule, theme, len(content_els), content_els
+
         if len(content_els) == 0:
             if rule.get(self.NOCONTENT_KEY) != 'ignore':
                 self.add_to_body_start(
