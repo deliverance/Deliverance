@@ -293,7 +293,7 @@ class DeliveranceMiddleware(object):
             return [self.theme_uri, self.rule_uri]
         elif document_url == self.theme_uri:
             return []
-        elif document_url == self.rules_uri:
+        elif document_url == self.rule_uri:
             return self.get_resource_uris(document)
             #FIXME: check rules for xincludes.
         return []
