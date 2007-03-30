@@ -15,10 +15,9 @@ from paste.response import header_value, replace_header
 from htmlserialize import tostring
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
-from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
 from wsgifilter.cache_utils import parse_merged_etag #this version must be a bit difference than the deli version
-from wsgifilter.resource_fetcher import *
+from wsgifilter.resource_fetcher import get_internal_resource, get_external_resource, get_file_resource
 import sys 
 import datetime
 import threading
@@ -275,7 +274,9 @@ class DeliveranceMiddleware(object):
 
         #import pdb;pdb.set_trace()
 
-        if request_url_parts[0:2] == url_parts[0:2]:
+        if request_url_parts[0] == 'file':
+            status, headers, body = get_file_resource(url, env)
+        elif request_url_parts[0:2] == url_parts[0:2]:
             status, headers, body = get_internal_resource(url, env, self.app)
         elif url_parts[0:2] == ('', ''):
             status, headers, body = get_internal_resource(urlparse.urlunparse(request_url_parts[0:2] + url_parts[2:]), env, self.app)
