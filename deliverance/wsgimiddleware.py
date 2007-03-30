@@ -284,14 +284,15 @@ class DeliveranceMiddleware(object):
         return status, headers, body, parsed
 
     #fixme: is this the same as get_resource_uris?
-    def find_deps(self, environ, document, document_url):
+    def find_deps(self, environ, document, document_url):        
         if document_url == construct_url(environ):
             return [self.theme_uri, self.rule_uri]
         elif document_url == self.theme_uri:
             return []
-        else:
+        elif document_url == self.rules_uri:
+            return self.get_resource_uris(document)
             #FIXME: check rules for xincludes.
-            return []
+        return []
 
         
         
