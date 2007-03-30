@@ -20,6 +20,7 @@ setup(name="Deliverance",
       install_requires=[
         'lxml>=1.2',
         'Paste',
+	'PasteScript',
 	'FormEncode',
 	'elementtree',
 	'nose',

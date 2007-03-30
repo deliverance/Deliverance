@@ -86,80 +86,92 @@ class DeliveranceMiddleware(object):
         else:
             self._rendererType = renderer
 
-    def get_renderer(self, environ):
-        return self.create_renderer(environ)
+    def get_rules(self, fetch):
+        try:
+            status, headers, body, parsed = fetch(self.rule_uri)
+            if not status.startswith('200'):
+                raise DeliveranceError("Unable to retrieve rules from %s (status = %s)" % (self.rule_uri, status))
+            
+        except Exception, message:
+            newmessage = "Unable to retrieve rules from %s " % self.rule_uri 
+            if message:
+                newmessage += ": " + str(message)
 
-    def create_renderer(self, environ):
+            raise DeliveranceError(newmessage)
+
+        try:
+            parsed_rules = etree.XML(body)
+        except Exception, message:
+            message.public_html = 'Cannot parse rules (%s) [%s]' % (message, rule)
+            raise
+
+        return parsed_rules
+    
+    def get_theme(self, fetch):
+        try:
+            status, headers, body, parsed = fetch(self.theme_uri)
+            if not status.startswith('200'):
+                raise DeliveranceError("Unable to retrieve theme from %s (status = %s)" % (self.rule_uri, status))
+            return parsed
+        except Exception, message:
+            message.public_html = 'Unable to retrieve theme page from %s: %s' % (
+                self.theme_uri, message)
+            raise
+
+    def create_renderer(self, environ, page_manager):
         """
         construct a new deliverance Renderer from the 
         information passed to the initializer.  A new copy 
         of the theme and rules is retrieved. 
         """
-        theme = self.theme(environ)
-        rule = self.rule(environ)
-        full_theme_uri = urlparse.urljoin(
-            construct_url(environ, with_path_info=False),
-            self.theme_uri)
 
         def reference_resolver(href, parse, encoding=None):
-            text = self.get_resource(environ, href)
+            status, headers, body, parsed = page_manager.fetch(href)
+
+            if not status.startswith('200'): 
+                path_info = uri 
+                loc = header_value(headers, 'location')
+                if loc:
+                    loc = ' location=%r' % loc
+                else:
+                    loc = ''
+                raise DeliveranceError(
+                    "Request for internal resource at %s (%r) failed with status code %r%s"
+                    % (construct_url(environ), path_info, status,
+                       loc))
+
+            if parse == "html":
+                return parsed 
             if parse == "xml":
                 return etree.XML(text)
-            if parse == "html":
-                return etree.HTML(text)
             else:
                 if encoding:
                     return text.decode(encoding)
                 else:
                     return text
+                
+        full_theme_uri = urlparse.urljoin(
+            construct_url(environ, with_path_info = False),
+            self.theme_uri)
 
+
+        parsedTheme = self.get_theme(page_manager.fetch)
+        parsedRule = self.get_rules(page_manager.fetch)
+        
         try:
-            parsedTheme = parseHTML(theme)
+            parsedRule =  etree.XML(page_manager.fetch(self.rule_uri)[2])
         except Exception, message:
-            newmessage = "Unable to parse theme page (" + self.theme_uri + ")"
+            newmessage = "Unable to retrieve rules from " + self.rule_uri 
             if message:
-                newmessage += ":" + str(message)
+                newmessage += ": " + str(message)
             raise DeliveranceError(newmessage)
-
-        try:
-            parsedRule = etree.XML(rule)
-        except Exception, message:
-            print "trying to parse %s" % rule
-            message.public_html = 'Cannot parse rules (%s)' % message
-            raise
-
+        
         return self._rendererType(
             theme=parsedTheme,
             theme_uri=full_theme_uri,
             rule=parsedRule, 
             rule_uri=self.rule_uri,
             reference_resolver=reference_resolver)
-
-    def rule(self, environ):
-        """
-        retrieves the data referred to by the rule_uri passed to the 
-        initializer. 
-        """
-        try:
-            return self.get_resource(environ, self.rule_uri)
-        except Exception, message:
-            newmessage = "Unable to retrieve rules from " + self.rule_uri 
-            if message:
-                newmessage += ": " + str(message)
-
-            raise DeliveranceError(newmessage)
-
-    def theme(self, environ):
-        """
-        retrieves the data referred to by the theme_uri passed to the 
-        initializer. 
-        """
-        try:
-            return self.get_resource(environ, self.theme_uri)
-        except Exception, message:
-            message.public_html = 'Unable to retrieve theme page from %s: %s' % (
-                self.theme_uri, message)
-            raise
 
     def __call__(self, environ, start_response):
         """
@@ -205,16 +217,12 @@ class DeliveranceMiddleware(object):
         else: 
             environ['transcluder.etags'] = {}
 
-        old_get_resource = self.get_resource
-        get_resource = lambda url, env: old_get_resource(env, url)
 
-        pm = PageManager(construct_url(environ), environ, self.deptracker, lambda document, document_url: self.find_deps(environ, document, document_url), self.tasklist, self.etree_subrequest)
+        pm = PageManager(construct_url(environ), environ, self.deptracker,
+                         lambda document, document_url: self.find_deps(environ, document, document_url),
+                         self.tasklist, self.etree_subrequest)
         self.pm = pm
-        def simple_fetch(env, url):
-            body = self.pm.fetch(url)[2]
-            return body
 
-        self.get_resource = simple_fetch
         if is_conditional_get(environ) and not pm.is_modified():
             headers = [] 
             pm.merge_headers_into(headers)
@@ -230,20 +238,16 @@ class DeliveranceMiddleware(object):
 
         pm.begin_speculative_gets()
 
-        # perform actual themeing 
-        old_body = body
-        body = self.filter_body(environ, body)
+        # perform actual themeing
+
+        themed_doc = self.create_renderer(environ, pm).render(parsed)
+        body = tostring(themed_doc, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
+                                                  "http://www.w3.org/TR/html4/loose.dtd"))
 
         replace_header(headers, 'content-length', str(len(body)))
         replace_header(headers, 'content-type', 'text/html; charset=utf-8')
 
         pm.merge_headers_into(headers)
-
-#        cache_utils.merge_cache_headers(environ, 
-#                                        environ[DELIVERANCE_CACHE], 
-#                                        headers, 
-#                                        self.merge_cache_control)
-
 
         start_response(status, headers)
         return [body]
@@ -307,177 +311,6 @@ class DeliveranceMiddleware(object):
             return False # yerg, 304s can have no content-type 
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
-    def filter_body(self, environ, body):
-        """
-        returns the result of the deliverance transformation on the string 'body' 
-        in the context of environ. The result is a string containing HTML. 
-        """
-
-        content = self.get_renderer(environ).render(parseHTML(body))
-        return tostring(content, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
-                                               "http://www.w3.org/TR/html4/loose.dtd"))
-
-
-    def rebuild_check(self, environ, start_response): 
-        # perform the request for content  
-
-        content_url = construct_url(environ)
-
-        etag_map = {}
-        #I think this is all done above with the incookies stuff
-        #if 'HTTP_IF_NONE_MATCH' in environ: 
-        #    etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
-	#    tag = etag_map.get(content_url, None)
-	#    if tag: 
-        #        environ['HTTP_IF_NONE_MATCH'] = tag
-        #    else:
-        #        if 'HTTP_IF_NONE_MATCH' in environ: 
-        #            del environ['HTTP_IF_NONE_MATCH']
-
-
-        #hm, fetch returned 200 instead of 304.  Is this because of deps?
-        #no, I think it's because we fuck with the environ... no, we don't.  
-
-        status, headers, body, parsed = self.pm.fetch(content_url)
-
-#        status, headers, body = intercept_output(environ, self.app,
-#                                                 self.should_intercept,
-#                                                 start_response)            
-        #fixme: probably need to set status to none for non-html?
-
-        if status is None: 
-            # should_intercept says this isn't HTML, we're done
-            return (None, None, body)
-
-        if self.should_ignore_url(content_url): 
-            start_response(status, headers)
-            return (None, None, [body])
-
-        # cache the response so we can look at its headers later 
-        environ[DELIVERANCE_CACHE][content_url] = (status, headers, body)
-
-        # it was modified or an error, give it back for themeing 
-        if not status.startswith('304'): 
-            # if it's not a full HTML page, skip it 
-            if not self.hasHTMLTag(body): 
-                start_response(status, headers)
-                return (None, None, [body])
-
-            # send it back for rebuild 
-            return (status, headers, body)
-            
-        # got 304 Not Modified for content, check other resources 
-        rules = etree.XML(self.rule(environ))
-        resources = self.get_resource_uris(rules)        
-
-        if self.any_modified(environ, resources, etag_map): 
-            # something changed, 
-            # get the content explicitly and give it back 
-            if 'HTTP_IF_MODIFIED_SINCE' in environ: 
-                del environ['HTTP_IF_MODIFIED_SINCE']
-            if 'HTTP_IF_NONE_MATCH' in environ: 
-                del environ['HTTP_IF_NONE_MATCH'] 
-            environ['CACHE-CONTROL'] = 'no-cache'
-
-            status, headers, body = intercept_output(environ, self.app)
-
-            if not self.hasHTMLTag(body): 
-                # XXX yarg, we didn't care about it!
-                start_response(status, headers)
-                return (None, None, [body])
-
-            environ[DELIVERANCE_CACHE][content_url] = (status, headers, body)
-            return (status, headers, body)
-
-        # nothing was modified, give back a 304 
-        cache_utils.merge_cache_headers(environ, 
-                                        environ[DELIVERANCE_CACHE], 
-                                        headers, 
-                                        self.merge_cache_control)
-        start_response('304 Not Modified', headers)
-
-        return (None,None,[])
-        
-    def any_modified(self, environ, resources, etag_map): 
-        """
-        returns a boolean indicating whether any of the uris in the resources 
-        list have been modified. if an entry for the uri exists in the map
-        etag_map, the value will be used to check the resource using an 
-        if-none-match http header. if an if-not-modified check is desired, 
-        it should be present in environ. 
-        """
-        moddate = None
-
-        if 'HTTP_IF_MODIFIED_SINCE' in environ: 
-            moddate = environ['HTTP_IF_MODIFIED_SINCE']            
-            
-        for uri in resources:
-            if (self.check_modification(environ, uri, 
-                                        moddate, 
-                                        etag_map.get(uri,None))): 
-                return True
-
-        return False 
-
-
-    def get_resource(self, environ, uri):
-        """
-        retrieve the content from the uri given, 
-        uses cache if possible. throws exception if 
-        response is not 200 
-        """
-        if uri in environ[DELIVERANCE_CACHE]: 
-            response = environ[DELIVERANCE_CACHE][uri]
-            if response[0].startswith('200'): 
-                return response[2]
-
-        fetcher = self.get_fetcher(environ, uri)
-         
-
-        # eliminate validation headers, we want the content 
-        if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
-            del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
-        if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
-            del fetcher.environ['HTTP_IF_NONE_MATCH'] 
-        fetcher.environ['CACHE-CONTROL'] = 'no-cache'
-        
-
-        status, headers, body = fetcher.wsgi_get()         
-        
-        if not status.startswith('200'): 
-            path_info = uri 
-            loc = header_value(headers, 'location')
-            if loc:
-                loc = ' location=%r' % loc
-            else:
-                loc = ''
-            raise DeliveranceError(
-                "Request for internal resource at %s (%r) failed with status code %r%s"
-                % (construct_url(environ), path_info, status,
-                   loc))
-
-        environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
-
-        return body
-            
-
-    def get_fetcher(self, environ, uri): 
-        """
-        retrieve an object which is appropriate for fetching the 
-        uri specified. 
-        """
-        internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
-        uri = urlparse.urljoin(internalBaseURL, uri)        
-
-        if urlparse.urlparse(uri)[0] == 'file':
-            return FileResourceFetcher(environ, uri)
-
-        elif  internalBaseURL and uri.startswith(internalBaseURL):
-            return InternalResourceFetcher(environ, uri[len(internalBaseURL):],
-                                           self.app)
-        else:
-            return ExternalResourceFetcher(uri)        
-
 
     def get_resource_uris(self, rules): 
         """
@@ -496,46 +329,6 @@ class DeliveranceMiddleware(object):
         return list(resources)
 
             
-    def check_modification(self, environ, uri, httpdate_since=None, etag=None): 
-        """
-        if httpdate_since is set to an httpdate the If-Modified-Since HTTP header 
-          is used to check for modification 
-
-        if etag is set to an etag for the resource, the If-None-Match HTTP header 
-          is used to check for modification 
-
-        the resulting (status, headers, body) tuple for the request is stored in 
-        environ[DELIVERANCE_CACHE][uri]. 
-
-        """
-
-        print "CHECK_MOD", uri
-        fetcher = self.get_fetcher(environ, uri)
-        
-        if httpdate_since: 
-            fetcher.environ['HTTP_IF_MODIFIED_SINCE'] = httpdate_since 
-        else: 
-            if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
-                del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
-        
-
-        if etag: 
-            fetcher.environ['HTTP_IF_NONE_MATCH'] = etag
-        else: 
-            if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
-                del fetcher.environ['HTTP_IF_NONE_MATCH']
-
-
-        status, headers, body = fetcher.wsgi_get()
-        environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
-
-        if status.startswith('304'): # Not Modified             
-            return False 
-
-        return True
-
-
-
     HTML_DOC_PAT = re.compile(r"^.*<\s*html(\s*|>).*$",re.I|re.M)
     def hasHTMLTag(self, body):
         """
