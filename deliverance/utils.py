@@ -450,7 +450,7 @@ class RendererBase(object):
 
         import htmlserialize
 
-        print "xpath for rule %s" % htmlserialize.tostring(rule)
+        #print "xpath for rule %s" % htmlserialize.tostring(rule)
 
         content_xpath = rule.get(self.RULE_CONTENT_KEY)
 

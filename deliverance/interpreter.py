@@ -153,7 +153,7 @@ class Renderer(RendererBase):
             content.xpath(self.get_content_xpath(rule)))
 
 
-        print "apply_append", rule, theme, len(content_els), content_els
+        #print "apply_append", rule, theme, len(content_els), content_els
 
         if len(content_els) == 0:
             if rule.get(self.NOCONTENT_KEY) != 'ignore':

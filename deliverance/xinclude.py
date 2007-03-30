@@ -74,7 +74,7 @@ class FatalIncludeError(SyntaxError):
 def default_loader(href, parse, encoding=None):
     file = open(href)
     if parse == "xml":
-        data = etree.XML(file.read())
+        data = etree.XML(file.read(), parser = etree.XMLParser())
     else:
         data = file.read()
         if encoding:

@@ -161,7 +161,7 @@ class Renderer(RendererBase):
         prepare transform elements for "append" rule 
         """
 
-        print "apply_append", rule, theme
+        #print "apply_append", rule, theme
         theme_el = self.get_theme_el(rule, theme)
         if theme_el is None:
             return 

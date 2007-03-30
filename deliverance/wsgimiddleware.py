@@ -39,6 +39,9 @@ IGNORE_EXTENSIONS = ['js','css','gif','jpg','jpeg','pdf','ps','doc','png','ico',
 
 IGNORE_URL_PATTERN = re.compile("^.*\.(%s)$" % '|'.join(IGNORE_EXTENSIONS))
 
+def parseXML(xml):
+    return etree.XML(xml, parser = etree.XMLParser())
+
 class DeliveranceMiddleware(object):
     """
     a DeliveranceMiddleware object exposes a single deliverance 
@@ -100,7 +103,7 @@ class DeliveranceMiddleware(object):
             raise DeliveranceError(newmessage)
 
         try:
-            parsed_rules = etree.XML(body)
+            parsed_rules = parseXML(body)
         except Exception, message:
             message.public_html = 'Cannot parse rules (%s) [%s]' % (message, rule)
             raise
@@ -143,7 +146,7 @@ class DeliveranceMiddleware(object):
             if parse == "html":
                 return parsed 
             if parse == "xml":
-                return etree.XML(text)
+                return parseXML(text)
             else:
                 if encoding:
                     return text.decode(encoding)
@@ -159,7 +162,7 @@ class DeliveranceMiddleware(object):
         parsedRule = self.get_rules(page_manager.fetch)
         
         try:
-            parsedRule =  etree.XML(page_manager.fetch(self.rule_uri)[2])
+            parsedRule =  parseXML(page_manager.fetch(self.rule_uri)[2])
         except Exception, message:
             newmessage = "Unable to retrieve rules from " + self.rule_uri 
             if message:
@@ -282,7 +285,7 @@ class DeliveranceMiddleware(object):
 
 
         if status.startswith('200') and self.is_html(status, headers):
-            parsed = etree.HTML(body)
+            parsed = etree.HTML(body, parser=etree.HTMLParser())
         else:
             parsed = None
         return status, headers, body, parsed
