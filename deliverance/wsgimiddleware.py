@@ -368,7 +368,7 @@ class DeliveranceMiddleware(object):
             return InternalResourceFetcher(environ, uri[len(internalBaseURL):],
                                            self.app)
         else:
-            return ExternalResourceFetcher(uri)        
+            return ExternalResourceFetcher(environ, uri)        
 
 
     def get_resource_uris(self, rules): 

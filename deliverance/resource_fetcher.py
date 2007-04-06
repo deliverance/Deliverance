@@ -127,13 +127,13 @@ class FileResourceFetcher(object):
         return body
 
 class ExternalResourceFetcher(object): 
-    def __init__(self, uri, headers_only=False): 
+    def __init__(self, in_environ, uri, headers_only=False): 
         self.uri = uri 
         
         url_chunks = urlparse.urlsplit(uri)
         loc = urlparse.urlsplit(uri) 
         
-        self.environ = {}
+        self.environ = in_environ.copy() 
         
         if headers_only: 
             self.environ['REQUEST_METHOD'] = 'HEAD'
