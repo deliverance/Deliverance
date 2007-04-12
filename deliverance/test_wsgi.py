@@ -45,12 +45,12 @@ def html_string_compare(astr, bstr):
     a = None
     b = None
     try:
-        a = etree.HTML(astr)
+        a = etree.HTML(astr, etree.HTMLParser())
     except:
         print a
         raise
     try:
-        b = etree.HTML(bstr)
+        b = etree.HTML(bstr, etree.HTMLParser())
     except:
         print b
         raise
