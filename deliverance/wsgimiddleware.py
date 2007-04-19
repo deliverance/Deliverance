@@ -176,8 +176,12 @@ class DeliveranceMiddleware(object):
             
         status, headers, body = self.rebuild_check(environ, start_response)
 
-        # non-html responses, or rebuild is not necessary: bail out 
         if status is None:
+            # non-html responses, or rebuild is not necessary: bail out 
+            return body
+        if not status.startswith('200'):
+            # any non-200 response shouldn't be themed...
+            start_response(status, headers)
             return body
 
         # perform actual themeing 
