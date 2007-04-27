@@ -372,8 +372,19 @@ class DeliveranceMiddleware(object):
             return InternalResourceFetcher(environ, uri[len(internalBaseURL):],
                                            self.app)
         else:
-            return ExternalResourceFetcher(environ, uri)        
+	    out_environ = self.cleaned_environ(environ)
+            return ExternalResourceFetcher(out_environ, uri)        
 
+    def cleaned_environ(self, environ):
+        """
+        this implements the policy for manipulating
+        outbound environments.
+        """
+    	cleaned = environ.copy()
+	if 'HTTP_VIA' in cleaned:
+            del cleaned['HTTP_VIA']
+        return cleaned
+    
 
     def get_resource_uris(self, rules): 
         """
