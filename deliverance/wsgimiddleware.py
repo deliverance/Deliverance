@@ -381,7 +381,7 @@ class DeliveranceMiddleware(object):
         outbound environments.
         """
     	cleaned = environ.copy()
-	if 'HTTP_VIA' in cleaned:
+        if 'HTTP_VIA' in cleaned:
             del cleaned['HTTP_VIA']
         return cleaned
     
