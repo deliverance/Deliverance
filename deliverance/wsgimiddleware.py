@@ -206,7 +206,7 @@ class DeliveranceMiddleware(object):
         """
         type = header_value(headers, 'content-type')
         if type is None:
-            return False # yerg, 304s can have no content-type 
+            return True # yerg, 304s can have no content-type 
         return type.startswith('text/html') or type.startswith('application/xhtml+xml')
 
     def filter_body(self, environ, body):

@@ -84,7 +84,7 @@ class FileResourceFetcher(object):
 
         uri_parts = urlparse.urlparse(self.uri)
         self.environ['PATH_INFO'] = uri_parts[2]
-        self.environ['SCRIPT_INFO'] = '' 
+        self.environ['SCRIPT_NAME'] = '' 
         self.environ['wsgi.scheme'] = 'file'
         if len(uri_parts[4]) > 0: 
             self.environ['QUERY_STRING'] = uri_parts[4] + '&notheme'
@@ -146,10 +146,10 @@ class ExternalResourceFetcher(object):
         self.environ['wsgi.url_scheme'] = loc[0]
         self.environ['wsgi.version'] = (1, 0)
         self.environ['HTTP_HOST'] = loc[1]
-        self.environ['PATH_INFO'] = loc[2]
+        self.environ['PATH_INFO'] = urllib.unquote(loc[2])
         self.environ['QUERY_STRING'] = loc[3]
 
-        self.environ['SCRIPT_INFO'] = ''
+        self.environ['SCRIPT_NAME'] = ''
 
         #if loc[0].find(':') != -1: 
         #    self.environ['SERVER_NAME'],self.environ['SERVER_PORT'] = loc[0].split(':')
