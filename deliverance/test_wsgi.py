@@ -20,6 +20,7 @@ guidesearch_data = os.path.join(os.path.dirname(__file__), 'test-data', 'guidese
 ajax_data = os.path.join(os.path.dirname(__file__), 'test-data', 'ajax')
 url_data = os.path.join(os.path.dirname(__file__), 'test-data', 'wsgiurl')
 aggregate_data = os.path.join(os.path.dirname(__file__), 'test-data', 'aggregate')
+aggregate2_data = os.path.join(os.path.dirname(__file__), 'test-data', 'aggregate2')
 
 static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
@@ -29,6 +30,7 @@ guidesearch_app = StaticURLParser(guidesearch_data)
 ajax_app = StaticURLParser(ajax_data)
 url_app = StaticURLParser(url_data)
 aggregate_app = StaticURLParser(aggregate_data)
+aggregate2_app = StaticURLParser(aggregate2_data)
 
 
 
@@ -155,6 +157,14 @@ def do_aggregate(renderer_type, name):
     res2 = app.get('/expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
+def do_aggregate2(renderer_type, name):
+    wsgi_app = DeliveranceMiddleware(aggregate2_app, 'theme.html', 'rules.xml',
+                                     renderer_type)
+    app = TestApp(wsgi_app)
+    res = app.get('/index.html')
+    res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
 def do_cache(renderer_type, name): 
     # XXX this should be busted up into multiple tests I spose 
 
@@ -272,7 +282,7 @@ def do_cache(renderer_type, name):
                                           
 
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_cache ] 
+TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_aggregate2, do_cache ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 
