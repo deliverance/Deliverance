@@ -445,7 +445,8 @@ class Renderer(RendererBase):
         for el in els:
             if isinstance(el, basestring):
                 continue
-            self.attach_text_to_previous(el, el.tail)
+            if el.tail:
+                self.attach_text_to_previous(el, el.tail)
             el.getparent().remove(el)
             removed += 1
         return removed

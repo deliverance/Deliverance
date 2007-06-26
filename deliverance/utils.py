@@ -284,12 +284,15 @@ class RendererBase(object):
     def attach_text_to_previous(self,el,text):
         """
         attaches the text given to the nearest previous node to el, 
-        ie its preceding sibling or parent         
+        ie its preceding sibling or parent
         """
         if text is None:
             return 
 
-        el_i = el.getparent().index(el)
+        parent = el.getparent()
+        assert parent is not None, (
+            "Element %r has no parent" % el)
+        el_i = parent.index(el)
         if el_i > 0:
             sib_el = el.getparent()[el_i - 1]
             if sib_el.tail:
