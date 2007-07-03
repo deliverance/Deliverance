@@ -439,6 +439,8 @@ class RendererBase(object):
             if doc is None:
                 continue 
 
+            self.fixup_links(doc, href)
+
             doc_node = etree.SubElement(root,"document")
             doc_node.set("content",href)
             doc_node.append(doc)
