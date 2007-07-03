@@ -39,7 +39,9 @@ class DeliveranceMiddleware(object):
     tranformation as a WSGI middleware component. 
     """
 
-    def __init__(self, app, theme_uri, rule_uri, renderer='py', merge_cache_control=False):
+    def __init__(self, app, theme_uri, rule_uri,
+                 renderer='py', merge_cache_control=False,
+                 is_internal_uri=None):
         """
         initializer
         
@@ -50,9 +52,14 @@ class DeliveranceMiddleware(object):
           performing transformations, may be 'py' or 'xslt' or a
           Renderer class
         merge_cache_control: if set to True, the cache-control header will 
-        be calculated from the cache-control headers of all component pages 
-        during rendering. If set to False, the requested content's 
-        cache-control headers will be used. (does not affect etag merging)
+          be calculated from the cache-control headers of all component pages 
+          during rendering. If set to False, the requested content's 
+          cache-control headers will be used. (does not affect etag merging)
+        is_internal_uri: an optional predicate accepting a uri and
+          a wsgi environment. This should return true if the uri
+          should be considered 'internal'(passed to the
+          subapplication) and false if the requestshould be send
+          over the network. 
         """
         self.app = app
         self.theme_uri = theme_uri
@@ -69,6 +76,8 @@ class DeliveranceMiddleware(object):
             raise ValueError("Unknown Renderer: %s - Expecting 'py' or 'xslt'" % renderer)
         else:
             self._rendererType = renderer
+
+        self._is_internal_uri = is_internal_uri
 
     def get_renderer(self, environ):
         return self.create_renderer(environ)
@@ -322,6 +331,7 @@ class DeliveranceMiddleware(object):
         uses cache if possible. throws exception if 
         response is not 200 
         """
+        
         if uri in environ[DELIVERANCE_CACHE]: 
             response = environ[DELIVERANCE_CACHE][uri]
             if response[0].startswith('200'): 
@@ -355,21 +365,39 @@ class DeliveranceMiddleware(object):
         environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
 
         return body
+
+
+    def is_internal_uri(self, uri, environ):
+        if self._is_internal_uri:
+            # specified in constructor 
+            return self._is_internal_uri(uri, environ)
+        else:
+            # default
+            internalBaseURL = environ.get(DELIVERANCE_BASE_URL)
             
+            test_uri = urlparse.urljoin(internalBaseURL, uri)
+
+            if test_uri.startswith(internalBaseURL):
+                return True
+            else:
+                return False
 
     def get_fetcher(self, environ, uri): 
         """
         retrieve an object which is appropriate for fetching the 
         uri specified. 
         """
-        internalBaseURL = environ.get(DELIVERANCE_BASE_URL,None)
-        uri = urlparse.urljoin(internalBaseURL, uri)        
-
+        
         if urlparse.urlparse(uri)[0] == 'file':
             return FileResourceFetcher(environ, uri)
 
-        elif  internalBaseURL and uri.startswith(internalBaseURL):
-            return InternalResourceFetcher(environ, uri[len(internalBaseURL):],
+        elif self.is_internal_uri(uri, environ):
+            # make it absolute
+            internalBaseURL = environ.get(DELIVERANCE_BASE_URL)
+            uri = urlparse.urljoin(internalBaseURL, uri)
+
+            return InternalResourceFetcher(environ,
+                                           uri,
                                            self.app)
         else:
 	    out_environ = self.cleaned_environ(environ)

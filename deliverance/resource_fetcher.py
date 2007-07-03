@@ -21,22 +21,28 @@ class InternalResourceFetcher(object):
         else:
             self.environ = in_environ.copy()
             
-        if not self.uri.startswith('/'):
-            self.uri = '/' + self.uri
-
+        base_url = in_environ['deliverance.base-url']
+        if not base_url.endswith('/'):
+            base_url += '/'
+        uri = urlparse.urljoin(base_url, uri)
         uri_parts = urlparse.urlparse(uri)
 
-        self.environ['PATH_INFO'] = urllib.unquote(uri_parts[2])
+        if uri.startswith(base_url):
+            script_name = urlparse.urlparse(base_url)[2]
+            path_info = uri_parts[2][len(script_name):]
+            if not path_info.startswith('/'):
+                path_info = '/%s' % path_info
+                
+            self.environ['SCRIPT_NAME'] = urllib.unquote(script_name)
+            self.environ['PATH_INFO'] = urllib.unquote(path_info)
+        else:
+            self.environ['SCRIPT_NAME'] = ''
+            self.environ['PATH_INFO'] = urllib.unquote(uri_parts[2])
+                            
         if len(uri_parts[4]) > 0: 
             self.environ['QUERY_STRING'] = uri_parts[4] + '&notheme'
         else: 
             self.environ['QUERY_STRING'] = 'notheme'
-
-        base_url = in_environ['deliverance.base-url']
-        if base_url is not None:
-            self.environ['SCRIPT_NAME'] = urllib.unquote(urlparse.urlparse(base_url)[2])
-        else: 
-            self.environ['SCRIPT_NAME'] = ''
 
         if headers_only: 
             self.environ['REQUEST_METHOD'] = 'HEAD'
@@ -130,7 +136,6 @@ class ExternalResourceFetcher(object):
     def __init__(self, in_environ, uri, headers_only=False): 
         self.uri = uri 
         
-        url_chunks = urlparse.urlsplit(uri)
         loc = urlparse.urlsplit(uri) 
         
         self.environ = in_environ.copy() 
