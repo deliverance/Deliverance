@@ -42,5 +42,54 @@
   </output> 
 </deliverance-test>
 
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme=".//div[@id='foo']" 
+     content=".//div || .//body/*" />
+  </rules>
+
+  <theme base="http://example.com">
+   <html><body><div id="foo"></div></body></html>
+  </theme>
+
+  <content>
+   <html><body>
+    <div>some content</div>
+    <span>more content</span>
+   </body></html>
+  </content>
+
+  <output>
+   <html><body><div id="foo">
+     <div>some content</div></div></body></html>
+  </output>
+</deliverance-test>
+
+
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme=".//div[@id='foo']" 
+     content=".//div || .//body/*" />
+  </rules>
+
+  <theme base="http://example.com">
+   <html><body><div id="foo"></div></body></html>
+  </theme>
+
+  <content>
+   <html><body>
+    <span>some content</span>
+    <span>more content</span>
+   </body></html>
+  </content>
+
+  <output>
+   <html><body><div id="foo">
+     <span>some content</span>
+     <span>more content</span>
+   </div></body></html>
+  </output>
+</deliverance-test>
+
 
 </deliverance-test-suite>

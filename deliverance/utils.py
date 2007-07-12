@@ -404,7 +404,7 @@ class RendererBase(object):
 
         <content>
           <document content="http://blah.org/foo">...</document>
-          <docuemnt content="deliverance:request-content">
+          <document content="deliverance:request-content">
             ... 
           </document>
         </content>
@@ -456,6 +456,57 @@ class RendererBase(object):
 
         if content_xpath is None:
             return None
+
+        content_doc = rule.get(self.RULE_HREF_KEY, self.REQUEST_CONTENT)
+        ored_parts = content_xpath.split('||')
+        ored_parts = [self._translate_content_xpath(part, content_doc)
+                      for part in ored_parts]
+        if len(ored_parts) == 1:
+            # Simplest/commonest case, we'll just skip the rest:
+            return ored_parts[0]
+        prev_parts = []
+        new_parts = []
+        for part in ored_parts:
+            for prev_part in prev_parts:
+                part = self._add_xpath_condition(
+                    part, 'count(%s) = 0' % (prev_part))
+            new_parts.append(part)
+            prev_parts.append(part)
+        content_xpath = ' | '.join(new_parts)
+        return content_xpath
+
+    def _translate_content_xpath(self, xpath, content_doc):
+        paths = xpath.split('|')
+        new_paths = []
+        for path in paths:
+            path = path.strip()
+            if not path.startswith('/'):
+                path = '/' + path
+            new_paths.append(
+                "/content/document[@content='%s']%s"
+                % (content_doc, path))
+        return ' | '.join(new_paths)
+    
+    def _add_xpath_condition(self, xpath, cond, operator='and'):
+        if xpath.endswith(']'):
+            return '%s %s (%s)]' % (
+                xpath[:-1], operator, cond)
+        else:
+            return '%s[%s]' % (xpath, cond)
+
+            
+
+   
+
+    def x_get_content_xpath(self, rule): 
+        """
+        gets the xpath to lookup the content referred to by rule 
+        in the aggregated content document 
+        """
+        content_xpath = rule.get(self.RULE_CONTENT_KEY)
+
+        if content_xpath is None:
+            return None
         
         if not content_xpath.startswith('/'): 
             content_xpath = '/%s' % content_xpath 
@@ -466,5 +517,3 @@ class RendererBase(object):
         return new_xpath
 
 
-
-   
