@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deliverance-test-suite>
+
+<!-- This tests | in xpath rules, as well as the not-really-xpath ||
+     operator -->
+
+<deliverance-test>
+  <rules xmlns="http://www.plone.org/deliverance">
+    <copy theme=".//div[@id='foo']" 
+     content=".//span[@class='bar'] | .//div[@class='foo']" />
+  </rules>
+
+  <theme base="http://example.com"> 
+     <html><head><title>Blah</title></head>
+     <body>
+       <div></div>
+       <div id="foo">Dummy Content</div>
+       <div class="foo">More Dummy</div>
+     </body></html>
+  </theme>
+
+  <content> 
+     <html><body>
+       <div class="bar">Real Content</div>
+       <span class="bar">1</span>
+       <span class="quux">2</span>
+       <p>zzz</p>
+       <div class="foo">3</div>
+       <div class="bar">4</div>
+     </body></html>
+  </content>
+ 
+  <output>
+     <html><head><title>Blah</title></head><body>
+       <div></div>
+       <div id="foo">
+         <span class="bar">1</span>
+         <div class="foo">3</div>
+       </div>
+       <div class="foo">More Dummy</div>
+     </body></html>
+  </output> 
+</deliverance-test>
+
+
+</deliverance-test-suite>
