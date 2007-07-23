@@ -188,8 +188,14 @@ class DeliveranceMiddleware(object):
         if status is None:
             # non-html responses, or rebuild is not necessary: bail out 
             return body
-        if not status.startswith('200'):
-            # any non-200 response shouldn't be themed...
+        theme = True
+        status_code = status.split()[0]
+        if (status_code.startswith('3')
+            or status_code == '204'
+            or status_code == '401'):
+            # Redirects, not-modified, etc don't get themed (3xx)
+            # No Content doesn't get themed (204)
+            # Unauthorized isn't themed (401)
             start_response(status, headers)
             return body
 
