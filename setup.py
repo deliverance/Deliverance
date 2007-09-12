@@ -54,7 +54,7 @@ middleware as an HTTP proxy.
       packages=find_packages(exclude=[]),
       zip_safe=False,
       install_requires=[
-        'lxml>=1.2',
+        'lxml>=1.2,<2.0dev',
         'Paste',
 	'FormEncode',
 	'elementtree',
