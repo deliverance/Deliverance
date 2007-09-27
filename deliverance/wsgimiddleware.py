@@ -492,11 +492,13 @@ class DeliveranceMiddleware(object):
         return re.match(IGNORE_URL_PATTERN, url) is not None
 
 def make_filter(app, global_conf,
-                theme_uri=None, rule_uri=None):
+                theme_uri=None, rule_uri=None,
+                renderer='py'):
     assert theme_uri is not None, (
         "You must give a theme_uri")
     assert rule_uri is not None, (
         "You must give a rule_uri")
     return DeliveranceMiddleware(
-        app, theme_uri, rule_uri)
+        app, theme_uri, rule_uri,
+        renderer=renderer)
 
