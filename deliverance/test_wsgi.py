@@ -4,6 +4,7 @@ from lxml import etree
 from paste.fixture import TestApp
 from paste.urlparser import StaticURLParser
 from paste.response import header_value
+from paste.wsgilib import intercept_output
 from deliverance.wsgimiddleware import DeliveranceMiddleware
 from formencode.doctest_xml_compare import xml_compare
 from deliverance.htmlserialize import tostring
@@ -21,6 +22,7 @@ ajax_data = os.path.join(os.path.dirname(__file__), 'test-data', 'ajax')
 url_data = os.path.join(os.path.dirname(__file__), 'test-data', 'wsgiurl')
 aggregate_data = os.path.join(os.path.dirname(__file__), 'test-data', 'aggregate')
 aggregate2_data = os.path.join(os.path.dirname(__file__), 'test-data', 'aggregate2')
+ignore_data = os.path.join(os.path.dirname(__file__), 'test-data', 'ignore')
 
 static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
@@ -31,8 +33,7 @@ ajax_app = StaticURLParser(ajax_data)
 url_app = StaticURLParser(url_data)
 aggregate_app = StaticURLParser(aggregate_data)
 aggregate2_app = StaticURLParser(aggregate2_data)
-
-
+ignore_app = StaticURLParser(ignore_data)
 
 def html_string_compare(astr, bstr):
     """
@@ -165,6 +166,43 @@ def do_aggregate2(renderer_type, name):
     res2 = app.get('/expected.html?notheme')
     html_string_compare(res.body, res2.body)
 
+def do_ignore(renderer_type, name): 
+    wsgi_app = DeliveranceMiddleware(ignore_app, 'theme.html', 'rules.xml', 
+                                     renderer_type)
+    
+    app = TestApp(wsgi_app)
+    res = app.get('/index.html')
+    res2 = app.get('/expected.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+    res = app.get('/index2.html')
+    res2 = app.get('/expected2.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+
+def do_ignore_header(renderer_type, name):     
+    class NoThemeHeaderApp:
+        def __init__(self, app): 
+            self.app = app
+
+        def __call__(self, environ, start_response): 
+            status, headers, body = intercept_output(environ, self.app)
+            headers.append(('x-deliverance-no-theme','1'))
+            start_response(status, headers)
+            return [body]
+
+    wsgi_app = DeliveranceMiddleware(NoThemeHeaderApp(ignore_app), 
+                                      'theme.html', 'rules.xml', 
+                                      renderer_type)
+    
+    app = TestApp(wsgi_app)
+
+    res = app.get('/index2.html')
+    res2 = app.get('/expected3.html?notheme')
+    html_string_compare(res.body, res2.body)
+    
+    
+
 def do_cache(renderer_type, name): 
     # XXX this should be busted up into multiple tests I spose 
 
@@ -274,15 +312,8 @@ def do_cache(renderer_type, name):
     
 
 
-    
-
-    
-    
-    
-                                          
-
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_aggregate2, do_cache ] 
+TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_aggregate2, do_cache, do_ignore, do_ignore_header ] 
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 

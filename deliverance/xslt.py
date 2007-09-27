@@ -106,6 +106,8 @@ class Renderer(RendererBase):
                 transformation represented by this class performed on the 
                 given content. 
         """
+        if self.shouldnt_theme(content):
+            return copy.deepcopy(content)
 
         #print "TRANSFORM: %s" % etree.tostring(self.xslt_wrapper)
         if content:

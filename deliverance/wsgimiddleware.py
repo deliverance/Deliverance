@@ -219,6 +219,11 @@ class DeliveranceMiddleware(object):
         specify a response from the wrapped middleware 
         which deliverance may need to theme. 
         """
+
+        dont_deliverate = header_value(headers, 'x-deliverance-no-theme')
+        if dont_deliverate:
+            return False
+
         type = header_value(headers, 'content-type')
         if type is None:
             return True # yerg, 304s can have no content-type 

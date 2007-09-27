@@ -59,6 +59,9 @@ class Renderer(RendererBase):
                 transformation represented by this class performed on the 
                 given content. 
         """
+        if self.shouldnt_theme(content):
+            return copy.deepcopy(content)
+
         result = copy.deepcopy(self.theme)
         input = self.aggregate(self.resolve_uri,self.rules,copy.deepcopy(content))
         self.apply_rules(self.rules, result, input)

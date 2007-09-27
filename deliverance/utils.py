@@ -88,6 +88,13 @@ class RendererBase(object):
 
     REQUEST_CONTENT = "deliverance:request-content"
 
+    def shouldnt_theme(self, document):
+        if document is None:
+            return False
+
+        nt = document.xpath('//head/meta[@http-equiv="x-deliverance-no-theme"]')
+        return len(nt) != 0
+
     def get_theme_el(self,rule,theme):
         """
         get the element referred to by the "theme" attribute of the 
