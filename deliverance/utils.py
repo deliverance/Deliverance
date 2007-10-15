@@ -160,7 +160,7 @@ class RendererBase(object):
         inserts the element el into the beginning of body 
         element of the document given        
         """
-        if not el:
+        if el is None:
             return
         body = doc.find('body')
         if body is None:
@@ -427,7 +427,9 @@ class RendererBase(object):
         root = etree.Element("content")
 
 
-        if content: 
+        ## FIXME: this was originally "if content:", but I think it actually
+        ## was meant to catch content==None.  But I'm not sure.
+        if content is not None:
             request_doc = etree.SubElement(root,"document")
             request_doc.set("content",self.REQUEST_CONTENT)
             request_doc.append(content)

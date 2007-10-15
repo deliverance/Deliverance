@@ -110,7 +110,7 @@ class Renderer(RendererBase):
             return copy.deepcopy(content)
 
         #print "TRANSFORM: %s" % etree.tostring(self.xslt_wrapper)
-        if content:
+        if content is not None:
             content = self.aggregate(self.resolve_uri, self.rules, content)
             return self.transform(content).getroot()
         else:
@@ -322,7 +322,7 @@ class Renderer(RendererBase):
             return
 
         err = self.format_error("no content matched", rule)
-        if err:
+        if err is not None:
             # if the content was possibly moved, check for a marker instead of the content 
             check_xpath = self.get_content_xpath(rule)
                 
