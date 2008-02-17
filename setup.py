@@ -54,13 +54,10 @@ middleware as an HTTP proxy.
       packages=find_packages(exclude=[]),
       zip_safe=False,
       install_requires=[
-        'lxml>=1.2,<2.0dev',
-        'Paste',
-	'FormEncode',
-	'elementtree',
+        'lxml>=2.0a',
+        'WebOb>=0.9',
+	'FormEncode', # test requirement
 	'nose',
-	'WSGIFilter',
-	'setuptools'
       ],
       include_package_data=True,
       entry_points="""
