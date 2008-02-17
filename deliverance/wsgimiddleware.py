@@ -356,7 +356,7 @@ class DeliveranceMiddleware(object):
             del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
         if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
             del fetcher.environ['HTTP_IF_NONE_MATCH'] 
-        fetcher.environ['CACHE-CONTROL'] = 'no-cache'
+        fetcher.environ['HTTP_CACHE_CONTROL'] = 'no-cache'
         
 
         status, headers, body = fetcher.wsgi_get()         
