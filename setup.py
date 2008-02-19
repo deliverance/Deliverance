@@ -77,6 +77,10 @@ middleware as an HTTP proxy.
       deliverance-handtransform = deliverance.handtransform:main
       deliverance-static = deliverance.staticcommand:main
       """,
+      tests_require=[ 
+          'nose', 
+          ], 
+      test_suite='nose.collector', 
       )
 
 
