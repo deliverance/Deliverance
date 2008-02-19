@@ -128,7 +128,7 @@ class RendererBase(object):
         d.attrib['class'] = 'deliverance-error'
         d.text = 'Deliverance error: %s' % message
         br = etree.Element('br')
-        br.tail = 'rule: %s' % etree.tostring(rule)
+        br.tail = 'rule: %s' % rule_tostring(rule)
         d.append(br)
         if elts:
             d.append(etree.Element('br'))
@@ -525,4 +525,13 @@ class RendererBase(object):
 
         return new_xpath
 
-
+def rule_tostring(rule, include_xmlns=False):
+    """
+    Convert a rule back to a string
+    """
+    if include_xmlns:
+        return etree.tostring(rule)
+    else:
+        text = etree.tostring(rule)
+        text = text.replace(' xmlns="http://www.plone.org/deliverance"', '')
+        return text

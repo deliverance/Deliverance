@@ -5,6 +5,7 @@ import re
 from deliverance import utils
 from deliverance.utils import RuleSyntaxError
 from deliverance.utils import RendererBase
+from deliverance.utils import rule_tostring
 
 
 xslt_wrapper_skel = """
@@ -425,9 +426,9 @@ class Renderer(RendererBase):
         for wrapping inserted content nodes during debugging
         """
         comment_before = etree.Element("{%s}comment" % nsmap["xsl"])
-        comment_before.text = "Deliverance: applying rule %s" % etree.tostring(rule)
+        comment_before.text = "Deliverance: applying rule %s" % rule_tostring(rule)
         comment_after = etree.Element("{%s}comment" % nsmap["xsl"])
-        comment_after.text = "Deliverance: done applying rule %s" % etree.tostring(rule)
+        comment_after.text = "Deliverance: done applying rule %s" % rule_tostring(rule)
         return comment_before, comment_after
 
 

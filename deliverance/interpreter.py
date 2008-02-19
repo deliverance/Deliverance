@@ -4,6 +4,7 @@ import copy
 from deliverance import utils
 from deliverance.utils import RuleSyntaxError
 from deliverance.utils import RendererBase
+from deliverance.utils import rule_tostring
 
 class Renderer(RendererBase):
     """
@@ -119,7 +120,7 @@ class Renderer(RendererBase):
         else:
             raise RuleSyntaxError(
                 "Rule %s (%s) not understood" % (
-                    rule.tag, etree.tostring(rule)))
+                    rule.tag, rule_tostring(rule)))
 
         # process possible "move" attribute 
         self.check_move(rule, theme, content)
@@ -487,6 +488,6 @@ class Renderer(RendererBase):
         returns a pair of comments for insertion before and 
         after work done by the rule given during debugging. 
         """
-        comment_before = etree.Comment("Deliverance: applying rule %s" % etree.tostring(rule))
-        comment_after = etree.Comment("Deliverance: done applying rule %s" % etree.tostring(rule))
+        comment_before = etree.Comment("Deliverance: applying rule %s" % rule_tostring(rule))
+        comment_after = etree.Comment("Deliverance: done applying rule %s" % rule_tostring(rule))
         return comment_before, comment_after
