@@ -535,3 +535,37 @@ def rule_tostring(rule, include_xmlns=False):
         text = etree.tostring(rule)
         text = text.replace(' xmlns="http://www.plone.org/deliverance"', '')
         return text
+
+# API for sharing overridden theme / rule URIs with other middleware layers.
+
+_THEME_URI_KEY = 'deliverance.theme_uri'
+
+def setThemeURI(environ, uri):
+    environ[_THEME_URI_KEY] = uri
+
+def getThemeURI(environ, default=None):
+    return environ.get(_THEME_URI_KEY, default)
+
+_RULE_URI_KEY = 'deliverance.rule_uri'
+
+def setRuleURI(environ, uri):
+    environ[_RULE_URI_KEY] = uri
+
+def getRuleURI(environ, default=None):
+    return environ.get(_RULE_URI_KEY, default)
+
+_SERIALIZER_KEY = 'deliverance.serializer'
+
+def setSerializer(environ, dotted_or_egg):
+    environ[_SERIALIZER_KEY] = dotted_or_egg
+
+def getSerializer(environ, default=None):
+    dotted_or_egg = environ.get(_SERIALIZER_KEY, default)
+    if isinstance(dotted_or_egg, basestring):
+        return _resolveDottedOrEgg(dotted_or_egg)
+    return dotted_or_egg
+
+def _resolveDottedOrEgg(dotted_or_egg):
+    from pkg_resources import EntryPoint
+    return EntryPoint.parse('x=%s' % dotted_or_egg).load(False)
+

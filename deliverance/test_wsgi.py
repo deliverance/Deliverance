@@ -23,6 +23,7 @@ url_data = os.path.join(os.path.dirname(__file__), 'test-data', 'wsgiurl')
 aggregate_data = os.path.join(os.path.dirname(__file__), 'test-data', 'aggregate')
 aggregate2_data = os.path.join(os.path.dirname(__file__), 'test-data', 'aggregate2')
 ignore_data = os.path.join(os.path.dirname(__file__), 'test-data', 'ignore')
+urienv_data = os.path.join(os.path.dirname(__file__), 'test-data', 'urienv')
 
 static_app = StaticURLParser(static_data)
 tasktracker_app = StaticURLParser(tasktracker_data)
@@ -34,6 +35,7 @@ url_app = StaticURLParser(url_data)
 aggregate_app = StaticURLParser(aggregate_data)
 aggregate2_app = StaticURLParser(aggregate2_data)
 ignore_app = StaticURLParser(ignore_data)
+urienv_app = StaticURLParser(urienv_data)
 
 def html_string_compare(astr, bstr):
     """
@@ -313,11 +315,51 @@ def do_cache(renderer_type, name):
                   headers={'If-Modified-Since': formatdate(then-15)})
     status = res.status
     assert(status == 200)
-    
 
+def do_rule_uri_environ(renderer_type, name):
+    from deliverance.utils import setRuleURI
+    wsgi_app = DeliveranceMiddleware(urienv_app, 'theme.html', 'rules.xml',
+                                     renderer_type)
+    environ = {}
+    setRuleURI(environ, 'rules2.xml')
+    app = TestApp(wsgi_app, extra_environ=environ)
+    res = app.get('/example.html')
+    res2 = app.get('/example_expected_rule_uri_environ.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+def do_theme_uri_environ(renderer_type, name):
+    from deliverance.utils import setThemeURI
+    wsgi_app = DeliveranceMiddleware(urienv_app, 'theme.html', 'rules.xml',
+                                     renderer_type)
+    environ = {}
+    setThemeURI(environ, 'theme2.html')
+    app = TestApp(wsgi_app, extra_environ=environ)
+    res = app.get('/example.html')
+    res2 = app.get('/example_expected_theme_uri_environ.html?notheme')
+    html_string_compare(res.body, res2.body)
+    
+def do_serializer_environ(renderer_type, name):
+    from deliverance.utils import setSerializer
+    wsgi_app = DeliveranceMiddleware(urienv_app, 'theme.html', 'rules.xml',
+                                     renderer_type)
+    environ = {}
+    setSerializer(environ, 'deliverance.test_wsgi:_uppercaseTextNodes')
+    app = TestApp(wsgi_app, extra_environ=environ)
+    res = app.get('/example.html')
+    res2 = app.get('/example_expected_uppercase.html?notheme')
+    html_string_compare(res.body, res2.body)
+
+
+def _uppercaseTextNodes(content):
+    from htmlserialize import tostring
+    return tostring(content,
+                    doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
+                                  "http://www.w3.org/TR/html4/loose.dtd")
+                   ).upper()
 
 RENDERER_TYPES = ['py', 'xslt']
-TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_aggregate2, do_cache, do_ignore, do_ignore_header ] 
+TEST_FUNCS = [ do_url, do_basic, do_text, do_tasktracker, do_xinclude, do_with_spaces, do_nycsr, do_necoro, do_guidesearch, do_ajax, do_aggregate, do_aggregate2, do_cache, do_ignore, do_ignore_header, do_rule_uri_environ, do_theme_uri_environ, do_serializer_environ ] 
+
 def test_all():
     for renderer_type in RENDERER_TYPES:
         for test_func in TEST_FUNCS: 

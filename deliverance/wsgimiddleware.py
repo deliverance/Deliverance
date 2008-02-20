@@ -15,6 +15,9 @@ from paste.response import header_value, replace_header
 from htmlserialize import tostring
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
+from deliverance.utils import getThemeURI
+from deliverance.utils import getRuleURI
+from deliverance.utils import getSerializer
 from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
 import sys 
@@ -33,6 +36,11 @@ IGNORE_EXTENSIONS = ['js','css','gif','jpg','jpeg','pdf','ps','doc','png','ico',
 
 IGNORE_URL_PATTERN = re.compile("^.*\.(%s)$" % '|'.join(IGNORE_EXTENSIONS))
 
+def _toHTML(content):
+    return tostring(content,
+                    doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
+                                  "http://www.w3.org/TR/html4/loose.dtd"))
+
 class DeliveranceMiddleware(object):
     """
     a DeliveranceMiddleware object exposes a single deliverance 
@@ -41,7 +49,7 @@ class DeliveranceMiddleware(object):
 
     def __init__(self, app, theme_uri, rule_uri,
                  renderer='py', merge_cache_control=False,
-                 is_internal_uri=None):
+                 is_internal_uri=None, serializer=None):
         """
         initializer
         
@@ -60,6 +68,9 @@ class DeliveranceMiddleware(object):
           should be considered 'internal'(passed to the
           subapplication) and false if the requestshould be send
           over the network. 
+        serializer:  dotted name or entry point indicdating a callable used
+          to post-process rendered output.  Defaults to the '_toHTML' function
+          above.
         """
         self.app = app
         self.theme_uri = theme_uri
@@ -78,6 +89,9 @@ class DeliveranceMiddleware(object):
             self._rendererType = renderer
 
         self._is_internal_uri = is_internal_uri
+        if serializer is None:
+            serializer = _toHTML
+        self.serializer = serializer
 
     def get_renderer(self, environ):
         return self.create_renderer(environ)
@@ -88,11 +102,11 @@ class DeliveranceMiddleware(object):
         information passed to the initializer.  A new copy 
         of the theme and rules is retrieved. 
         """
-        theme = self.theme(environ)
-        rule = self.rule(environ)
+        theme, theme_uri = self.theme(environ)
+        rule, rule_uri = self.rule(environ)
         full_theme_uri = urlparse.urljoin(
             construct_url(environ, with_path_info=False),
-            self.theme_uri)
+            theme_uri)
 
         def reference_resolver(href, parse, encoding=None):
             text = self.get_resource(environ, href)
@@ -109,7 +123,7 @@ class DeliveranceMiddleware(object):
         try:
             parsedTheme = parseHTML(theme)
         except Exception, message:
-            newmessage = "Unable to parse theme page (" + self.theme_uri + ")"
+            newmessage = "Unable to parse theme page (" + theme_uri + ")"
             if message:
                 newmessage += ":" + str(message)
             raise DeliveranceError(newmessage)
@@ -124,33 +138,40 @@ class DeliveranceMiddleware(object):
             theme=parsedTheme,
             theme_uri=full_theme_uri,
             rule=parsedRule, 
-            rule_uri=self.rule_uri,
+            rule_uri=rule_uri,
             reference_resolver=reference_resolver)
 
-    def rule(self, environ):
-        """
+    def rule(self, environ=None):
+        """ environ -> (rule, rule_uri)
         retrieves the data referred to by the rule_uri passed to the 
         initializer. 
         """
+        if environ is None:
+            environ = {}
+        rule_uri = getRuleURI(environ, self.rule_uri)
         try:
-            return self.get_resource(environ, self.rule_uri)
+            return (self.get_resource(environ, rule_uri), rule_uri)
         except Exception, message:
-            newmessage = "Unable to retrieve rules from " + self.rule_uri 
+            newmessage = "Unable to retrieve rules from " + rule_uri 
             if message:
                 newmessage += ": " + str(message)
 
             raise DeliveranceError(newmessage)
 
-    def theme(self, environ):
-        """
+    def theme(self, environ=None):
+        """ environ -> (theme, theme_uri)
+
         retrieves the data referred to by the theme_uri passed to the 
         initializer. 
         """
+        if environ is None:
+            environ = {}
+        theme_uri = getThemeURI(environ, self.theme_uri)
         try:
-            return self.get_resource(environ, self.theme_uri)
+            return (self.get_resource(environ, theme_uri), theme_uri)
         except Exception, message:
             message.public_html = 'Unable to retrieve theme page from %s: %s' % (
-                self.theme_uri, message)
+                theme_uri, message)
             raise
 
     def __call__(self, environ, start_response):
@@ -232,12 +253,12 @@ class DeliveranceMiddleware(object):
     def filter_body(self, environ, body):
         """
         returns the result of the deliverance transformation on the string 'body' 
-        in the context of environ. The result is a string containing HTML. 
+        in the context of environ. The result is a string containing HTML,
+        or whatever the configured serializer makes it.
         """
         content = self.get_renderer(environ).render(parseHTML(body))
-
-        return tostring(content, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
-                                               "http://www.w3.org/TR/html4/loose.dtd"))
+        serializer = getSerializer(environ, self.serializer)
+        return serializer(content)
 
 
     def rebuild_check(self, environ, start_response): 
@@ -284,8 +305,8 @@ class DeliveranceMiddleware(object):
             return (status, headers, body)
             
         # got 304 Not Modified for content, check other resources 
-        rules = etree.XML(self.rule(environ))
-        resources = self.get_resource_uris(rules)        
+        rules = etree.XML(self.rule(environ)[0])
+        resources = self.get_resource_uris(rules, environ)        
         if self.any_modified(environ, resources, etag_map): 
             # something changed, 
             # get the content explicitly and give it back 
@@ -425,14 +446,18 @@ class DeliveranceMiddleware(object):
         return cleaned
     
 
-    def get_resource_uris(self, rules): 
+    def get_resource_uris(self, rules, environ=None): 
         """
         retrieves a list of uris pointing to the resources that 
         are components of rendering (excluding content) 
         """
+        if environ is None:
+            environ = {}
         resources = Set()
-        resources.add(self.rule_uri)
-        resources.add(self.theme_uri)
+        rule_uri = getRuleURI(environ, self.rule_uri)
+        resources.add(rule_uri)
+        theme_uri = getThemeURI(environ, self.theme_uri)
+        resources.add(theme_uri)
 
         for rule in rules: 
             href = rule.get("href",None)
