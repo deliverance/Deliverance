@@ -523,12 +523,12 @@ class DeliveranceMiddleware(object):
 
 def make_filter(app, global_conf,
                 theme_uri=None, rule_uri=None,
-                renderer='py'):
+                renderer='py', serializer=None):
     assert theme_uri is not None, (
         "You must give a theme_uri")
     assert rule_uri is not None, (
         "You must give a rule_uri")
     return DeliveranceMiddleware(
         app, theme_uri, rule_uri,
-        renderer=renderer)
+        renderer=renderer, serializer=serializer)
 
