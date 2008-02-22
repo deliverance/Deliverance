@@ -317,33 +317,33 @@ def do_cache(renderer_type, name):
     assert(status == 200)
 
 def do_rule_uri_environ(renderer_type, name):
-    from deliverance.utils import setRuleURI
+    from deliverance.utils import set_rule_uri
     wsgi_app = DeliveranceMiddleware(urienv_app, 'theme.html', 'rules.xml',
                                      renderer_type)
     environ = {}
-    setRuleURI(environ, 'rules2.xml')
+    set_rule_uri(environ, 'rules2.xml')
     app = TestApp(wsgi_app, extra_environ=environ)
     res = app.get('/example.html')
     res2 = app.get('/example_expected_rule_uri_environ.html?notheme')
     html_string_compare(res.body, res2.body)
 
 def do_theme_uri_environ(renderer_type, name):
-    from deliverance.utils import setThemeURI
+    from deliverance.utils import set_theme_uri
     wsgi_app = DeliveranceMiddleware(urienv_app, 'theme.html', 'rules.xml',
                                      renderer_type)
     environ = {}
-    setThemeURI(environ, 'theme2.html')
+    set_theme_uri(environ, 'theme2.html')
     app = TestApp(wsgi_app, extra_environ=environ)
     res = app.get('/example.html')
     res2 = app.get('/example_expected_theme_uri_environ.html?notheme')
     html_string_compare(res.body, res2.body)
     
 def do_serializer_environ(renderer_type, name):
-    from deliverance.utils import setSerializer
+    from deliverance.utils import set_serializer
     wsgi_app = DeliveranceMiddleware(urienv_app, 'theme.html', 'rules.xml',
                                      renderer_type)
     environ = {}
-    setSerializer(environ, 'deliverance.test_wsgi:_uppercaseTextNodes')
+    set_serializer(environ, 'deliverance.test_wsgi:_uppercaseTextNodes')
     app = TestApp(wsgi_app, extra_environ=environ)
     res = app.get('/example.html')
     res2 = app.get('/example_expected_uppercase.html?notheme')

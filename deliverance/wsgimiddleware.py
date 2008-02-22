@@ -15,9 +15,9 @@ from paste.response import header_value, replace_header
 from htmlserialize import tostring
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
-from deliverance.utils import getThemeURI
-from deliverance.utils import getRuleURI
-from deliverance.utils import getSerializer
+from deliverance.utils import get_theme_uri
+from deliverance.utils import get_rule_uri
+from deliverance.utils import get_serializer
 from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
 import sys 
@@ -148,7 +148,7 @@ class DeliveranceMiddleware(object):
         """
         if environ is None:
             environ = {}
-        rule_uri = getRuleURI(environ, self.rule_uri)
+        rule_uri = get_rule_uri(environ, self.rule_uri)
         try:
             return (self.get_resource(environ, rule_uri), rule_uri)
         except Exception, message:
@@ -166,7 +166,7 @@ class DeliveranceMiddleware(object):
         """
         if environ is None:
             environ = {}
-        theme_uri = getThemeURI(environ, self.theme_uri)
+        theme_uri = get_theme_uri(environ, self.theme_uri)
         try:
             return (self.get_resource(environ, theme_uri), theme_uri)
         except Exception, message:
@@ -257,7 +257,7 @@ class DeliveranceMiddleware(object):
         or whatever the configured serializer makes it.
         """
         content = self.get_renderer(environ).render(parseHTML(body))
-        serializer = getSerializer(environ, self.serializer)
+        serializer = get_serializer(environ, self.serializer)
         return serializer(content)
 
 
@@ -454,9 +454,9 @@ class DeliveranceMiddleware(object):
         if environ is None:
             environ = {}
         resources = Set()
-        rule_uri = getRuleURI(environ, self.rule_uri)
+        rule_uri = get_rule_uri(environ, self.rule_uri)
         resources.add(rule_uri)
-        theme_uri = getThemeURI(environ, self.theme_uri)
+        theme_uri = get_theme_uri(environ, self.theme_uri)
         resources.add(theme_uri)
 
         for rule in rules: 

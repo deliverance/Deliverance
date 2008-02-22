@@ -540,26 +540,26 @@ def rule_tostring(rule, include_xmlns=False):
 
 _THEME_URI_KEY = 'deliverance.theme_uri'
 
-def setThemeURI(environ, uri):
+def set_theme_uri(environ, uri):
     environ[_THEME_URI_KEY] = uri
 
-def getThemeURI(environ, default=None):
+def get_theme_uri(environ, default=None):
     return environ.get(_THEME_URI_KEY, default)
 
 _RULE_URI_KEY = 'deliverance.rule_uri'
 
-def setRuleURI(environ, uri):
+def set_rule_uri(environ, uri):
     environ[_RULE_URI_KEY] = uri
 
-def getRuleURI(environ, default=None):
+def get_rule_uri(environ, default=None):
     return environ.get(_RULE_URI_KEY, default)
 
 _SERIALIZER_KEY = 'deliverance.serializer'
 
-def setSerializer(environ, dotted_or_egg):
+def set_serializer(environ, dotted_or_egg):
     environ[_SERIALIZER_KEY] = dotted_or_egg
 
-def getSerializer(environ, default=None):
+def get_serializer(environ, default=None):
     dotted_or_egg = environ.get(_SERIALIZER_KEY, default)
     if isinstance(dotted_or_egg, basestring):
         return _resolveDottedOrEgg(dotted_or_egg)
