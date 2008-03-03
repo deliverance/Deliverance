@@ -359,7 +359,7 @@ class DeliveranceMiddleware(object):
         fetcher.environ['HTTP_CACHE_CONTROL'] = 'no-cache'
         
 
-        status, headers, body = fetcher.wsgi_get()         
+        status, headers, body = fetcher.wsgi_get()
         
         if not status.startswith('200'): 
             path_info = uri 
@@ -372,6 +372,8 @@ class DeliveranceMiddleware(object):
                 "Request for internal resource at %s (%r) failed with status code %r%s"
                 % (construct_url(environ), path_info, status,
                    loc))
+
+        body = fixup_meta_content_type(headers, body)
 
         environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
 
@@ -507,3 +509,27 @@ def make_filter(app, global_conf,
         app, theme_uri, rule_uri,
         renderer=renderer)
 
+_http_equiv_re = re.compile(r'<meta\s+[^>]*http-equiv="?content-type"?[^>]*>', re.I|re.S)
+_head_re = re.compile(r'<head[^>]*>', re.I|re.S)
+_html_re = re.compile(r'<html[^>]*>', re.I|re.S)
+
+def fixup_meta_content_type(headers, body):
+    """
+    This, in a somewhat hacky fashion, adds <meta
+    http-equiv=content-type> to pages that do not already have it.
+    """
+    ## FIXME: the existance of this function is a total hack
+    content_type = header_value(headers, 'content-type')
+    if not content_type or not content_type.startswith('text/html'):
+        return body
+    if _http_equiv_re.search(body):
+        # Already has the tag
+        return body
+    http_equiv = '<meta http-equiv="content-type" content="%s">\n' % content_type
+    match = _head_re.search(body)
+    if not match:
+        match = _html_re.search(body)
+        if not match:
+            # Doesn't look like html
+            return body
+    return body[:match.end()] + http_equiv + body[match.end():]
