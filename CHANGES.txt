@@ -1,0 +1,51 @@
+Deliverance Changelog
+=====================
+
+After 0.1.2
+-----------
+
+- (wsgimiddleware) Expose all middleware constructor arguments via
+  Paste config.
+
+- (wsgimiddleware) Check for environmental overrides of theme URI, rule
+  URI, serializer, and apply.
+
+- (utils) Added APIs for parsing non-string config values 
+  ('resolve_callable', 'resolve_dotted_or_egg', 'bool_from_string').
+
+- (utils) Added APIs for getting / setting environmental overrides of
+  theme URI, rule URI, serializer.
+
+- (wsgimiddleware) Add a <meta http-equiv=content-type> to pages that
+  don't already have it.
+
+- (setup) Relax restriction on lxml 2.x (which should work fine).
+
+0.1.2 (2008-02-19)
+------------------
+
+- (setup) Added nose test runner, so you can do 'python setup.py test'.
+
+- (wsgimiddleware) Fix typo in setting Cache-Control header.
+
+- (xslt, utils) Keep xmlns out of places where rules are printed for
+  debugging (error reports, comment).
+
+0.1.1 (2007-10-15)
+------------------
+
+- (wsgimiddleware) Added a renderer configuration parameter to the middleware
+  paste deploy configurator:  enables selection of 'py' (default) or 'xslt'
+  renderers.
+
+- (utils, xslt) Replace some truth tests of elements, which actually were
+  testing if there were no subelements when they meant to be testing
+  for None.
+
+- (interpreter, xslt) Do not apply theme if x-deliverance-no-theme response
+  header or meta http-equiv tag is present.
+
+0.1 (2007-09-12)
+----------------
+
+- Initial public release.
