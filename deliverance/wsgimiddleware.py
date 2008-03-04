@@ -13,11 +13,13 @@ from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
 from htmlserialize import tostring
+from deliverance.utils import bool_from_string
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
 from deliverance.utils import get_theme_uri
 from deliverance.utils import get_rule_uri
 from deliverance.utils import get_serializer
+from deliverance.utils import resolve_callable
 from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
 from deliverance import cache_utils
 import sys 
@@ -75,7 +77,7 @@ class DeliveranceMiddleware(object):
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
-        self.merge_cache_control = merge_cache_control
+        self.merge_cache_control = bool_from_string(merge_cache_control)
 
         if renderer == 'py':
             import interpreter
@@ -88,7 +90,7 @@ class DeliveranceMiddleware(object):
         else:
             self._rendererType = renderer
 
-        self._is_internal_uri = is_internal_uri
+        self._is_internal_uri = resolve_callable(is_internal_uri)
         if serializer is None:
             serializer = _toHTML
         self.serializer = serializer
@@ -521,14 +523,37 @@ class DeliveranceMiddleware(object):
         # blacklisting can happen here as well 
         return re.match(IGNORE_URL_PATTERN, url) is not None
 
+
+def always_external(uri, environ):
+    """Always return False so the external loader is used.
+
+    o Configure in paste config using the following:
+    
+      is_internal_uri = deliverance.wsgimiddleware:always_external
+    """
+    return False
+
+
 def make_filter(app, global_conf,
-                theme_uri=None, rule_uri=None,
-                renderer='py', serializer=None):
+                theme_uri=None,
+                rule_uri=None,
+                renderer='py',
+                merge_cache_control=False,
+                is_internal_uri=None,
+                serializer=None,
+               ):
+    """ Configure DeliveranceError via Paste config.
+    """
     assert theme_uri is not None, (
         "You must give a theme_uri")
     assert rule_uri is not None, (
         "You must give a rule_uri")
-    return DeliveranceMiddleware(
-        app, theme_uri, rule_uri,
-        renderer=renderer, serializer=serializer)
+    return DeliveranceMiddleware(app=app,
+                                 theme_uri=theme_uri,
+                                 rule_uri=rule_uri,
+                                 renderer=renderer,
+                                 merge_cache_control=merge_cache_control,
+                                 is_internal_uri=is_internal_uri,
+                                 serializer=serializer,
+                                )
 
