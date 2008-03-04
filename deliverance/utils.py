@@ -560,12 +560,19 @@ def set_serializer(environ, dotted_or_egg):
     environ[_SERIALIZER_KEY] = dotted_or_egg
 
 def get_serializer(environ, default=None):
-    dotted_or_egg = environ.get(_SERIALIZER_KEY, default)
+    return resolve_callable(environ.get(_SERIALIZER_KEY, default))
+
+def resolve_callable(dotted_or_egg):
     if isinstance(dotted_or_egg, basestring):
-        return _resolveDottedOrEgg(dotted_or_egg)
+        return resolve_dotted_or_egg(dotted_or_egg)
     return dotted_or_egg
 
-def _resolveDottedOrEgg(dotted_or_egg):
+def resolve_dotted_or_egg(dotted_or_egg):
     from pkg_resources import EntryPoint
     return EntryPoint.parse('x=%s' % dotted_or_egg).load(False)
 
+def bool_from_string(value):
+    if isinstance(value, basestring):
+        if value.lower() in ('false', 'no'):
+            return False
+    return bool(value)
