@@ -1,4 +1,4 @@
-__version__ = '0.1.2'
+__version__ = '0.2dev'
 
 from setuptools import setup, find_packages
 
@@ -54,7 +54,7 @@ middleware as an HTTP proxy.
       packages=find_packages(exclude=[]),
       zip_safe=False,
       install_requires=[
-        'lxml>=1.2,<2.0dev',
+        'lxml>=1.2',
         'Paste',
 	'FormEncode',
 	'elementtree',
