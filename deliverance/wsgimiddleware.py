@@ -13,9 +13,16 @@ from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
 from htmlserialize import tostring
+from deliverance.utils import bool_from_string
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
-from deliverance.resource_fetcher import InternalResourceFetcher, FileResourceFetcher, ExternalResourceFetcher
+from deliverance.utils import get_theme_uri
+from deliverance.utils import get_rule_uri
+from deliverance.utils import get_serializer
+from deliverance.utils import resolve_callable
+from deliverance.resource_fetcher import InternalResourceFetcher
+from deliverance.resource_fetcher import FileResourceFetcher
+from deliverance.resource_fetcher import ExternalResourceFetcher
 from deliverance import cache_utils
 import sys 
 import datetime
@@ -27,11 +34,18 @@ from sets import Set
 DELIVERANCE_BASE_URL = 'deliverance.base-url'
 DELIVERANCE_CACHE = 'deliverance.cache'
 
-IGNORE_EXTENSIONS = ['js','css','gif','jpg','jpeg','pdf','ps','doc','png','ico','mov','mpg','mpeg', 'mp3','m4a', 
-                     'txt','rtf', 'swf', 'wav', 'zip', 'wmv', 'ppt', 'gz', 'tgz', 'jar', 'xls', 'bmp', 'tif', 'tga', 
-                     'hqx', 'avi']
+IGNORE_EXTENSIONS = ['js', 'css', 'gif', 'jpg', 'jpeg', 'pdf', 'ps', 'doc',
+                     'png', 'ico', 'mov', 'mpg', 'mpeg', 'mp3', 'm4a', 'txt',
+                     'rtf', 'swf', 'wav', 'zip', 'wmv', 'ppt', 'gz', 'tgz',
+                     'jar', 'xls', 'bmp', 'tif', 'tga', 'hqx', 'avi',
+                    ]
 
 IGNORE_URL_PATTERN = re.compile("^.*\.(%s)$" % '|'.join(IGNORE_EXTENSIONS))
+
+def _toHTML(content):
+    return tostring(content,
+                    doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
+                                  "http://www.w3.org/TR/html4/loose.dtd"))
 
 class DeliveranceMiddleware(object):
     """
@@ -41,7 +55,7 @@ class DeliveranceMiddleware(object):
 
     def __init__(self, app, theme_uri, rule_uri,
                  renderer='py', merge_cache_control=False,
-                 is_internal_uri=None):
+                 is_internal_uri=None, serializer=None):
         """
         initializer
         
@@ -60,11 +74,14 @@ class DeliveranceMiddleware(object):
           should be considered 'internal'(passed to the
           subapplication) and false if the requestshould be send
           over the network. 
+        serializer:  dotted name or entry point indicdating a callable used
+          to post-process rendered output.  Defaults to the '_toHTML' function
+          above.
         """
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
-        self.merge_cache_control = merge_cache_control
+        self.merge_cache_control = bool_from_string(merge_cache_control)
 
         if renderer == 'py':
             import interpreter
@@ -73,11 +90,15 @@ class DeliveranceMiddleware(object):
             import xslt
             self._rendererType = xslt.Renderer
         elif renderer is None or isinstance(renderer, basestring):
-            raise ValueError("Unknown Renderer: %s - Expecting 'py' or 'xslt'" % renderer)
+            raise ValueError("Unknown Renderer: %s - Expecting 'py' or 'xslt'"
+                               % renderer)
         else:
             self._rendererType = renderer
 
-        self._is_internal_uri = is_internal_uri
+        self._is_internal_uri = resolve_callable(is_internal_uri)
+        if serializer is None:
+            serializer = _toHTML
+        self.serializer = serializer
 
     def get_renderer(self, environ):
         return self.create_renderer(environ)
@@ -88,11 +109,11 @@ class DeliveranceMiddleware(object):
         information passed to the initializer.  A new copy 
         of the theme and rules is retrieved. 
         """
-        theme = self.theme(environ)
-        rule = self.rule(environ)
+        theme, theme_uri = self.theme(environ)
+        rule, rule_uri = self.rule(environ)
         full_theme_uri = urlparse.urljoin(
             construct_url(environ, with_path_info=False),
-            self.theme_uri)
+            theme_uri)
 
         def reference_resolver(href, parse, encoding=None):
             text = self.get_resource(environ, href)
@@ -109,7 +130,7 @@ class DeliveranceMiddleware(object):
         try:
             parsedTheme = parseHTML(theme)
         except Exception, message:
-            newmessage = "Unable to parse theme page (" + self.theme_uri + ")"
+            newmessage = "Unable to parse theme page (" + theme_uri + ")"
             if message:
                 newmessage += ":" + str(message)
             raise DeliveranceError(newmessage)
@@ -124,33 +145,40 @@ class DeliveranceMiddleware(object):
             theme=parsedTheme,
             theme_uri=full_theme_uri,
             rule=parsedRule, 
-            rule_uri=self.rule_uri,
+            rule_uri=rule_uri,
             reference_resolver=reference_resolver)
 
-    def rule(self, environ):
-        """
+    def rule(self, environ=None):
+        """ environ -> (rule, rule_uri)
         retrieves the data referred to by the rule_uri passed to the 
         initializer. 
         """
+        if environ is None:
+            environ = {}
+        rule_uri = get_rule_uri(environ, self.rule_uri)
         try:
-            return self.get_resource(environ, self.rule_uri)
+            return (self.get_resource(environ, rule_uri), rule_uri)
         except Exception, message:
-            newmessage = "Unable to retrieve rules from " + self.rule_uri 
+            newmessage = "Unable to retrieve rules from " + rule_uri 
             if message:
                 newmessage += ": " + str(message)
 
             raise DeliveranceError(newmessage)
 
-    def theme(self, environ):
-        """
+    def theme(self, environ=None):
+        """ environ -> (theme, theme_uri)
+
         retrieves the data referred to by the theme_uri passed to the 
         initializer. 
         """
+        if environ is None:
+            environ = {}
+        theme_uri = get_theme_uri(environ, self.theme_uri)
         try:
-            return self.get_resource(environ, self.theme_uri)
+            return (self.get_resource(environ, theme_uri), theme_uri)
         except Exception, message:
-            message.public_html = 'Unable to retrieve theme page from %s: %s' % (
-                self.theme_uri, message)
+            message.public_html = ('Unable to retrieve theme page from %s: %s'
+                                    % (theme_uri, message))
             raise
 
     def __call__(self, environ, start_response):
@@ -162,13 +190,16 @@ class DeliveranceMiddleware(object):
         initializer. 
         """
         qs = environ.get('QUERY_STRING', '')
-        environ[DELIVERANCE_BASE_URL] = construct_url(environ, with_path_info=False, with_query_string=False)
+        environ[DELIVERANCE_BASE_URL] = construct_url(environ,
+                                                      with_path_info=False,
+                                                      with_query_string=False)
         environ[DELIVERANCE_CACHE] = {} 
         notheme = 'notheme' in qs
         if environ.get('HTTP_X_REQUESTED_WITH', '') == 'XMLHttpRequest':
             notheme = True
         if notheme:
-            # eliminate the deliverance notheme query argument for the subrequest
+            # eliminate the deliverance notheme query argument for
+            # the subrequest
             if qs == 'notheme': 
                 environ['QUERY_STRING'] = ''
             elif qs.endswith('&notheme'): 
@@ -227,17 +258,18 @@ class DeliveranceMiddleware(object):
         type = header_value(headers, 'content-type')
         if type is None:
             return True # yerg, 304s can have no content-type 
-        return type.startswith('text/html') or type.startswith('application/xhtml+xml')
+        return (type.startswith('text/html') or
+                type.startswith('application/xhtml+xml'))
 
     def filter_body(self, environ, body):
         """
-        returns the result of the deliverance transformation on the string 'body' 
-        in the context of environ. The result is a string containing HTML. 
+        returns the result of the deliverance transform on the string 'body' 
+        in the context of environ. The result is a string containing HTML,
+        or whatever the configured serializer makes it.
         """
         content = self.get_renderer(environ).render(parseHTML(body))
-
-        return tostring(content, doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
-                                               "http://www.w3.org/TR/html4/loose.dtd"))
+        serializer = get_serializer(environ, self.serializer)
+        return serializer(content)
 
 
     def rebuild_check(self, environ, start_response): 
@@ -247,7 +279,8 @@ class DeliveranceMiddleware(object):
 
         etag_map = {}
         if 'HTTP_IF_NONE_MATCH' in environ: 
-            etag_map = cache_utils.parse_merged_etag(environ['HTTP_IF_NONE_MATCH'])
+            etag_map = cache_utils.parse_merged_etag(
+                                           environ['HTTP_IF_NONE_MATCH'])
 	    tag = etag_map.get(content_url, None)
 	    environ['HTTP_IF_NONE_MATCH'] = tag
 	    if tag: 
@@ -284,8 +317,8 @@ class DeliveranceMiddleware(object):
             return (status, headers, body)
             
         # got 304 Not Modified for content, check other resources 
-        rules = etree.XML(self.rule(environ))
-        resources = self.get_resource_uris(rules)        
+        rules = etree.XML(self.rule(environ)[0])
+        resources = self.get_resource_uris(rules, environ)        
         if self.any_modified(environ, resources, etag_map): 
             # something changed, 
             # get the content explicitly and give it back 
@@ -369,7 +402,8 @@ class DeliveranceMiddleware(object):
             else:
                 loc = ''
             raise DeliveranceError(
-                "Request for internal resource at %s (%r) failed with status code %r%s"
+                "Request for internal resource at %s (%r) failed "
+                "with status code %r%s"
                 % (construct_url(environ), path_info, status,
                    loc))
 
@@ -427,14 +461,18 @@ class DeliveranceMiddleware(object):
         return cleaned
     
 
-    def get_resource_uris(self, rules): 
+    def get_resource_uris(self, rules, environ=None): 
         """
         retrieves a list of uris pointing to the resources that 
         are components of rendering (excluding content) 
         """
+        if environ is None:
+            environ = {}
         resources = Set()
-        resources.add(self.rule_uri)
-        resources.add(self.theme_uri)
+        rule_uri = get_rule_uri(environ, self.rule_uri)
+        resources.add(rule_uri)
+        theme_uri = get_theme_uri(environ, self.theme_uri)
+        resources.add(theme_uri)
 
         for rule in rules: 
             href = rule.get("href",None)
@@ -444,16 +482,16 @@ class DeliveranceMiddleware(object):
         return list(resources)
 
             
-    def check_modification(self, environ, uri, httpdate_since=None, etag=None): 
+    def check_modification(self, environ, uri, httpdate_since=None, etag=None):
         """
-        if httpdate_since is set to an httpdate the If-Modified-Since HTTP header 
-          is used to check for modification 
+        if httpdate_since is set to an httpdate the If-Modified-Since HTTP
+        header is used to check for modification 
 
-        if etag is set to an etag for the resource, the If-None-Match HTTP header 
-          is used to check for modification 
+        if etag is set to an etag for the resource, the If-None-Match HTTP
+        header is used to check for modification 
 
-        the resulting (status, headers, body) tuple for the request is stored in 
-        environ[DELIVERANCE_CACHE][uri]. 
+        the resulting (status, headers, body) tuple for the request is stored
+        in environ[DELIVERANCE_CACHE][uri]. 
 
         """
 
@@ -498,16 +536,39 @@ class DeliveranceMiddleware(object):
         # blacklisting can happen here as well 
         return re.match(IGNORE_URL_PATTERN, url) is not None
 
+
+def always_external(uri, environ):
+    """Always return False so the external loader is used.
+
+    o Configure in paste config using the following:
+    
+      is_internal_uri = deliverance.wsgimiddleware:always_external
+    """
+    return False
+
+
 def make_filter(app, global_conf,
-                theme_uri=None, rule_uri=None,
-                renderer='py'):
+                theme_uri=None,
+                rule_uri=None,
+                renderer='py',
+                merge_cache_control=False,
+                is_internal_uri=None,
+                serializer=None,
+               ):
+    """ Configure DeliveranceError via Paste config.
+    """
     assert theme_uri is not None, (
         "You must give a theme_uri")
     assert rule_uri is not None, (
         "You must give a rule_uri")
-    return DeliveranceMiddleware(
-        app, theme_uri, rule_uri,
-        renderer=renderer)
+    return DeliveranceMiddleware(app=app,
+                                 theme_uri=theme_uri,
+                                 rule_uri=rule_uri,
+                                 renderer=renderer,
+                                 merge_cache_control=merge_cache_control,
+                                 is_internal_uri=is_internal_uri,
+                                 serializer=serializer,
+                                )
 
 _http_equiv_re = re.compile(r'<meta\s+[^>]*http-equiv="?content-type"?[^>]*>', re.I|re.S)
 _head_re = re.compile(r'<head[^>]*>', re.I|re.S)
