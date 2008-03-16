@@ -135,7 +135,6 @@ class FileResourceFetcher(object):
 class ExternalResourceFetcher(object): 
     def __init__(self, in_environ, uri, headers_only=False): 
         self.uri = uri 
-        
         loc = urlparse.urlsplit(uri) 
         
         self.environ = in_environ.copy() 
@@ -148,9 +147,10 @@ class ExternalResourceFetcher(object):
         self.environ['CONTENT_LENGTH'] = '0'
         self.environ['wsgi.input'] = StringIO('')
 
-        self.environ['wsgi.url_scheme'] = loc[0]
+        self.environ['wsgi.url_scheme'] = loc[0] or \
+                                          self.environ['wsgi.url_scheme']
         self.environ['wsgi.version'] = (1, 0)
-        self.environ['HTTP_HOST'] = loc[1]
+        self.environ['HTTP_HOST'] = loc[1] or self.environ['HTTP_HOST']
         self.environ['PATH_INFO'] = urllib.unquote(loc[2])
         self.environ['QUERY_STRING'] = loc[3]
 
