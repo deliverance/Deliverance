@@ -222,8 +222,8 @@ class DeliveranceMiddleware(object):
         theme = True
         status_code = status.split()[0]
         if (status_code.startswith('3')
-            or status_code == '204'
-            or status_code == '401'):
+            or status_code == '204'):
+            #or status_code == '401'):
             # Redirects, not-modified, etc don't get themed (3xx)
             # No Content doesn't get themed (204)
             # Unauthorized isn't themed (401)
