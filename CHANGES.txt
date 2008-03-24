@@ -21,6 +21,12 @@ After 0.1.2
 
 - (setup) Relax restriction on lxml 2.x (which should work fine).
 
+- (wsgimiddleware) Now accepts url_black_list for determining when to
+  not filter things.
+
+- (wsgimiddleware) Puts in some checks to make sure content is not getting
+  double-themed.
+
 0.1.2 (2008-02-19)
 ------------------
 

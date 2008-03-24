@@ -55,7 +55,8 @@ class DeliveranceMiddleware(object):
 
     def __init__(self, app, theme_uri, rule_uri,
                  renderer='py', merge_cache_control=False,
-                 is_internal_uri=None, serializer=None):
+                 is_internal_uri=None, serializer=None,
+                 url_black_list=[]):
         """
         initializer
         
@@ -77,11 +78,15 @@ class DeliveranceMiddleware(object):
         serializer:  dotted name or entry point indicdating a callable used
           to post-process rendered output.  Defaults to the '_toHTML' function
           above.
+        url_black_list: if url matches anything inside this list, the item
+          will not be filtered.  The items can either be strings or regular
+          expression objects.
         """
         self.app = app
         self.theme_uri = theme_uri
         self.rule_uri = rule_uri
         self.merge_cache_control = bool_from_string(merge_cache_control)
+        self.url_black_list = url_black_list
 
         if renderer == 'py':
             import interpreter
@@ -230,6 +235,11 @@ class DeliveranceMiddleware(object):
             start_response(status, headers)
             return body
 
+        if environ.get('deliverance.filtered', False) or \
+               ('deliverance-filtered', '1') in headers:
+            start_response(status, headers)
+            return body
+
         # perform actual themeing 
         body = self.filter_body(environ, body)
 
@@ -241,6 +251,8 @@ class DeliveranceMiddleware(object):
                                         headers, 
                                         self.merge_cache_control)
 
+        environ['deliverance.filtered'] = True
+        headers.append(('deliverance-filtered', '1'))
         start_response(status, headers)
         return [body]
         
@@ -533,9 +545,18 @@ class DeliveranceMiddleware(object):
 
 
     def should_ignore_url(self, url): 
-        # blacklisting can happen here as well 
-        return re.match(IGNORE_URL_PATTERN, url) is not None
+        if re.match(IGNORE_URL_PATTERN, url) is not None:
+            return True
 
+        for x in self.url_black_list:
+            if isinstance(x, basestring):
+                if url.find(x) > -1:
+                    return True
+            elif hasattr(x, 'match') and callable(x.match):
+                if x.match(url) is not None:
+                    return True
+
+        return False
 
 def always_external(uri, environ):
     """Always return False so the external loader is used.
@@ -550,6 +571,7 @@ def always_external(uri, environ):
 def make_filter(app, global_conf,
                 theme_uri=None,
                 rule_uri=None,
+                url_black_list=[],
                 renderer='py',
                 merge_cache_control=False,
                 is_internal_uri=None,
@@ -568,6 +590,7 @@ def make_filter(app, global_conf,
                                  merge_cache_control=merge_cache_control,
                                  is_internal_uri=is_internal_uri,
                                  serializer=serializer,
+                                 url_black_list=url_black_list,
                                 )
 
 _http_equiv_re = re.compile(r'<meta\s+[^>]*http-equiv="?content-type"?[^>]*>', re.I|re.S)
