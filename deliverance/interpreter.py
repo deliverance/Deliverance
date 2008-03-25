@@ -153,8 +153,11 @@ class Renderer(RendererBase):
         if theme_el is None:
             return 
 
-        content_els = copy.deepcopy(
-            content.xpath(self.get_content_xpath(rule)))
+        try:
+            xpath = content.xpath(self.get_content_xpath(rule))
+        except etree.XPathEvalError, e:
+            raise etree.XPathEvalError("Error %s in xpath expression %r" % (e, self.get_content_xpath(rule)))
+        content_els = copy.deepcopy(xpath)
 
         if len(content_els) == 0:
             if rule.get(self.NOCONTENT_KEY) != 'ignore':
