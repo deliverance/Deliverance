@@ -35,10 +35,10 @@ def relocate_headers(headers, base_href, old_href, new_href):
         new_headers.append((name, value))
     return new_headers
 
-def relocate_content(content, base_href, old_href, new_href):
+def relocate_content(environ, content, base_href, old_href, new_href):
     def sub_link(href):
         return relocate_href(href, base_href, old_href, new_href)
-    return fixuplinks.fixup_text_links(content, sub_link)
+    return fixuplinks.fixup_text_links(environ, content, sub_link)
 
 # This catches the case of http://foo, which is equivalent to
 # http://foo/ :
@@ -84,7 +84,7 @@ class RelocateMiddleware(object):
             if hasattr(app_iter, 'close'):
                 app_iter.close()
         content = ''.join(written)
-        content = relocate_content(content, base_href, self.old_href, new_href)
+        content = relocate_content(environ, content, base_href, self.old_href, new_href)
         headers = stat_headers[1]
         replace_header(headers, 'content-length', str(len(content)))
         start_response(*stat_headers)
