@@ -5,6 +5,7 @@ Deliverance theming as WSGI middleware
 """
 
 import re
+import os
 import urlparse
 import urllib
 from lxml import etree
@@ -557,10 +558,43 @@ def make_filter(app, global_conf,
                ):
     """ Configure DeliveranceError via Paste config.
     """
+    """
+    Wraps an app in deliverance, using the given theme_uri and rule_uri.
+
+    The theme_uri and rule_uri may be ``file:///`` URLs, which will
+    cause this to mount the containing directory in
+    ``/.deliverance/theme`` and ``/.deliverance/rules``.  Note that in
+    this case your theme *must not* refer to any files in a parent
+    directory; only sibling files (and files in subdirectories under
+    the theme directory) will be accessible.
+    """
+    statics = {}
+    if theme_uri.lower().startswith('file:'):
+        theme_path = filename_for_uri(theme_uri)
+        theme_dir = os.path.dirname(theme_path)
+        statics['/.deliverance/theme'] = theme_dir
+        theme_uri = '/.deliverance/theme/%s' % os.path.basename(theme_path)
+    if rule_uri.lower().startswith('file:'):
+        rule_path = filename_for_uri(rule_uri)
+        rule_dir = os.path.dirname(theme_path)
+        if statics.get('/.deliverance/theme') == rule_dir:
+            rule_uri = '/.deliverance/theme/%s' % os.path.basename(rule_path)
+        else:
+            statics['/.deliverance/rules'] = rule_dir
+            rule_uri = '/.deliverance/rules/%s' % os.path.basename(rule_path)
     assert theme_uri is not None, (
         "You must give a theme_uri")
     assert rule_uri is not None, (
         "You must give a rule_uri")
+    if statics:
+        from paste.urlmap import URLMap
+        from paste.urlparser import StaticURLParser
+        mapper = URLMap()
+        mapper[''] = app
+        for path, dir in statics.items():
+            path_app = StaticURLParser(dir)
+            mapper[path] = path_app
+        app = mapper
     return DeliveranceMiddleware(app=app,
                                  theme_uri=theme_uri,
                                  rule_uri=rule_uri,
@@ -569,6 +603,36 @@ def make_filter(app, global_conf,
                                  is_internal_uri=is_internal_uri,
                                  serializer=serializer,
                                 )
+
+_windows_drive_re = re.compile(r'^[a-z][|]', re.I)
+
+def filename_for_uri(uri):
+    """
+    Returns the filename for a given file: uri.
+
+    Uses cwd when you give ``file://`` (exactly TWO slashes)
+
+    On Windows you can give a drive with ``file:///C|/path``
+    """
+    assert uri.lower().startswith('file:'), (
+        "Not a file:/ uri: %r" % uri)
+    uri = uri[5:]
+    # Just in case they give a Windows path:
+    uri = uri.replace('\\', '/')
+    relative = uri.startswith('//') and not uri.startswith('///')
+    filename = uri.lstrip('/')
+    filename = urllib.unquote(filename)
+    if sys.platform == 'win32':
+        match = _windows_drive_re.match(filename)
+        if match:
+            filename = filename[0] + ':' + filename[2:]
+        elif not relative:
+            filename = '/' + filename
+    elif not relative:
+        filename = '/' + filename
+    if relative:
+        filename = os.path.abspath(filename)
+    return os.path.normpath(os.path.normcase(filename))
 
 _http_equiv_re = re.compile(r'<meta\s+[^>]*http-equiv="?content-type"?[^>]*>', re.I|re.S)
 _head_re = re.compile(r'<head[^>]*>', re.I|re.S)

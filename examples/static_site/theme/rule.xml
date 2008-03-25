@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ 
+<rules xmlns:xi="http://www.w3.org/2001/XInclude" xmlns="http://www.plone.org/deliverance" >
+  <xi:include href="standardrules.xml" />
+
+  <replace theme="//div[@id='content']" content="//body/*" />
+</rules>
