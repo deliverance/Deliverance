@@ -595,14 +595,16 @@ def make_filter(app, global_conf,
             path_app = StaticURLParser(dir)
             mapper[path] = path_app
         app = mapper
-    return DeliveranceMiddleware(app=app,
-                                 theme_uri=theme_uri,
-                                 rule_uri=rule_uri,
-                                 renderer=renderer,
-                                 merge_cache_control=merge_cache_control,
-                                 is_internal_uri=is_internal_uri,
-                                 serializer=serializer,
-                                )
+    deliv_app = DeliveranceMiddleware(app=app,
+                                      theme_uri=theme_uri,
+                                      rule_uri=rule_uri,
+                                      renderer=renderer,
+                                      merge_cache_control=merge_cache_control,
+                                      is_internal_uri=is_internal_uri,
+                                      serializer=serializer,
+                                      )
+    from paste.recursive import RecursiveMiddleware
+    return RecursiveMiddleware(deliv_app)
 
 _windows_drive_re = re.compile(r'^[a-z][|]', re.I)
 
