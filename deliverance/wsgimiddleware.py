@@ -194,7 +194,7 @@ class DeliveranceMiddleware(object):
         environ[DELIVERANCE_BASE_URL] = construct_url(environ,
                                                       with_path_info=False,
                                                       with_query_string=False)
-        environ[DELIVERANCE_CACHE] = {} 
+        environ[DELIVERANCE_CACHE] = {}
         notheme = 'notheme' in qs
         if environ.get('HTTP_X_REQUESTED_WITH', '') == 'XMLHttpRequest':
             notheme = True
@@ -214,6 +214,8 @@ class DeliveranceMiddleware(object):
             del environ['HTTP_IF_MATCH'] 
         if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
             del environ['HTTP_IF_UNMODIFIED_SINCE'] 
+
+        orig_environ = environ.copy()
             
         status, headers, body = self.rebuild_check(environ, start_response)
 
@@ -232,7 +234,7 @@ class DeliveranceMiddleware(object):
             return body
 
         # perform actual themeing 
-        body = self.filter_body(environ, body)
+        body = self.filter_body(environ, orig_environ, body)
 
         replace_header(headers, 'content-length', str(len(body)))
         replace_header(headers, 'content-type', 'text/html; charset=utf-8')
@@ -262,13 +264,13 @@ class DeliveranceMiddleware(object):
         return (type.startswith('text/html') or
                 type.startswith('application/xhtml+xml'))
 
-    def filter_body(self, environ, body):
+    def filter_body(self, environ, orig_environ, body):
         """
         returns the result of the deliverance transform on the string 'body' 
         in the context of environ. The result is a string containing HTML,
         or whatever the configured serializer makes it.
         """
-        content = self.get_renderer(environ).render(parseHTML(body))
+        content = self.get_renderer(orig_environ).render(parseHTML(body))
         serializer = get_serializer(environ, self.serializer)
         return serializer(content)
 
