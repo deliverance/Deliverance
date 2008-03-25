@@ -4,16 +4,18 @@ utilities for manipulating html links
 
 
 from deliverance.htmlserialize import decodeAndParseHTML, tostring
+from deliverance.utils import get_serializer
 import urlparse
 import re
 
-def fixup_text_links(doc, link_repl_func, remove_base_tags=True):
+def fixup_text_links(environ, doc, link_repl_func, remove_base_tags=True):
     """
     fixup_links(), but work on text and returns text
     """
     doc = decodeAndParseHTML(doc)
     fixup_links(doc, link_repl_func, remove_base_tags=remove_base_tags)
-    return tostring(doc)
+    serializer = get_serializer(environ, tostring)
+    return serializer(doc)
 
 def fixup_links(doc, link_repl_func,
                 remove_base_tags=True):
