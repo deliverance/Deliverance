@@ -20,6 +20,9 @@ class InternalResourceFetcher(object):
             self.environ['paste.recursive.include'] = in_environ['paste.recursive.include']
         else:
             self.environ = in_environ.copy()
+
+        if 'paste.registry' in self.environ:
+            del self.environ['paste.registry']
             
         base_url = in_environ['deliverance.base-url']
         if not base_url.endswith('/'):
