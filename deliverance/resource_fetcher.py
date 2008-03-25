@@ -21,8 +21,9 @@ class InternalResourceFetcher(object):
         else:
             self.environ = in_environ.copy()
 
-        if 'paste.registry' in self.environ:
-            del self.environ['paste.registry']
+        for key in ['paste.registry', 'paste.evalexception', 'paste.expected_exceptions']:
+            if key in self.environ:
+                del self.environ[key]
             
         base_url = in_environ['deliverance.base-url']
         if not base_url.endswith('/'):
