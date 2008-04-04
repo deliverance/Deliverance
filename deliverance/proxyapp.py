@@ -11,12 +11,15 @@ from paste.urlparser import StaticURLParser
 from paste.exceptions import errormiddleware
 from deliverance.wsgimiddleware import DeliveranceMiddleware
 from deliverance.relocateresponse import RelocateMiddleware
+from deliverance.utils import get_serializer
+from deliverance.utils import set_serializer
 
 class ProxyDeliveranceApp(object):
 
     def __init__(self, theme_uri, rule_uri, proxy,
                  transparent=False, debug_headers=False,
-                 relocate_content=False, renderer='py'):
+                 relocate_content=False, renderer='py',
+                 serializer=None):
         self.theme_uri = theme_uri,
         self.rule_uri = rule_uri,
         self.proxy = proxy
@@ -24,7 +27,7 @@ class ProxyDeliveranceApp(object):
         self.debug_headers = debug_headers
         self.subapp = self.make_app()
         self.deliverance_app = DeliveranceMiddleware(
-            self.subapp, theme_uri, rule_uri, renderer)
+            self.subapp, theme_uri, rule_uri, renderer, serializer=serializer)
         self.relocate_content = relocate_content
 
     def make_app(self):
@@ -38,6 +41,8 @@ class ProxyDeliveranceApp(object):
         return app
 
     def __call__(self, environ, start_response):
+        if get_serializer(environ, None) is None:
+            set_serializer(environ, self.deliverance_app.serializer)
         if self.relocate_content:
             reloc_app = RelocateMiddleware(self.run_subapp, old_href='http://'+self.proxy)
             return reloc_app(environ, start_response)
@@ -108,6 +113,7 @@ def make_proxy(global_conf,
                renderer='py', transparent=False, debug_headers=False,
                relocate_content=False,
                merge_cache_control=False,
+               serializer=None,
                **kw):
     from paste.deploy.converters import asbool
     mount_points = {}
@@ -150,6 +156,7 @@ def make_proxy(global_conf,
         debug_headers=asbool(debug_headers),
         relocate_content=asbool(relocate_content),
         renderer=renderer,
-        mount_points=mount_points)
+        mount_points=mount_points,
+        serializer=serializer)
     app = errormiddleware.make_error_middleware(app, global_conf)
     return app

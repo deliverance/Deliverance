@@ -75,7 +75,7 @@ class DeliveranceMiddleware(object):
           should be considered 'internal'(passed to the
           subapplication) and false if the requestshould be send
           over the network. 
-        serializer:  dotted name or entry point indicdating a callable used
+        serializer:  dotted name or entry point indicating a callable used
           to post-process rendered output.  Defaults to the '_toHTML' function
           above.
         """
