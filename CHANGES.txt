@@ -3,6 +3,7 @@ Deliverance Changelog
 
 After 0.1.2
 -----------
+- Add a new serializers file with HTML4 and XHTML serializers.
 
 - (wsgimiddleware) Expose all middleware constructor arguments via
   Paste config.

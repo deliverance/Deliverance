@@ -13,7 +13,6 @@ from htmlserialize import decodeAndParseHTML as parseHTML
 from paste.wsgilib import intercept_output
 from paste.request import construct_url
 from paste.response import header_value, replace_header
-from htmlserialize import tostring
 from deliverance.utils import bool_from_string
 from deliverance.utils import DeliveranceError
 from deliverance.utils import DELIVERANCE_ERROR_PAGE
@@ -43,10 +42,6 @@ IGNORE_EXTENSIONS = ['js', 'css', 'gif', 'jpg', 'jpeg', 'pdf', 'ps', 'doc',
 
 IGNORE_URL_PATTERN = re.compile("^.*\.(%s)$" % '|'.join(IGNORE_EXTENSIONS))
 
-def _toHTML(content):
-    return tostring(content,
-                    doctype_pair=("-//W3C//DTD HTML 4.01 Transitional//EN",
-                                  "http://www.w3.org/TR/html4/loose.dtd"))
 
 class DeliveranceMiddleware(object):
     """
@@ -98,7 +93,8 @@ class DeliveranceMiddleware(object):
 
         self._is_internal_uri = resolve_callable(is_internal_uri)
         if serializer is None:
-            serializer = _toHTML
+            from deliverance.serializers import HTML4
+            serializer = HTML4
         self.serializer = serializer
 
     def get_renderer(self, environ):
