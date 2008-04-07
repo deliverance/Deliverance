@@ -574,7 +574,7 @@ def make_filter(app, global_conf,
         theme_uri = '/.deliverance/theme/%s' % os.path.basename(theme_path)
     if rule_uri.lower().startswith('file:'):
         rule_path = filename_for_uri(rule_uri)
-        rule_dir = os.path.dirname(theme_path)
+        rule_dir = os.path.dirname(rule_path)
         if statics.get('/.deliverance/theme') == rule_dir:
             rule_uri = '/.deliverance/theme/%s' % os.path.basename(rule_path)
         else:
