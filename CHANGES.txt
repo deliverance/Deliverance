@@ -11,6 +11,9 @@ After 0.1.2
 - (wsgimiddleware) Check for environmental overrides of theme URI, rule
   URI, serializer, and apply.
 
+- (wsgimiddleware) Strip out range-related headers in addition to
+  the other conditional headers.
+
 - (utils) Added APIs for parsing non-string config values 
   ('resolve_callable', 'resolve_dotted_or_egg', 'bool_from_string').
 

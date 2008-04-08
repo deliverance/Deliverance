@@ -203,13 +203,11 @@ class DeliveranceMiddleware(object):
                 environ['QUERY_STRING'] = qs[:-len('&notheme')]
             return self.app(environ, start_response)
         
-        # unsupported 
-        if 'HTTP_ACCEPT_ENCODING' in environ:
-            environ['HTTP_ACCEPT_ENCODING'] = '' 
-        if 'HTTP_IF_MATCH' in environ: 
-            del environ['HTTP_IF_MATCH'] 
-        if 'HTTP_IF_UNMODIFIED_SINCE' in environ: 
-            del environ['HTTP_IF_UNMODIFIED_SINCE'] 
+        # unsupported
+        for key in ['HTTP_ACCEPT_ENCODING', 'HTTP_IF_MATCH', 'HTTP_IF_UNMODIFIED_SINCE',
+                    'HTTP_RANGE', 'HTTP_IF_RANGE']:
+            if key in environ:
+                del environ[key]
 
         orig_environ = environ.copy()
             
