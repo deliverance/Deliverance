@@ -382,10 +382,10 @@ class DeliveranceMiddleware(object):
          
 
         # eliminate validation headers, we want the content 
-        if 'HTTP_IF_MODIFIED_SINCE' in fetcher.environ: 
-            del fetcher.environ['HTTP_IF_MODIFIED_SINCE']
-        if 'HTTP_IF_NONE_MATCH' in fetcher.environ: 
-            del fetcher.environ['HTTP_IF_NONE_MATCH'] 
+        for key in ['HTTP_ACCEPT_ENCODING', 'HTTP_IF_MATCH', 'HTTP_IF_UNMODIFIED_SINCE',
+                    'HTTP_RANGE', 'HTTP_IF_RANGE']:
+            if key in environ:
+                del environ[key]
         fetcher.environ['HTTP_CACHE_CONTROL'] = 'no-cache'
         
 
