@@ -15,7 +15,7 @@ def fixup_text_links(environ, doc, link_repl_func, remove_base_tags=True):
     doc = decodeAndParseHTML(doc)
     fixup_links(doc, link_repl_func, remove_base_tags=remove_base_tags)
     serializer = get_serializer(environ, tostring)
-    return serializer(doc)
+    return serializer(environ, doc)
 
 def fixup_links(doc, link_repl_func,
                 remove_base_tags=True):

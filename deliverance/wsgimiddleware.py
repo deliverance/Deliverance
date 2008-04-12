@@ -266,7 +266,7 @@ class DeliveranceMiddleware(object):
         """
         content = self.get_renderer(orig_environ).render(parseHTML(body))
         serializer = get_serializer(environ, self.serializer)
-        return serializer(content)
+        return serializer(environ, content)
 
 
     def rebuild_check(self, environ, start_response): 
