@@ -383,11 +383,11 @@ class DeliveranceMiddleware(object):
 
         # eliminate validation headers, we want the content 
         for key in ['HTTP_ACCEPT_ENCODING', 'HTTP_IF_MATCH', 'HTTP_IF_UNMODIFIED_SINCE',
-                    'HTTP_RANGE', 'HTTP_IF_RANGE']:
-            if key in environ:
-                del environ[key]
+                    'HTTP_RANGE', 'HTTP_IF_RANGE',
+                    'HTTP_IF_NONE_MATCH', 'HTTP_IF_MODIFIED_SINCE']:
+            if key in fetcher.environ:
+                del fetcher.environ[key]
         fetcher.environ['HTTP_CACHE_CONTROL'] = 'no-cache'
-        
 
         status, headers, body = fetcher.wsgi_get()
         
