@@ -227,7 +227,7 @@ def parse_merged_etag(composite_tag):
             return tags
         try:
             tag_len = int(tag_len)
-        except: 
+        except ValueError: 
             return {}
         
         if len(composite_tag) >= tag_len: 
