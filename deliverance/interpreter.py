@@ -78,21 +78,8 @@ class Renderer(RendererBase):
         rules, theme and content should be lxml etree 
         structures. 
         """
-        drop_rules, other_rules = self.separate_drop_rules(rules)
-        move_rules, other_rules = self.separate_move_rules(other_rules)
-
-        # process all drop rules first 
-        for rule in drop_rules:
-            self.apply_rule(rule, theme, content) 
-
-        # process all move rules next 
-        for rule in move_rules: 
-            self.apply_rule(rule,theme,content)
-
-        # finally the rest
-        for rule in other_rules:
+        for rule in rules:
             self.apply_rule(rule, theme, content)
-
 
     def apply_rule(self, rule, theme, content):
         """

@@ -5,8 +5,8 @@
 
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">
-    <copy theme="//div[@id='content']" content="//*[@id='body']" />
     <copy theme="//div[@id='nav']" content="//*[@id='extra_nav']" move="1" />
+    <copy theme="//div[@id='content']" content="//*[@id='body']" />
   </rules>
 
   <theme base="http://example.com"> 
@@ -98,8 +98,8 @@
 <!-- tests move with append -->
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">
-    <copy theme="//div[@id='content']" content="//*[@id='body']" />
     <append theme="//div[@id='nav']" content="//*[@id='extra_nav']" move="1" />
+    <copy theme="//div[@id='content']" content="//*[@id='body']" />
   </rules>
 
   <theme base="http://example.com"> 
@@ -142,8 +142,8 @@
 <!-- tests move with prepend -->
 <deliverance-test>
   <rules xmlns="http://www.plone.org/deliverance">
-    <copy theme="//div[@id='content']" content="//*[@id='body']" />
     <prepend theme="//div[@id='nav']" content="//*[@id='extra_nav']" move="1" />
+    <copy theme="//div[@id='content']" content="//*[@id='body']" />
   </rules>
 
   <theme base="http://example.com"> 

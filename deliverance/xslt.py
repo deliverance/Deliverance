@@ -67,6 +67,8 @@ class Renderer(RendererBase):
          before being returned. 
                 
         """
+        import warnings
+        warnings.warn("The XSLT renderer is deprecated; please use deliverance.interpreter.Renderer instead.  The XSLT renderer may produce different results than the Python renderer", DeprecationWarning)
         theme_copy = copy.deepcopy(theme)
         self.rules = rule
         self.rules_uri = rule_uri

@@ -25,6 +25,14 @@ After 0.1.2
 
 - (setup) Relax restriction on lxml 2.x (which should work fine).
 
+- (interpreter) Run the rules in order, including running drop rules
+  in order (previously they were always run before all other rules)
+  and run move="1" rules in order with all the other rules.
+
+- Deprecate the XSLT interpreter.  Changing rules to run in order was
+  not feasible with the XSLT version, but the intuitive behavior was
+  more important than the alternate renderer.
+
 0.1.2 (2008-02-19)
 ------------------
 
