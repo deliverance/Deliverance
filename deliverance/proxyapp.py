@@ -23,6 +23,17 @@ class ProxyDeliveranceApp(object):
         self.theme_uri = theme_uri,
         self.rule_uri = rule_uri,
         self.proxy = proxy
+        self.path_info = ''
+
+        # the proxy might look like foo.bar.org:8080/baz/fleem
+        # so we need to save the baz/fleem part to inject
+        # into PATH_INFO later on (during __call__)
+        proxy = proxy.split('/', 1)
+        if len(proxy) > 1:
+            self.proxy = proxy[0]
+            proxy[1] = proxy[1].strip('/')
+            self.path_info = '/%s' % proxy[1]
+
         self.transparent = transparent
         self.debug_headers = debug_headers
         self.subapp = self.make_app()
@@ -59,6 +70,7 @@ class ProxyDeliveranceApp(object):
                 server, port = self.proxy, '80'
             environ['SERVER_NAME'] = server
             environ['SERVER_PORT'] = port
+            environ['PATH_INFO'] = self.path_info + environ['PATH_INFO']
         return self.deliverance_app(
             environ, start_response)
     
