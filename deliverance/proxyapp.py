@@ -22,19 +22,29 @@ class ProxyDeliveranceApp(object):
                  serializer=None):
         self.theme_uri = theme_uri,
         self.rule_uri = rule_uri,
-        self.proxy = proxy
-        self.path_info = ''
-
-        # the proxy might look like foo.bar.org:8080/baz/fleem
-        # so we need to save the baz/fleem part to inject
-        # into PATH_INFO later on (during __call__)
-        proxy = proxy.split('/', 1)
-        if len(proxy) > 1:
-            self.proxy = proxy[0]
-            proxy[1] = proxy[1].strip('/')
-            self.path_info = '/%s' % proxy[1]
-
+        if not re.match(r'https?://', proxy, re.I):
+            proxy = 'http://' + proxy
+        scheme, netloc, path, query, fragment = urlparse.urlsplit(proxy)
+        if fragment:
+            raise ValueError(
+                "No fragment is allowed in the proxy destination (#%s in the url %r)"
+                % (fragment, proxy))
+        if query:
+            raise ValueError(
+                "No query string is allowed in the proxy destination (?%s in the url %r)"
+                % (query, proxy))
+        if path == '/':
+            path = ''
+        self.proxy_path = path
+        self.proxy = netloc
+        if scheme not in ('http', 'https'):
+            raise ValueError(
+                "Proxying to the scheme %r location is not supported" % scheme)
         self.transparent = transparent
+        if self.proxy_path and self.transparent:
+            raise ValueError(
+                "The transparent option is not compatible with proxy destinations that include"
+                " a path (path=%r)" % self.proxy_path)
         self.debug_headers = debug_headers
         self.subapp = self.make_app()
         self.deliverance_app = DeliveranceMiddleware(
@@ -55,7 +65,8 @@ class ProxyDeliveranceApp(object):
         if get_serializer(environ, None) is None:
             set_serializer(environ, self.deliverance_app.serializer)
         if self.relocate_content:
-            reloc_app = RelocateMiddleware(self.run_subapp, old_href='http://'+self.proxy)
+            proxy_dest = 'http://%s%s' % (self.proxy, self.proxy_path)
+            reloc_app = RelocateMiddleware(self.run_subapp, old_href=proxy_dest)
             return reloc_app(environ, start_response)
         else:
             return self.run_subapp(environ, start_response)
@@ -70,7 +81,7 @@ class ProxyDeliveranceApp(object):
                 server, port = self.proxy, '80'
             environ['SERVER_NAME'] = server
             environ['SERVER_PORT'] = port
-            environ['PATH_INFO'] = self.path_info + environ['PATH_INFO']
+            environ['PATH_INFO'] = self.proxy_path + environ['PATH_INFO']
         return self.deliverance_app(
             environ, start_response)
     
@@ -143,23 +154,6 @@ def make_proxy(global_conf,
     parts = urlparse.urlsplit(wrap_href)
     scheme, netloc, path, query, fragment = parts
     scheme = scheme.lower()
-    if scheme not in ['http', 'https']:
-        raise ValueError(
-            "I don't know how to proxy to the scheme %r (from wrap_href=%s)"
-            % (scheme, wrap_href))
-    if fragment:
-        raise ValueError(
-            "You cannot use a fragment (%r) in wrap_href=%s"
-            % (fragment, wrap_href))
-    if query:
-        raise ValueError(
-            "You cannot use a query string ?%s (from wrap_href=%s)"
-            % (query, wrap_href))
-    if path and path != '/':
-        raise ValueError(
-            "Proxying to a path on a server is not currently supported "
-            "(path=%r from wrap_href=%s)"
-            % (path, wrap_href))
     app = ProxyMountedDeliveranceApp(
         theme_uri=theme_uri,
         rule_uri=rule_uri,
