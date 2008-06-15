@@ -1,4 +1,4 @@
-__version__ = '0.2dev'
+__version__ = '0.1.99.simplon.1'
 
 from setuptools import setup, find_packages
 

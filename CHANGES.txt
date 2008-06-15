@@ -1,8 +1,11 @@
 Deliverance Changelog
 =====================
 
-After 0.1.2
------------
+0.1.99.simplon.1
+----------------
+
+- NOTE: Private, non-official release!
+
 - Add a new serializers file with HTML4 and XHTML serializers.
 
 - (wsgimiddleware) Expose all middleware constructor arguments via
