@@ -4,6 +4,7 @@ passing the request to another HTTP server
 """
 
 import os
+import re
 import urlparse
 from paste.proxy import TransparentProxy
 from paste.urlmap import URLMap
