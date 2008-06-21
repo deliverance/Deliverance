@@ -1,9 +1,9 @@
-__version__ = '0.2dev'
+version = '0.2'
 
 from setuptools import setup, find_packages
 
 setup(name="Deliverance",
-      version=__version__,
+      version=version,
       description="Deliverance rewrites HTML to add theming",
       long_description="""\
 Deliverance rewrites HTML pages to theme the pages -- adding things
