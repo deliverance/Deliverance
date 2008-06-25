@@ -1,6 +1,6 @@
 This tests different kinds of matchers.
 
-     >>> from deliverance.classmatch import compile_matcher, compile_header_matcher
+     >>> from deliverance.stringmatch import compile_matcher, compile_header_matcher
      >>> def match(pattern, *values):
      ...     for value in values:
      ...         result = compile_matcher(pattern)(value)
