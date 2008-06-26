@@ -1,14 +1,11 @@
 """
-Represents individual rules
+Represents individual actions (<append> etc) and the RuleSet that puts them together
 """
 
 from deliverance.exceptions import add_exception_info
-from deliverance.util.converters import asbool
+from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
 from lxml import etree
-
-## A dictionary mapping element names to their rule classes:
-rules = {}
 
 class RuleSyntaxError(Exception):
     """
@@ -28,22 +25,83 @@ class AbortTheme(Exception):
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
-def parse_rule(el, source_location):
-    if el.tag not in rules:
+class Rule(object):
+    """
+    This represents everything in a <rule></rule> section.
+    """
+
+    def __init__(self, classes, actions, theme, source_location):
+        self.classes = classes
+        self._actions = actions
+        self.theme = theme
+        self.source_location = source_location
+
+    @classmethod
+    def parse_xml(cls, el, source_location):
+        """
+        Creates a Rule object from a parsed XML <rule> element.
+        """
+        assert el.tag == 'rule'
+        classes = el.get('class', '').split()
+        if not classes:
+            classes = ['default']
+        theme = None
+        actions = []
+        for el in el.iterchildren():
+            if el.tag == 'theme':
+                ## FIXME: error if more than one theme
+                ## FIXME: error if no href
+                theme = el.get('href')
+                continue
+            action = parse_action(el, source_location)
+            actions.append(action)
+        return cls(classes, actions, theme, source_location)
+
+    def apply(self, content_doc, theme_doc, resource_fetcher, log):
+        """
+        Applies all the actions in this rule to the theme_doc
+
+        Note that this leaves behind attributes to mark elements that
+        originated in the content.  You should call
+        :func:`remove_content_attribs` after applying all rules.
+        """
+        for action in self._actions:
+            action.apply(content_doc, theme_doc, resource_fetcher, log)
+        return theme_doc
+
+## A dictionary mapping element names to their rule classes:
+_actions = {}
+
+def parse_action(el, source_location):
+    """
+    Parses an element into an action object.
+    """
+    if el.tag not in _actions:
         raise RuleSyntaxError(
             "There is no rule with the name %s"
             % el.tag)
-    Class = rules[el.tag]
+    Class = _actions[el.tag]
     instance = Class.from_xml(el, source_location)
     return instance
 
-class AbstractRule(object):
+class AbstractAction(object):
+    # This is the abstract class for all other rules
 
+    # These values are allowed for nocontent and notheme attributes:
     _no_allowed = (None, 'ignore', 'abort', 'warn')
+    # These values are allowed for manycontent and manytheme attributes:
     _many_allowed = _no_allowed + ('last', 'first', 'ignore:first', 'ignore:last',
                                    'warn:first', 'warn:last')
 
     def convert_error(self, name, value):
+        """
+        Taking a ``name="value"`` attribute for an error type
+        (nocontent, manycontent, etc) this returns ``(error_handler,
+        position)`` (where ``position`` is None for notheme/nocontent).
+
+        This applies the default value of "warn" and the default
+        position of "first".
+        """
         if value == '':
             value = None
         if value:
@@ -74,9 +132,16 @@ class AbstractRule(object):
                 value = ('abort', None)
         elif not value:
             value = ('warn', None)
+        if isinstance(value, basestring):
+            value = (value, None)
+        assert isinstance(value, tuple), 'Bad value: %r' % value
         return value
 
     def format_error(self, attr, value):
+        """
+        Takes the result of :meth:`convert_error` and serializes it
+        back into ``attribute="value"``
+        """
         if attr in ('manytheme', 'manycontent'):
             handler, pos = value
             if pos == 'last':
@@ -133,10 +198,15 @@ class AbstractRule(object):
             return False
         return True
 
+    # Set to the tag name in subclasses (append, prepend, etc):
     name = None
+    # Set to true in subclasses if the move attribute means something:
     move_supported = True
 
     def describe_self(self):
+        """
+        A text description of this rule, for use in log messages and errors
+        """
         parts = ['<%s' % self.name]
         if getattr(self, 'content', None):
             parts.append('content="%s"' % html_quote(self.content))
@@ -158,6 +228,10 @@ class AbstractRule(object):
         return ' '.join(parts) + ' />'
 
     def describe_content_elements(self, els, children=False):
+        """
+        A text description of a list of content elements, for use in
+        log messages and errors.
+        """
         text = ', '.join(el.tag for el in els)
         if children:
             return 'children of %s' % text
@@ -165,11 +239,19 @@ class AbstractRule(object):
             return text
 
     def describe_theme_element(self, el):
+        """
+        A text description of a theme element, for use in log messages
+        and errors.
+        """
         return el.tag
 
     @classmethod
-    def compile_selector(cls, tag, attr, source_location):
-        value = tag.get(attr)
+    def compile_selector(cls, el, attr, source_location):
+        """
+        Compiles a single selector taken from the given attribute of
+        an element.
+        """
+        value = el.get(attr)
         if value is None:
             return None
         return Selector.parse(value)
@@ -179,7 +261,7 @@ class AbstractRule(object):
         Takes a list of elements and prepares their children as a list and text,
         so that you can do::
 
-          text, els = preparent_content_children(self, els)
+          text, els = prepare_content_children(self, els)
           add_text(theme_el, text)
           theme_el.extend(els)
 
@@ -213,10 +295,8 @@ class AbstractRule(object):
                 elements.remove(el)
         return type, elements, attributes
 
-class TransformRule(AbstractRule):
-    """
-    Abstract class for the rules that move from the content to the theme (replace, append, prepend)
-    """
+class TransformAction(AbstractAction):
+    # Abstract class for the rules that move from the content to the theme (replace, append, prepend)
 
     def __init__(self, source_location, content, theme, if_content=None, content_href=None,
                  move=True, nocontent=None, notheme=None, manytheme=None, manycontent=None):
@@ -241,6 +321,9 @@ class TransformRule(AbstractRule):
 
     @classmethod
     def from_xml(cls, tag, source_location):
+        """
+        Creates an instance of this object from the given parsed XML element
+        """
         content = cls.compile_selector(tag, 'content', source_location)
         theme = cls.compile_selector(tag, 'theme', source_location)
         if_content = cls.compile_selector(tag, 'if_content', source_location)
@@ -254,6 +337,9 @@ class TransformRule(AbstractRule):
                    manycontent=tag.get('manycontent'))
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
+        """
+        Applies this action to the theme_doc.
+        """
         describe = log.describe
         if self.content_href:
             content_doc = resource_fetcher(self.content_href)
@@ -307,6 +393,9 @@ class TransformRule(AbstractRule):
         self.apply_transformation(content_type, content_els, attributes, theme_type, theme_el, log)
 
     def join_attributes(self, attr1, attr2):
+        """
+        Joins the sets of attribute names in attr1 and attr2, where either might be None
+        """
         if not attr1 and not attr2:
             return None
         if attr1 and not attr2:
@@ -318,8 +407,12 @@ class TransformRule(AbstractRule):
         attr |= attr2
         return list(attr)
 
-class Replace(TransformRule):
+    def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
+        raise NotImplementedError
 
+class Replace(TransformAction):
+
+    # Compatible types of child and theme selector types:
     _compatible_types = [
         ('children', 'elements'),
         ('children', 'children'),
@@ -328,7 +421,7 @@ class Replace(TransformRule):
         ('attributes', 'attributes'),
         ('tag', 'tag'),
         ]
-
+ 
     def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
         describe = log.describe
         if theme_type == 'children':
@@ -337,11 +430,11 @@ class Replace(TransformRule):
             theme_el.text = ''
             if content_type == 'elements':
                 if self.move:
-                    # If we are working with copies, then the tails don't/shouldn't be moved
+                    # If we aren't working with copies then we have to move the tails up as we remove the elements:
                     for el in reversed(content_els):
                         move_tail_upward(el)
                 else:
-                    # If we are working with copies, then we can just throw away the tails
+                    # If we are working with copies, then we can just throw away the tails:
                     for el in content_els:
                         el.tail = None
                 theme_el.extend(content_els)
@@ -440,10 +533,11 @@ class Replace(TransformRule):
             theme_el.attrib.update(content_els[0].attrib)
             # "move" in this case doesn't mean anything
 
-rules['replace'] = Replace
+_actions['replace'] = Replace
 
-class Append(TransformRule):
+class Append(TransformAction):
 
+    # This is set to False in Prepend:
     _append = True
 
     _compatible_types = [
@@ -472,7 +566,7 @@ class Append(TransformRule):
                     theme_el.text = None
                     theme_el[:0] = content_els
             elif content_type == 'children':
-                text, els = self.preparent_content_children(content_els)
+                text, els = self.prepare_content_children(content_els)
                 if self._append:
                     if len(theme_el):
                         add_tail(theme_el[-1], text)
@@ -556,14 +650,14 @@ class Append(TransformRule):
                 else:
                     content_attrib.clear()
 
-rules['append'] = Append
+_actions['append'] = Append
 
 class Prepend(Append):
     _append = False
 
-rules['prepend'] = Prepend
+_actions['prepend'] = Prepend
 
-class Drop(AbstractRule):
+class Drop(AbstractAction):
     
     def __init__(self, source_location, content, theme, if_content=None,
                  nocontent=None, notheme=None):
@@ -635,7 +729,7 @@ class Drop(AbstractRule):
                    nocontent=tag.get('nocontent'),
                    notheme=tag.get('notheme'))
 
-rules['drop'] = Drop
+_actions['drop'] = Drop
             
 ## Element utilities ##
 
@@ -675,16 +769,25 @@ def move_tail_upwards(el):
         add_text(parent, el.tail)
 
 def iter_self_and_ancestors(el):
+    """
+    Iterates over an element itself and all its ancestors (parent, grandparent, etc)
+    """
     yield el
     for item in el.iterancestors():
         yield item
 
 def mark_content_els(els):
+    """
+    Mark an element as originating from the content (this uses a special attribute)
+    """
     for el in els:
         ## FIXME: maybe put something that is trackable to the rule that moved the element
         el.set(CONTENT_ATTRIB, '1')
 
 def is_content_element(el):
+    """
+    Tests if the element came from the content (which includes if any of its ancestors)
+    """
     ## FIXME: should this check children too?
     for p in iter_self_and_ancestors(el):
         if p.get(CONTENT_ATTRIB):
@@ -692,11 +795,9 @@ def is_content_element(el):
     return False
 
 def remove_content_attribs(doc):
+    """
+    Remove the markers placed by :func:`mark_content_els`
+    """
     for p in doc.getiterator():
         if p.get(CONTENT_ATTRIB, None) is not None:
             del p.attrib[CONTENT_ATTRIB]
-
-from cgi import escape as cgi_escape
-def html_quote(s):
-    s = unicode(s)
-    return cgi_escape(s, True)

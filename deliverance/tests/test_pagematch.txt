@@ -1,0 +1,50 @@
+This tests pagematch, which tests whether a request/response matches a <match> tag.
+
+    >>> from deliverance.pagematch import Match
+    >>> from lxml.etree import XML
+    >>> from webob import Request
+    >>> from webob.headerdict import HeaderDict
+    >>> from deliverance.log import SavingLogger
+    >>> def make(xml):
+    ...     el = XML(xml)
+    ...     return Match.parse_xml(el, source_location=None)
+    >>> def match(matcher, request, response_headers, show_log=True):
+    ...     if isinstance(matcher, basestring):
+    ...         matcher = make(matcher)
+    ...     log = SavingLogger()
+    ...     if isinstance(response_headers, list):
+    ...         response_headers = HeaderDict(response_headers)
+    ...     result = matcher(request, response_headers, log)
+    ...     if show_log:
+    ...         for level, rule, message in log.messages:
+    ...             print 'log:', message
+    ...     return result
+
+If you don't provide a class attribute, it is an error:
+
+    >>> make('<match path="foo" />')
+    Traceback (most recent call last):
+        ...
+    MatchSyntaxError: You must provide some classes in the class attribute
+
+Matches get normalized:
+
+    >>> print make('<match path="/foo" last="0" class="  a b"/>')
+    <match class="a b" path="path:/foo/" />
+
+Now, some matches:
+
+    >>> m = make('<match path="/foo" class="a" />')
+    >>> match(m, Request.blank('/foo'), [])
+    True
+    >>> match(m, Request.blank('/foobar'), [])
+    log: Skipping class a because request URL (/foobar) does not match path="path:/foo/"
+    False
+    >>> match(m, Request.blank('/foo/bar'), [])
+    True
+    >>> m = make('<match response-header="Content-Type: contains: html" class="x" />')
+    >>> match(m, Request.blank('/'), [('content-type', 'text/plain')])
+    log: Skipping class x because the response headers Content-Type do not match response-header="Content-Type: contains:html"
+    False
+    >>> match(m, Request.blank('/'), [('content-type', 'text/html')])
+    True

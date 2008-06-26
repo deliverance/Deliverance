@@ -1,6 +1,17 @@
+"""
+Logging for deliverance.
+
+This does not use the standard :mod:`logging` module because that
+module is not easily applied and inspected locally.  We want the log
+messages to be strictly per-request.
+"""
+
 import logging
 
 class SavingLogger(object):
+    """
+    Logger that saves all its messages locally.
+    """
     def __init__(self, description=True):
         self.messages = []
         if description:

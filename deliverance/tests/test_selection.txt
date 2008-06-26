@@ -88,11 +88,11 @@ Now we'll select from some content:
 
     >>> from lxml.etree import XML
     >>> import copy
-    >>> from deliverance.rules import parse_rule, remove_content_attribs
+    >>> from deliverance.rules import parse_action, remove_content_attribs
     >>> from deliverance.log import SavingLogger
     >>> def t_rule_head(rule, selector='//head', show_log=False):
     ...     rule = XML(rule)
-    ...     rule = parse_rule(rule, None)
+    ...     rule = parse_action(rule, None)
     ...     theme_copy = copy.deepcopy(theme)
     ...     theme_copy.make_links_absolute()
     ...     logger = SavingLogger()

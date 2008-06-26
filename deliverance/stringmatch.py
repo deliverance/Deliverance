@@ -1,11 +1,21 @@
+"""
+Represents the string and header matching that is used to determine page classes.
+"""
+
 import fnmatch
 import re
+from deliverance.util.converters import asbool
 
 __all__ = ['compile_matcher', 'compile_header_matcher', 'MatchSyntaxError']
 
 _prefix_re = re.compile(r'^([a-z_-]+):', re.I)
 
 def compile_matcher(s, default=None):
+    """
+    Compiles the match string to a match object.
+
+    Match objects are callable objects that return a boolean.
+    """
     match = _prefix_re.search(s)
     if not match:
         if default is None:
@@ -17,7 +27,7 @@ def compile_matcher(s, default=None):
         pattern = s
     else:
         type = match.group(1).lower()
-        pattern = s[match.end():]
+        pattern = s[match.end():].lstrip()
     if type not in _matches:
         ## FIXME: show possible names?
         raise MatchSyntaxError(
@@ -26,6 +36,14 @@ def compile_matcher(s, default=None):
     return _matches[type](pattern)
 
 def compile_header_matcher(s, default='exact'):
+    """
+    Compiles the match header string to a match object.
+
+    Unlike simple match objects, these match against a dictionary of headers.
+
+    This also applies the the environ dictionary.  Case-sensitivity is
+    handled by the dictionary, not the matcher.
+    """
     if ':' not in s:
         raise MatchSyntaxError(
             "A header match must be like 'Header: pattern'; you have no header in %r"
@@ -50,6 +68,7 @@ def _add_matcher(cls):
     _matches[cls.name] = cls
 
 class Matcher(object):
+    # Abstract base class for matchers
 
     name = None
 
@@ -63,12 +82,15 @@ class Matcher(object):
         return '%s:%s' % (self.name, self.pattern)
 
     def __str__(self):
-        return str(unicode(self))
+        return unicode(self).encode('utf8')
     
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, str(self))
 
 class WildcardMatcher(Matcher):
+    """
+    Matches a value against a pattern that may contain ``*`` wildcards.
+    """
 
     name = 'wildcard'
 
@@ -82,6 +104,9 @@ class WildcardMatcher(Matcher):
 _add_matcher(WildcardMatcher)
 
 class WildcardInsensitiveMatcher(Matcher):
+    """
+    Matches a value, ignoring case, against a pattern with wildcards.
+    """
 
     name = 'wildcard-insensitive'
 
@@ -95,6 +120,9 @@ class WildcardInsensitiveMatcher(Matcher):
 _add_matcher(WildcardInsensitiveMatcher)
 
 class RegexMatcher(Matcher):
+    """
+    Matches a value against a regular expression.
+    """
 
     name = 'regex'
 
@@ -113,6 +141,10 @@ class RegexMatcher(Matcher):
 _add_matcher(RegexMatcher)
 
 class PathMatcher(Matcher):
+    """
+    Matches a value against a path.  This checks prefixes, but also
+    only matches /-delimited segments.
+    """
 
     name = 'path'
 
@@ -128,6 +160,9 @@ class PathMatcher(Matcher):
 _add_matcher(PathMatcher)
 
 class ExactMatcher(Matcher):
+    """
+    Matches a string exactly.
+    """
 
     name = 'exact'
 
@@ -137,6 +172,9 @@ class ExactMatcher(Matcher):
 _add_matcher(ExactMatcher)
         
 class ExactInsensitiveMatcher(Matcher):
+    """
+    Matches a string exactly, but ignoring case.
+    """
     
     name = 'exact-insensitive'
 
@@ -146,6 +184,9 @@ class ExactInsensitiveMatcher(Matcher):
 _add_matcher(ExactInsensitiveMatcher)
 
 class ContainsMatcher(Matcher):
+    """
+    Matches if the value contains the pattern.
+    """
 
     name = 'contains'
 
@@ -155,6 +196,9 @@ class ContainsMatcher(Matcher):
 _add_matcher(ContainsMatcher)
 
 class ContainsInsensitiveMatcher(Matcher):
+    """
+    Matches if the value contains the pattern, ignoring case.
+    """
 
     name = 'contains-insensitive'
 
@@ -163,19 +207,56 @@ class ContainsInsensitiveMatcher(Matcher):
 
 _add_matcher(ContainsInsensitiveMatcher)
 
+class BooleanMatcher(Matcher):
+    """
+    Matches according to a boolean true/falseness of a value
+    """
+    
+    name = 'boolean'
+
+    def __init__(self, pattern):
+        pattern = pattern.strip()
+        super(BooleanMatcher, self).__init__(pattern)
+        if pattern.lower() == 'not':
+            pattern = 'false'
+        if not pattern:
+            pattern = 'true'
+        self.boolean = asbool(pattern)
+
+    def __call__(self, s):
+        try:
+            value = asbool(s)
+        except ValueError:
+            value = False
+        if not self.boolean:
+            return not value
+        else:
+            return value
+
+_add_matcher(BooleanMatcher)
+
 class HeaderMatcher(object):
+    """
+    Matches simple "Header: pattern".  Does not match wildcard headers.
+    """
 
     def __init__(self, header, pattern):
         self.header = header
         self.pattern = pattern
 
     def __call__(self, headers):
-        return self.pattern(headers.get(self.header, ''))
+        return self.pattern(headers.get(self.header, '')), [self.header]
 
     def __unicode__(self):
         return u'%s: %s' % (self.header, self.pattern)
 
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
 class HeaderWildcardMatcher(object):
+    """
+    Matches "Header*: pattern", where the header contains a wildcard.
+    """
 
     def __init__(self, header, pattern):
         self.header = header
@@ -184,11 +265,16 @@ class HeaderWildcardMatcher(object):
 
     def __call__(self, headers):
         matches = self.header_re.match
+        matched = []
         for key in headers:
             if matches(key):
+                matched.append(key)
                 if self.pattern(headers[key]):
-                    return True
-        return False
+                    return True, [key]
+        return False, matched
 
     def __unicode__(self):
         return u'%s: %s' % (self.header, self.pattern)
+
+    def __str__(self):
+        return unicode(self).encode('utf8')

@@ -38,13 +38,14 @@ And then some header matching:
      >>> def mheader(pattern, headers):
      ...     return compile_header_matcher(pattern)(headers)
      >>> mheader('Something: foo', {'Something': 'foo'})
-     True
+     (True, ['Something'])
      >>> mheader('Something: foo', {'Something': 'foobar'})
-     False
+     (False, ['Something'])
      >>> mheader('Something: contains:foo', {'Something': 'foobar'})
-     True
+     (True, ['Something'])
      >>> mheader('X-*: contains:evil', {'X-Other': 'nothing', 'X-Foo-Bar': 'some evil!'})
-     True
+     (True, ['X-Foo-Bar'])
      >>> mheader('X-*: contains:evil', {'X-Foo-Bar': 'okay'})
-     False
-     
+     (False, ['X-Foo-Bar'])
+     >>> mheader('X-*: contains:other', {'X-Other': 'nothing', 'X-Foo-Bar': 'some evil!'})
+     (False, ['X-Foo-Bar', 'X-Other'])

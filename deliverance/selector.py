@@ -1,3 +1,7 @@
+"""
+Implements the element selection; XPath, CSS, and the modifiers on
+those selections.
+"""
 from lxml.etree import XPath
 from lxml.cssselect import CSSSelector
 import re
@@ -10,6 +14,12 @@ class SelectorSyntaxError(Exception):
     pass
 
 class Selector(object):
+    """
+    Represents one selection attribute
+
+    A selector contains multiple sub-selectors; this level combines
+    those from the || (cascading) operator.
+    """
 
     def __init__(self, major_type, attributes, selectors):
         self.major_type = major_type
@@ -20,6 +30,9 @@ class Selector(object):
 
     @classmethod
     def parse(cls, expr):
+        """
+        Parses one string expression, returning an instance of this class.
+        """
         major_type, attributes, expr = cls.parse_prefix(expr)
         selectors = [e.strip()
                      for e in expr.split('||')]
@@ -49,6 +62,13 @@ class Selector(object):
 
     @staticmethod
     def types_compatible(type1, type2):
+        """
+        When multiple types appear (separated with ||) this tests if
+        they are compatible with each other.
+
+        Only ``children`` and ``elements`` are compatible with each
+        other; in all other cases you must use the same type.
+        """
         if type1 in ('children', 'elements'):
             return type2 in ('children', 'elements')
         else:
@@ -61,9 +81,18 @@ class Selector(object):
              in self.selectors])
             
     def __str__(self):
-        return str(unicode(self))
+        return unicode(self).encode('utf8')
 
     def compile_selector(self, expr, default_type):
+        """
+        Compiles a single selector string to ``(selector_type,
+        selector_object, expression_string, attributes)`` where the
+        selector_type is a string (``"elements"``, ``"children"``,
+        etc), selector_object is a callable that returns elements,
+        expression_string is the original expression, passed in, and
+        ``attributes`` is a list of attributes in the case of
+        ``attributes(attr1, attr2):``
+        """
         type, attributes, rest_expr = self.parse_prefix(expr, default_type=default_type)
         if not self.types_compatible(type, self.major_type):
             raise SelectorSyntaxError(
