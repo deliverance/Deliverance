@@ -2,16 +2,11 @@
 Handles the <match> tag and matching requests and responses against these patterns.
 """
 
+from deliverance.exceptions import DeliveranceSyntaxError, AbortTheme
 from deliverance.stringmatch import compile_matcher, compile_header_matcher
 from deliverance.util.converters import asbool, html_quote
-from deliverance.rules import AbortTheme
 
 __all__ = ['MatchSyntaxError', 'Match']
-
-class MatchSyntaxError(Exception):
-    """
-    Raised if there's some error with the matching.
-    """
 
 class Match(object):
     """
@@ -43,11 +38,11 @@ class Match(object):
         abort = asbool(el.get('abort'))
         if not abort and not classes:
             ## FIXME: source location
-            raise MatchSyntaxError(
+            raise DeliveranceSyntaxError(
                 "You must provide some classes in the class attribute")
         if abort and classes:
             ## FIXME: source location
-            raise MatchSyntaxError(
+            raise DeliveranceSyntaxError(
                 'You cannot provide both abort="1" and class="%s"'
                 % (' '.join(classes)))
         path = cls._parse_attr(el, 'path', default='path')

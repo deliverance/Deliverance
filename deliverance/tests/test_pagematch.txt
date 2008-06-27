@@ -11,7 +11,7 @@ This tests pagematch, which tests whether a request/response matches a <match> t
     >>> def match(matcher, request, response_headers, show_log=True):
     ...     if isinstance(matcher, basestring):
     ...         matcher = make(matcher)
-    ...     log = SavingLogger()
+    ...     log = SavingLogger(None)
     ...     if isinstance(response_headers, list):
     ...         response_headers = HeaderDict(response_headers)
     ...     result = matcher(request, response_headers, log)
@@ -25,7 +25,7 @@ If you don't provide a class attribute, it is an error:
     >>> make('<match path="foo" />')
     Traceback (most recent call last):
         ...
-    MatchSyntaxError: You must provide some classes in the class attribute
+    DeliveranceSyntaxError: You must provide some classes in the class attribute
 
 Matches get normalized:
 

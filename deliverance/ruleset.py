@@ -1,5 +1,6 @@
+from deliverance.exceptions import AbortTheme
 from deliverance.pagematch import run_matches, Match
-from deliverance.rules import Rule, remove_content_attribs, AbortTheme
+from deliverance.rules import Rule, remove_content_attribs
 from lxml.html import tostring, document_fromstring
 from lxml.etree import XML
 import re

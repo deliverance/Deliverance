@@ -13,7 +13,7 @@ class SavingLogger(object):
     """
     Logger that saves all its messages locally.
     """
-    def __init__(self, req, description=True):
+    def __init__(self, request, description=True):
         self.messages = []
         if description:
             self.descriptions = []
@@ -45,8 +45,8 @@ class SavingLogger(object):
 
 class PrintingLogger(SavingLogger):
 
-    def __init__(self, req, description=True, print_level=logging.DEBUG):
-        super(PrintingLogger, self).__init__(req, description=description)
+    def __init__(self, request, description=True, print_level=logging.DEBUG):
+        super(PrintingLogger, self).__init__(request, description=description)
         self.print_level = print_level
 
     def add_description(self, msg):

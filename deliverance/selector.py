@@ -2,6 +2,8 @@
 Implements the element selection; XPath, CSS, and the modifiers on
 those selections.
 """
+
+from deliverance.exceptions import DeliveranceSyntaxError
 from lxml.etree import XPath
 from lxml.cssselect import CSSSelector
 import re
@@ -9,9 +11,6 @@ import re
 type_re = re.compile(r'^(elements?|children|tag|attributes?):')
 type_map = dict(element='elements', attribute='attributes')
 attributes_re = re.compile(r'^attributes[(]([a-zA-Z0-9_,-]+)[)]:')
-
-class SelectorSyntaxError(Exception):
-    pass
 
 class Selector(object):
     """
@@ -95,7 +94,7 @@ class Selector(object):
         """
         type, attributes, rest_expr = self.parse_prefix(expr, default_type=default_type)
         if not self.types_compatible(type, self.major_type):
-            raise SelectorSyntaxError(
+            raise DeliveranceSyntaxError(
                 "Expression %s in selector %r uses the type %r, but this is not compatible "
                 "with the type %r already declared earlier in the selector"
                 % (expr, self, type, self.major_type))

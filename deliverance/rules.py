@@ -1,27 +1,12 @@
 """
-Represents individual actions (<append> etc) and the RuleSet that puts them together
+Represents individual actions (``<append>`` etc) and the RuleSet that
+puts them together
 """
 
-from deliverance.exceptions import add_exception_info
+from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError
 from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
 from lxml import etree
-
-class RuleSyntaxError(Exception):
-    """
-    Exception raised when a rule itself is invalid
-    """
-
-class SelectionError(Exception):
-    """
-    Exception raised when a selection somehow isn't right (e.g.,
-    returns no elements when it should return an element).
-    """
-
-class AbortTheme(Exception):
-    """
-    Raised when something aborts via something like nocontent="abort"
-    """
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
@@ -81,7 +66,7 @@ def parse_action(el, source_location):
     Parses an element into an action object.
     """
     if el.tag not in _actions:
-        raise RuleSyntaxError(
+        raise DeliveranceSyntaxError(
             "There is no rule with the name %s"
             % el.tag)
     Class = _actions[el.tag]
@@ -118,7 +103,7 @@ class AbstractAction(object):
             if value not in self._no_allowed:
                 bad_options = self._no_allowed
         if bad_options:
-            raise RuleSyntaxError(
+            raise DeliveranceSyntaxError(
                 'The attribute %s="%s" should have a value of one of: %s'
                 % (name, value, ', '.join(v for v in bad_options if v)))
         if not value:
@@ -323,7 +308,7 @@ class TransformAction(AbstractAction):
         for content_type in self.content.selector_types():
             for theme_type in self.theme.selector_types():
                 if (theme_type, content_type) not in self._compatible_types:
-                    raise RuleSyntaxError(
+                    raise DeliveranceSyntaxError(
                         'Selector type %s (from content="%s") and type %s (from theme="%s") are not compatible'
                         % (content_type, self.content, theme_type, self.theme))
         self.if_content = if_content
