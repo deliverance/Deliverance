@@ -30,10 +30,11 @@ class Rule(object):
     This represents everything in a <rule></rule> section.
     """
 
-    def __init__(self, classes, actions, theme, source_location):
+    def __init__(self, classes, actions, theme, suppress_standard, source_location):
         self.classes = classes
         self._actions = actions
         self.theme = theme
+        self.suppress_standard = suppress_standard
         self.source_location = source_location
 
     @classmethod
@@ -47,15 +48,18 @@ class Rule(object):
             classes = ['default']
         theme = None
         actions = []
+        suppress_standard = asbool(el.get('suppress-standard'))
         for el in el.iterchildren():
             if el.tag == 'theme':
                 ## FIXME: error if more than one theme
                 ## FIXME: error if no href
                 theme = el.get('href')
                 continue
+            if el.tag is etree.Comment:
+                continue
             action = parse_action(el, source_location)
             actions.append(action)
-        return cls(classes, actions, theme, source_location)
+        return cls(classes, actions, theme, suppress_standard, source_location)
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
         """
@@ -112,29 +116,30 @@ class AbstractAction(object):
                 bad_options = self._many_allowed
         else:
             if value not in self._no_allowed:
-                vad_options = self._no_allowed
+                bad_options = self._no_allowed
         if bad_options:
             raise RuleSyntaxError(
                 'The attribute %s="%s" should have a value of one of: %s'
                 % (name, value, ', '.join(v for v in bad_options if v)))
+        if not value:
+            value = 'warn'
+        if name in ('nocontent', 'notheme'):
+            return value
+        # Must be manytheme/manycontent, which is (error_handler, fallback)
         if value and ':' in value:
             value = tuple(value.split(':', 1))
         elif value == 'first':
             value = ('ignore', 'first')
         elif value == 'last':
             value = ('ignore', 'last')
-        if name in ('manytheme', 'manycontent'):
-            if value == 'ignore':
-                value = ('ignore', 'first')
-            elif value == 'warn' or not value:
-                value = ('warn', 'first')
-            elif value == 'abort':
-                value = ('abort', None)
-        elif not value:
-            value = ('warn', None)
-        if isinstance(value, basestring):
-            value = (value, None)
-        assert isinstance(value, tuple), 'Bad value: %r' % value
+        if value == 'ignore':
+            value = ('ignore', 'first')
+        elif value == 'warn':
+            value = ('warn', 'first')
+        elif value == 'abort':
+            value = ('abort', None)
+        else:
+            assert 0, "Unexpected value: %r" % value
         return value
 
     def format_error(self, attr, value):
@@ -143,13 +148,16 @@ class AbstractAction(object):
         back into ``attribute="value"``
         """
         if attr in ('manytheme', 'manycontent'):
+            assert isinstance(value, tuple), (
+                "Unexpected value: %r (for attribute %s)" % (
+                    value, attr))
             handler, pos = value
             if pos == 'last':
                 text = '%s:%s' % (handler, pos)
             else:
                 text = handler
         else:
-            text = value[0]
+            text = value
             if text == 'warn':
                 return None
         return '%s="%s"' % (attr, html_quote(text))
@@ -214,18 +222,25 @@ class AbstractAction(object):
             parts.append('href="%s"' % html_quote(self.content_href))
         if self.move_supported and not getattr(self, 'move', False):
             parts.append('move="1"')
-        for attr in 'nocontent', 'manycontent':
-            value = getattr(self, 'nocontent', ('warn', None))
-            if value != ('warn', None):
-                parts.append(self.format_error(attr, value))
+        v = getattr(self, 'nocontent', 'warn')
+        if v != 'warn':
+            parts.append(self.format_error('nocontent', v))
+        v = getattr(self, 'manycontent', ('warn', None))
+        if v != ('warn', None):
+            parts.append(self.format_error('manycontent', v))
         if getattr(self, 'theme', None):
             parts.append('theme="%s"' % html_quote(self.theme))
-        for attr in 'notheme', 'manytheme':
-            value = getattr(self, 'nocontent', ('warn', None))
-            if value != ('warn', None):
-                parts.append(self.format_error(attr, value))
+        v = getattr(self, 'notheme', 'warn')
+        if v != 'warn':
+            parts.append(self.format_error('notheme', v))
+        v = getattr(self, 'manytheme', ('warn', None))
+        if v != ('warn', None):
+            parts.append(self.format_error('manytheme', v))
         ## FIXME: add source_location
         return ' '.join(parts) + ' />'
+
+    def __str__(self):
+        return self.describe_self()
 
     def describe_content_elements(self, els, children=False):
         """
@@ -421,6 +436,8 @@ class Replace(TransformAction):
         ('attributes', 'attributes'),
         ('tag', 'tag'),
         ]
+
+    name = 'replace'
  
     def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
         describe = log.describe
@@ -536,6 +553,8 @@ class Replace(TransformAction):
 _actions['replace'] = Replace
 
 class Append(TransformAction):
+
+    name = 'append'
 
     # This is set to False in Prepend:
     _append = True
@@ -653,12 +672,15 @@ class Append(TransformAction):
 _actions['append'] = Append
 
 class Prepend(Append):
+    name = 'prepend'
     _append = False
 
 _actions['prepend'] = Prepend
 
 class Drop(AbstractAction):
     
+    name = 'drop'
+
     def __init__(self, source_location, content, theme, if_content=None,
                  nocontent=None, notheme=None):
         self.source_location = source_location
@@ -801,3 +823,4 @@ def remove_content_attribs(doc):
     for p in doc.getiterator():
         if p.get(CONTENT_ATTRIB, None) is not None:
             del p.attrib[CONTENT_ATTRIB]
+

@@ -1,8 +1,10 @@
 from deliverance.pagematch import run_matches, Match
-from deliverance.rules import Rule, remove_content_attribs
+from deliverance.rules import Rule, remove_content_attribs, AbortTheme
 from lxml.html import tostring, document_fromstring
+from lxml.etree import XML
 import re
 import urlparse
+from webob.headerdict import HeaderDict
 
 class RuleSet(object):
 
@@ -17,7 +19,10 @@ class RuleSet(object):
             response_headers = HeaderDict(resp.headerlist + extra_headers)
         else:
             response_headers = resp.headers
-        classes = run_matches(self.matchers, req, response_headers, log)
+        try:
+            classes = run_matches(self.matchers, req, response_headers, log)
+        except AbortTheme:
+            return resp
         if not classes:
             classes = ['default']
         rules = []
@@ -36,8 +41,14 @@ class RuleSet(object):
         assert theme is not None
         theme_doc = self.get_theme(theme, resource_fetcher, log)
         content_doc = self.parse_document(resp.body, req.url)
+        run_standard = True
         for rule in rules:
             rule.apply(content_doc, theme_doc, resource_fetcher, log)
+            if rule.suppress_standard:
+                run_standard = False
+        if run_standard:
+            ## FIXME: should it be possible to put the standard rule in the ruleset?
+            standard_rule.apply(content_doc, theme_doc, resource_fetcher, log)
         remove_content_attribs(theme_doc)
         ## FIXME: handle caching?
         resp.body = tostring(theme_doc)
@@ -100,3 +111,13 @@ def parse_meta_headers(body):
             continue
         headers.append((http_equiv, content))
     return headers
+
+standard_rule = Rule.parse_xml(XML('''\
+<rule>
+  <!-- FIXME: append-or-replace for title? -->
+  <replace content="children:/html/head/title" theme="children:/html/head/title" nocontent="ignore" />
+  <append content="elements:/html/head/link" theme="children:/html/head" nocontent="ignore" />
+  <append content="elements:/html/head/script" theme="children:/html/head" nocontent="ignore" />
+  <append content="elements:/html/head/style" theme="children:/html/head" nocontent="ignore" />
+  <!-- FIXME: Any handling for overlapping/identical elements? -->
+</rule>'''), 'deliverance.ruleset.standard_rule')

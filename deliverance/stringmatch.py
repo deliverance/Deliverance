@@ -228,10 +228,10 @@ class BooleanMatcher(Matcher):
             value = asbool(s)
         except ValueError:
             value = False
-        if not self.boolean:
-            return not value
-        else:
+        if self.boolean:
             return value
+        else:
+            return not value
 
 _add_matcher(BooleanMatcher)
 

@@ -4,6 +4,7 @@ Handles the <match> tag and matching requests and responses against these patter
 
 from deliverance.stringmatch import compile_matcher, compile_header_matcher
 from deliverance.util.converters import asbool, html_quote
+from deliverance.rules import AbortTheme
 
 __all__ = ['MatchSyntaxError', 'Match']
 
@@ -81,7 +82,8 @@ class Match(object):
 
     def __unicode__(self):
         parts = [u'<match']
-        parts.append(u'class="%s"' % html_quote(' '.join(self.classes)))
+        if self.classes:
+            parts.append(u'class="%s"' % html_quote(' '.join(self.classes)))
         for attr, value in [
             ('path', self.path),
             ('domain', self.domain),
@@ -153,6 +155,9 @@ def run_matches(matchers, request, response_headers, log):
     results = []
     for matcher in matchers:
         if matcher(request, response_headers, log):
+            if matcher.abort:
+                log.debug(matcher, '<match> matched request, aborting')
+                raise AbortTheme('<match> matched request, aborting')
             log.debug(matcher, '<match> matched request, adding classes %s',
                       ', '.join(matcher.classes))
             for item in matcher.classes:
