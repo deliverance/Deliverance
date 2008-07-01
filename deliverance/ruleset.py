@@ -9,10 +9,12 @@ from webob.headerdict import HeaderDict
 
 class RuleSet(object):
 
-    def __init__(self, matchers, rules_by_class, default_theme=None):
+    def __init__(self, matchers, rules_by_class, default_theme=None,
+                 source_location=None):
         self.matchers = matchers
         self.rules_by_class = rules_by_class
         self.default_theme = default_theme
+        self.source_location = source_location
 
     def apply_rules(self, req, resp, resource_fetcher, log):
         extra_headers = parse_meta_headers(resp.body)
@@ -67,6 +69,14 @@ class RuleSet(object):
     def parse_document(self, s, url):
         return document_fromstring(s, base_url=url)
 
+    def log_description(self, log=None):
+        if log is None:
+            name = 'ruleset'
+        else:
+            name = '<a href="%s" target="_blank">ruleset</a>' % log.link_to(self.source_location, source=True)
+        desc = '&lt;%s&gt;' % name
+        return desc
+
     @classmethod
     def parse_xml(cls, doc, source_location):
         assert doc.tag == 'ruleset'
@@ -94,7 +104,8 @@ class RuleSet(object):
                 rules_by_class.setdefault(class_name, []).append(rule)
         if default_theme:
             default_theme = urlparse.urljoin(doc.base, default_theme)
-        return cls(matchers, rules_by_class, default_theme=default_theme)
+        return cls(matchers, rules_by_class, default_theme=default_theme,
+                   source_location=source_location)
 
 _meta_tag_re = re.compile(r'<meta\s+(.*?)>', re.I | re.S)
 _http_equiv_re = re.compile(r'http-equiv=(?:"([^"]*)"|([^\s>]*))', re.I|re.S)
