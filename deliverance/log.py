@@ -18,23 +18,12 @@ class SavingLogger(object):
     """
     Logger that saves all its messages locally.
     """
-    def __init__(self, request, middleware, description=None):
+    def __init__(self, request, middleware):
         self.messages = []
-        if description is None:
-            description = 'deliv_log' in request.GET
-        if description:
-            self.descriptions = []
-            self.describe = self.add_description
-        else:
-            self.descriptions = None
-            self.describe = None
         self.middleware = middleware
         self.request = request
         # This is writable:
         self.theme_url = None
-
-    def add_description(self, msg):
-        self.descriptions.append(msg)
 
     def message(self, level, el, msg, *args, **kw):
         if args:
@@ -65,18 +54,6 @@ class SavingLogger(object):
 
     log_template = HTMLTemplate('''\
     <h1 style="border-top: 3px dotted #f00">Deliverance Information</h1>
-
-    {{if log.descriptions:}}
-      {{div}}
-        {{h2}}What happened?</h2>
-        {{div_inner}}
-        <ol>
-        {{for desc in log.descriptions}}
-          <li>{{desc}}</li>
-        {{endfor}}
-        </ol>
-      </div></div>
-    {{endif}}
 
     {{if log.messages}}
       {{div}}
@@ -140,13 +117,9 @@ class SavingLogger(object):
 
 class PrintingLogger(SavingLogger):
 
-    def __init__(self, request, middleware, description=True, print_level=logging.DEBUG):
-        super(PrintingLogger, self).__init__(request, middleware, description=description)
+    def __init__(self, request, middleware, print_level=logging.DEBUG):
+        super(PrintingLogger, self).__init__(request, middleware)
         self.print_level = print_level
-
-    def add_description(self, msg):
-        print 'description:', msg
-        super(PrintingLogger, self).add_description(msg)
 
     def message(self, level, el, msg, *args, **kw):
         msg = super(PrintingLogger, self).message(level, el, msg, *args, **kw)

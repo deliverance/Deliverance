@@ -95,7 +95,7 @@ Now we'll select from some content:
     ...     rule = parse_action(rule, None)
     ...     theme_copy = copy.deepcopy(theme)
     ...     theme_copy.make_links_absolute()
-    ...     logger = SavingLogger(request=None)
+    ...     logger = SavingLogger(request=None, middleware=None)
     ...     content_copy = copy.deepcopy(content)
     ...     rule.apply(content_copy, theme_copy, None, logger)
     ...     remove_content_attribs(theme_copy)

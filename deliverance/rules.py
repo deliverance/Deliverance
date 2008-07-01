@@ -186,9 +186,6 @@ class AbstractAction(object):
         if ((not matched and not self.if_content.inverted)
             or (matched and self.if_content.inverted)):
             log.info(self, 'skipping rule because if-content="%s" does not match', self.if_content)
-            if log.describe:
-                log.describe('skipping rule %s because if-content="%s" does not match anything'
-                             % (self, self.if_content))
             return False
         return True
 
@@ -362,7 +359,6 @@ class TransformAction(AbstractAction):
         """
         Applies this action to the theme_doc.
         """
-        describe = log.describe
         if self.content_href:
             ## FIXME: check response type
             content_doc = resource_fetcher(self.content_href).body
@@ -378,10 +374,6 @@ class TransformAction(AbstractAction):
             else:
                 log_meth = log.warn
             log_meth(self, 'skipping rule because no content matches rule content="%s"', self.content)
-            if describe:
-                describe(
-                    'skipping rule %s because content="%s" does not match anything'
-                    % (self.describe_self(), html_quote(self.content)))
             return
         theme_type, theme_els, theme_attributes = self.select_elements(self.theme, theme_doc, theme=True)
         attributes = self.join_attributes(content_attributes, theme_attributes)
@@ -393,9 +385,6 @@ class TransformAction(AbstractAction):
             else:
                 log_meth = log.warn
             log_meth(self, 'skipping rule because no theme element matches rule theme="%s"', self.theme)
-            if describe:
-                describe('skipping rule %s because theme="%s" does not match anything'
-                         % (self.describe_self(), html_quote(self.content)))
             return
         if len(theme_els) > 1:
             if self.manytheme[0] == 'warn':
@@ -448,7 +437,6 @@ class Replace(TransformAction):
     name = 'replace'
  
     def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
-        describe = log.describe
         if theme_type == 'children':
             existing_children = len(theme_el) or theme_el.text
             theme_el[:] = []
@@ -463,27 +451,10 @@ class Replace(TransformAction):
                     for el in content_els:
                         el.tail = None
                 theme_el.extend(content_els)
-                if describe:
-                    if existing_children:
-                        extra = ' and removed its children'
-                    else:
-                        extra = ''
-                    describe(
-                        "Rule %s moved elements %s into element %s%s"
-                        % (self.describe_self(), self.describe_content_elements(content_els), self.describe_theme_element(theme_el), extra))
             elif content_type == 'children':
                 text, els = self.prepare_content_children(content_els)
                 add_text(theme_el, text)
                 theme_el.extend(els)
-                if describe:
-                    if existing_children:
-                        extra = ' and removed its children'
-                    else:
-                        extra = ''
-                    describe(
-                        "Rule %s moved the children of elements %s into element %s%s"
-                        % (self.describe_self(), self.describe_content_elements(content_els, children=True),
-                           self.describe_theme_element(theme_el), extra))
                 if self.move:
                     # Since we moved just the children of the content elements, we still need to remove the parent
                     # elements.
@@ -577,7 +548,6 @@ class Append(TransformAction):
         ]
 
     def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
-        describe = log.describe
         if theme_type == 'children':
             if content_type == 'elements':
                 if self.move:
@@ -702,7 +672,6 @@ class Drop(AbstractAction):
         self.notheme = self.convert_error('notheme', notheme)
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
-        describe = log.describe
         if not self.if_content_matches(content_doc, log):
             return
         for doc, selector, error, name in [(theme_doc, self.theme, self.notheme, 'theme'), (content_doc, self.content, self.nocontent, 'content')]:

@@ -92,7 +92,7 @@ Now to deliverate:
     >>> import logging
     >>> deliv = DeliveranceMiddleware(app, SubrequestRuleGetter('/rules.xml'),
     ...                               PrintingLogger,
-    ...                               log_factory_kw=dict(print_level=logging.WARNING, description=False))
+    ...                               log_factory_kw=dict(print_level=logging.WARNING))
 
 Now lets look at some plain content and its deliverated equivalent
 

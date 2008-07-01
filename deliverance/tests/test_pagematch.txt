@@ -11,7 +11,7 @@ This tests pagematch, which tests whether a request/response matches a <match> t
     >>> def match(matcher, request, response_headers, show_log=True):
     ...     if isinstance(matcher, basestring):
     ...         matcher = make(matcher)
-    ...     log = SavingLogger(None)
+    ...     log = SavingLogger(None, None)
     ...     if isinstance(response_headers, list):
     ...         response_headers = HeaderDict(response_headers)
     ...     result = matcher(request, response_headers, log)
