@@ -1,0 +1,7 @@
+<ruleset>
+ <theme href="/theme.html" />
+ <rule>
+  <replace content="children:body" theme="children:#content" nocontent="abort" />
+  <replace content="children:title" theme="children:#header" nocontent="ignore" />
+ </rule>
+</ruleset>

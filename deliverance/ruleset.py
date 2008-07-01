@@ -1,4 +1,4 @@
-from deliverance.exceptions import AbortTheme
+from deliverance.exceptions import AbortTheme, DeliveranceSyntaxError
 from deliverance.pagematch import run_matches, Match
 from deliverance.rules import Rule, remove_content_attribs
 from lxml.html import tostring, document_fromstring
@@ -55,10 +55,12 @@ class RuleSet(object):
         resp.body = tostring(theme_doc)
         return resp
 
-    def get_theme(self, url, resource_getter, log):
+    def get_theme(self, url, resource_fetcher, log):
         log.info(self, 'Fetching theme from %s' % url)
+        log.theme_url = url
         ## FIXME: should do caching
-        doc = self.parse_document(resource_getter(url), url)
+        ## FIXME: check response status
+        doc = self.parse_document(resource_fetcher(url).body, url)
         doc.make_links_absolute()
         return doc
 
@@ -82,8 +84,10 @@ class RuleSet(object):
                 ## FIXME: Add parse error
                 default_theme = el.get('href')
             else:
-                ## FIXME: better error
-                assert 0
+                ## FIXME: source location?
+                raise DeliveranceSyntaxError(
+                    "Invalid tag %s (unknown tag name %r)" % (tostring(el).split('>', 1)[0]+'>', el.tag),
+                    element=el)
         rules_by_class = {}
         for rule in rules:
             for class_name in rule.classes:
@@ -116,6 +120,7 @@ def parse_meta_headers(body):
 standard_rule = Rule.parse_xml(XML('''\
 <rule>
   <!-- FIXME: append-or-replace for title? -->
+  <!-- FIXME: maybe something like notheme="append:/html/head" -->
   <replace content="children:/html/head/title" theme="children:/html/head/title" nocontent="ignore" />
   <append content="elements:/html/head/link" theme="children:/html/head" nocontent="ignore" />
   <append content="elements:/html/head/script" theme="children:/html/head" nocontent="ignore" />

@@ -30,6 +30,10 @@ transformation.
       tests_require=['nose'],
       install_requires=[
         "lxml",
+        "WebOb",
+        "WSGIProxy",
+        "Tempita",
+        "Pygments",
       ],
       entry_points="""
       """,

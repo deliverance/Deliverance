@@ -7,6 +7,7 @@ from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError
 from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
 from lxml import etree
+from tempita import html
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
@@ -197,32 +198,7 @@ class AbstractAction(object):
     move_supported = True
 
     def describe_self(self):
-        """
-        A text description of this rule, for use in log messages and errors
-        """
-        parts = ['<%s' % self.name]
-        if getattr(self, 'content', None):
-            parts.append('content="%s"' % html_quote(self.content))
-        if getattr(self, 'content_href', None):
-            parts.append('href="%s"' % html_quote(self.content_href))
-        if self.move_supported and not getattr(self, 'move', False):
-            parts.append('move="1"')
-        v = getattr(self, 'nocontent', 'warn')
-        if v != 'warn':
-            parts.append(self.format_error('nocontent', v))
-        v = getattr(self, 'manycontent', ('warn', None))
-        if v != ('warn', None):
-            parts.append(self.format_error('manycontent', v))
-        if getattr(self, 'theme', None):
-            parts.append('theme="%s"' % html_quote(self.theme))
-        v = getattr(self, 'notheme', 'warn')
-        if v != 'warn':
-            parts.append(self.format_error('notheme', v))
-        v = getattr(self, 'manytheme', ('warn', None))
-        if v != ('warn', None):
-            parts.append(self.format_error('manytheme', v))
-        ## FIXME: add source_location
-        return ' '.join(parts) + ' />'
+        return self.log_description(log=None)
 
     def __str__(self):
         return self.describe_self()
@@ -295,6 +271,52 @@ class AbstractAction(object):
                 elements.remove(el)
         return type, elements, attributes
 
+    def log_description(self, log=None):
+        """
+        A text description of this rule, for use in log messages and errors
+        """
+        def linked_item(url, body, source=None, line=None, selector=None):
+            body = html_quote(body)
+            if log is None or url is None:
+                return body
+            link = log.link_to(url, source=source, line=line, selector=selector)
+            return '<a href="%s">%s</a>' % (html_quote(link), body)
+        if log:
+            request_url = log.request.url
+        else:
+            request_url = None
+        parts = ['&lt;%s' % linked_item(self.source_location, self.name)]
+        if getattr(self, 'content', None):
+            body = 'content="%s"' % html_quote(self.content)
+            parts.append(linked_item(request_url, body, selector=self.content))
+        if getattr(self, 'content_href', None):
+            dest = self.content_href
+            if request_url:
+                dest = urlparse.urljoin(request_url, dest)
+            body = 'href="%s"' % html_quote(self.content_href)
+            parts.append(linked_item(dest, body, source=True))
+        if self.move_supported and not getattr(self, 'move', False):
+            parts.append('move="1"')
+        v = getattr(self, 'nocontent', 'warn')
+        if v != 'warn':
+            parts.append(self.format_error('nocontent', v))
+        v = getattr(self, 'manycontent', ('warn', None))
+        if v != ('warn', None):
+            parts.append(self.format_error('manycontent', v))
+        if getattr(self, 'theme', None):
+            body = 'theme="%s"' % html_quote(self.theme)
+            theme_url = getattr(log, 'theme_url', None)
+            parts.append(linked_item(theme_url, body, selector=self.theme))
+        v = getattr(self, 'notheme', 'warn')
+        if v != 'warn':
+            parts.append(self.format_error('notheme', v))
+        v = getattr(self, 'manytheme', ('warn', None))
+        if v != ('warn', None):
+            parts.append(self.format_error('manytheme', v))
+        ## FIXME: add source_location
+        return html(' '.join(parts) + ' /&gt;')
+        
+
 class TransformAction(AbstractAction):
     # Abstract class for the rules that move from the content to the theme (replace, append, prepend)
 
@@ -342,7 +364,8 @@ class TransformAction(AbstractAction):
         """
         describe = log.describe
         if self.content_href:
-            content_doc = resource_fetcher(self.content_href)
+            ## FIXME: check response type
+            content_doc = resource_fetcher(self.content_href).body
         if not self.if_content_matches(content_doc, log):
             return
         content_type, content_els, content_attributes = self.select_elements(self.content, content_doc, theme=False)

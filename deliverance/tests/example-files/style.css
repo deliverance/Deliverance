@@ -1,0 +1,9 @@
+body {
+  font-family: sans-serif;
+}
+
+#footer {
+  border-top: 1px solid #999;
+  font-size: 70%;
+  margin-top: 1em;
+}
