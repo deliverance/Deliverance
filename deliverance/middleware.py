@@ -26,6 +26,8 @@ class DeliveranceMiddleware(object):
     def __call__(self, environ, start_response):
         ## FIXME: copy_get?:
         req = Request(environ)
+        if 'deliv_notheme' in req.GET:
+            return self.app(environ, start_response)
         req.environ['deliverance.base_url'] = req.application_url
         orig_req = Request(environ.copy())
         log = self.log_factory(req, self, **self.log_factory_kw)

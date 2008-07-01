@@ -432,8 +432,6 @@ class TransformAction(AbstractAction):
         else:
             theme_el = theme_els[0]
         if not self.move and theme_type in ('children', 'elements'):
-            ## FIXME: is this message necessary?
-            log.debug(self, 'content elements are being copied into theme (not moved)')
             content_els = copy.deepcopy(content_els)
         mark_content_els(content_els)
         self.apply_transformation(content_type, content_els, attributes, theme_type, theme_el, log)

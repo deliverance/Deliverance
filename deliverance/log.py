@@ -55,6 +55,12 @@ class SavingLogger(object):
     log_template = HTMLTemplate('''\
     <h1 style="border-top: 3px dotted #f00">Deliverance Information</h1>
 
+    <div>
+      <a href="{{theme_url}}">theme: {{log.theme_url}}</a>
+      | <a href="{{unthemed_url}}">unthemed content</a>
+      | <a href="{{content_source}}">content source</a>
+    </div>
+
     {{if log.messages}}
       {{div}}
       {{h2}}Log</h2>
@@ -86,8 +92,20 @@ class SavingLogger(object):
         )
 
     def format_html_log(self):
+        content_source = self.link_to(self.request.url, source=True)
         return self.log_template.substitute(
-            log=self, middleware=self.middleware, **self.tags)
+            log=self, middleware=self.middleware, 
+            unthemed_url=self._add_notheme(self.request.url),
+            theme_url=self._add_notheme(self.theme_url),
+            content_source=content_source,
+            **self.tags)
+
+    def _add_notheme(self, url):
+        if '?' in url:
+            url += '&'
+        else:
+            url += '?'
+        return url + 'deliv_notheme'
 
     def resolved_messages(self):
         for level, el, msg in self.messages:
