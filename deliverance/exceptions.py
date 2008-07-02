@@ -8,10 +8,11 @@ class DeliveranceError(Exception):
     attached to it.  Elements are the objects (maybe XML, or maybe
     not) that is applicable.
     """
-    def __init__(self, msg=None, request=None, element=None):
+    def __init__(self, msg=None, request=None, element=None, source_location=None):
         Exception.__init__(self, msg)
         self.request = request
         self.element = element
+        self.source_location = source_location
 
 class DeliveranceSyntaxError(DeliveranceError):
     """

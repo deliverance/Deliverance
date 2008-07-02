@@ -24,7 +24,7 @@ class RuleSet(object):
         else:
             response_headers = resp.headers
         try:
-            classes = run_matches(self.matchers, req, response_headers, log)
+            classes = run_matches(self.matchers, req, resp, response_headers, log)
         except AbortTheme:
             return resp
         if 'X-Deliverance-Page-Class' in resp.headers:
@@ -45,13 +45,13 @@ class RuleSet(object):
             theme = self.default_theme
             ## FIXME: error if not theme still
         assert theme is not None
-        theme_href = theme.resolve_href(req, resp)
+        theme_href = theme.resolve_href(req, resp, log)
         theme_doc = self.get_theme(theme_href, resource_fetcher, log)
         content_doc = self.parse_document(resp.body, req.url)
         run_standard = True
         for rule in rules:
             if rule.match is not None:
-                matches = rule.match(req, response_headers, log)
+                matches = rule.match(req, resp, response_headers, log)
                 if not matches:
                     log.debug(rule, "Skipping <rule>")
                     continue

@@ -6,7 +6,7 @@ puts them together
 from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError
 from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
-from deliverance.pagematch import Match
+from deliverance.pagematch import AbstractMatch
 from deliverance.themeref import Theme
 from lxml import etree
 from lxml.html import document_fromstring
@@ -28,9 +28,6 @@ class Rule(object):
         self.match = match
         self.suppress_standard = suppress_standard
         self.source_location = source_location
-
-    match_attrs = set([
-            'path', 'domain', 'request-header', 'response-header', 'environ'])
 
     @classmethod
     def parse_xml(cls, el, source_location):
@@ -54,18 +51,10 @@ class Rule(object):
             action = parse_action(el, source_location)
             actions.append(action)
         match = None
-        for attr in cls.match_attrs:
+        for attr in RuleMatch.match_attrs:
             if el.get(attr):
-                match = Match.parse_xml(el, source_location)
-                if match.abort:
-                    raise DeliveranceSyntaxError(
-                        "You cannot have an abort attribute on <rule> elements",
-                        element=el)
-                if match.last:
-                    ## FIXME: is last a good alternative to suppress-standard?
-                    raise DeliveranceSyntaxError(
-                        "You cannot have a last attribute on <rule> elements",
-                        element=el)
+                match = RuleMatch.parse_xml(self, el, source_location)
+                ## FIXME: would last="1" be a good alternative to suppress-standard?
                 break
         return cls(classes, actions, theme, match, suppress_standard, source_location)
 
@@ -80,6 +69,25 @@ class Rule(object):
         for action in self._actions:
             action.apply(content_doc, theme_doc, resource_fetcher, log)
         return theme_doc
+
+class RuleMatch(AbstractMatch):
+    """
+    Represents match rules in the <rule> element
+    """
+
+    element_name = 'rule'
+
+    @classmethod
+    def parse_xml(cls, rule, el, source_location):
+        inst = cls(**cls.parse_match_xml(el, source_location))
+        inst.rule = rule
+        return rule
+
+    def debug_description(self):
+        return '<rule>'
+
+    def log_context(self):
+        return self.rule
 
 ## A dictionary mapping element names to their rule classes:
 _actions = {}
