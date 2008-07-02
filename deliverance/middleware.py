@@ -70,7 +70,7 @@ class DeliveranceMiddleware(object):
         else:
             ## FIXME: pluggable subrequest handler?
             subreq = Request.blank(url)
-            resp = subreq.get_response(proxy_exact_request)
+            subresp = subreq.get_response(proxy_exact_request)
             log.debug(self, 'External request for %s: %s content-type: %s',
                       url, subresp.status, subresp.content_type)
             return subresp

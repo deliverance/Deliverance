@@ -56,9 +56,9 @@ class SavingLogger(object):
     <h1 style="border-top: 3px dotted #f00">Deliverance Information</h1>
 
     <div>
-      <a href="{{theme_url}}">theme: {{log.theme_url}}</a>
-      | <a href="{{unthemed_url}}">unthemed content</a>
-      | <a href="{{content_source}}">content source</a>
+      <a href="{{theme_url}}" target="_blank">theme: {{log.theme_url}}</a>
+      | <a href="{{unthemed_url}}" target="_blank">unthemed content</a>
+      | <a href="{{content_source}}" target="_blank">content source</a>
     </div>
 
     {{if log.messages}}

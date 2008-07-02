@@ -33,7 +33,8 @@ class Match(object):
         """
         Creates an instance of Match from the given parsed XML element.
         """
-        assert el.tag == 'match'
+        assert (el.tag == 'match'
+                or el.tag == 'rule')
         classes = el.get('class', '').split()
         abort = asbool(el.get('abort'))
         if not abort and not classes:

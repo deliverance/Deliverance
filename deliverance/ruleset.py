@@ -1,6 +1,7 @@
 from deliverance.exceptions import AbortTheme, DeliveranceSyntaxError
 from deliverance.pagematch import run_matches, Match
 from deliverance.rules import Rule, remove_content_attribs
+from deliverance.themeref import Theme
 from lxml.html import tostring, document_fromstring
 from lxml.etree import XML
 import re
@@ -26,6 +27,8 @@ class RuleSet(object):
             classes = run_matches(self.matchers, req, response_headers, log)
         except AbortTheme:
             return resp
+        if 'X-Deliverance-Page-Class' in resp.headers:
+            classes.extend(resp.headers['X-Deliverance-Page-Class'].strip().split())
         if not classes:
             classes = ['default']
         rules = []
@@ -42,10 +45,16 @@ class RuleSet(object):
             theme = self.default_theme
             ## FIXME: error if not theme still
         assert theme is not None
-        theme_doc = self.get_theme(theme, resource_fetcher, log)
+        theme_href = theme.resolve_href(req, resp)
+        theme_doc = self.get_theme(theme_href, resource_fetcher, log)
         content_doc = self.parse_document(resp.body, req.url)
         run_standard = True
         for rule in rules:
+            if rule.match is not None:
+                matches = rule.match(req, response_headers, log)
+                if not matches:
+                    log.debug(rule, "Skipping <rule>")
+                    continue
             rule.apply(content_doc, theme_doc, resource_fetcher, log)
             if rule.suppress_standard:
                 run_standard = False
@@ -92,7 +101,7 @@ class RuleSet(object):
                 rules.append(rule)
             elif el.tag == 'theme':
                 ## FIXME: Add parse error
-                default_theme = el.get('href')
+                default_theme = Theme.parse_xml(el, source_location)
             else:
                 ## FIXME: source location?
                 raise DeliveranceSyntaxError(
@@ -102,8 +111,8 @@ class RuleSet(object):
         for rule in rules:
             for class_name in rule.classes:
                 rules_by_class.setdefault(class_name, []).append(rule)
-        if default_theme:
-            default_theme = urlparse.urljoin(doc.base, default_theme)
+        if default_theme and default_theme.href:
+            default_theme.href = urlparse.urljoin(doc.base, default_theme.href)
         return cls(matchers, rules_by_class, default_theme=default_theme,
                    source_location=source_location)
 

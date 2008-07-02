@@ -6,10 +6,13 @@ puts them together
 from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError
 from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
+from deliverance.pagematch import Match
+from deliverance.themeref import Theme
 from lxml import etree
 from lxml.html import document_fromstring
 from tempita import html
 import copy
+import urlparse
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
@@ -18,12 +21,16 @@ class Rule(object):
     This represents everything in a <rule></rule> section.
     """
 
-    def __init__(self, classes, actions, theme, suppress_standard, source_location):
+    def __init__(self, classes, actions, theme, match, suppress_standard, source_location):
         self.classes = classes
         self._actions = actions
         self.theme = theme
+        self.match = match
         self.suppress_standard = suppress_standard
         self.source_location = source_location
+
+    match_attrs = set([
+            'path', 'domain', 'request-header', 'response-header', 'environ'])
 
     @classmethod
     def parse_xml(cls, el, source_location):
@@ -40,14 +47,27 @@ class Rule(object):
         for el in el.iterchildren():
             if el.tag == 'theme':
                 ## FIXME: error if more than one theme
-                ## FIXME: error if no href
-                theme = el.get('href')
+                theme = Theme.parse_xml(el, source_location)
                 continue
             if el.tag is etree.Comment:
                 continue
             action = parse_action(el, source_location)
             actions.append(action)
-        return cls(classes, actions, theme, suppress_standard, source_location)
+        match = None
+        for attr in cls.match_attrs:
+            if el.get(attr):
+                match = Match.parse_xml(el, source_location)
+                if match.abort:
+                    raise DeliveranceSyntaxError(
+                        "You cannot have an abort attribute on <rule> elements",
+                        element=el)
+                if match.last:
+                    ## FIXME: is last a good alternative to suppress-standard?
+                    raise DeliveranceSyntaxError(
+                        "You cannot have a last attribute on <rule> elements",
+                        element=el)
+                break
+        return cls(classes, actions, theme, match, suppress_standard, source_location)
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
         """
@@ -383,11 +403,15 @@ class TransformAction(AbstractAction):
         Applies this action to the theme_doc.
         """
         if self.content_href:
-            ## FIXME: check response type
-            ## FIXME: Join content_href with request url?
-            content_resp = resource_fetcher(self.content_href)
+            ## FIXME: Is this a weird way to resolve the href?
+            href = urlparse.urljoin(log.request.url, self.content_href)
+            content_resp = resource_fetcher(href)
             log.debug(self, 'Fetching resource from href="%s": %s',
-                      self.content_href, content_resp.status)
+                      href, content_resp.status)
+            if content_resp.status_int != 200:
+                log.warn(self, 'Resource %s returned the status %s; skipping rule',
+                         href, content_resp.status)
+                return
             content_doc = document_fromstring(content_resp.body, base_url=self.content_href)
         if not self.if_content_matches(content_doc, log):
             return
