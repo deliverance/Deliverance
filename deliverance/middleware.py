@@ -10,7 +10,8 @@ from pygments.lexers import XmlLexer, HtmlLexer, guess_lexer_for_filename
 from pygments.formatters import HtmlFormatter
 from tempita import HTMLTemplate, html_quote, html
 from lxml.etree import _Element
-from lxml.html import fromstring, document_fromstring, tostring
+from lxml.html import fromstring, document_fromstring, tostring, Element
+import posixpath
 
 class DeliveranceMiddleware(object):
 
@@ -75,7 +76,6 @@ class DeliveranceMiddleware(object):
                       url, subresp.status, subresp.content_type)
             return subresp
 
-
     def link_to(self, req, url, source=False, line=None, selector=None):
         base = req.environ['deliverance.base_url']
         base += '/.deliverance/view'
@@ -126,6 +126,9 @@ class DeliveranceMiddleware(object):
         else:
             from deliverance.selector import Selector
             doc = document_fromstring(subresp.body)
+            el = Element('base')
+            el.set('href', posixpath.dirname(url) + '/')
+            doc.head.insert(0, el)
             selector = Selector.parse(selector)
             type, elements, attributes = selector(doc)
             if not elements:
@@ -167,6 +170,7 @@ class DeliveranceMiddleware(object):
             def format_tag(tag):
                 return highlight(tostring(tag).split('>')[0]+'>')
             text = template.substitute(
+                base_url=req.url,
                 els_in_head=els_in_head, doc=doc,
                 elements=all_elements, selector=selector, 
                 format_tag=format_tag, highlight=highlight)
@@ -194,7 +198,7 @@ class DeliveranceMiddleware(object):
     {{if len(elements) == 1}}
       One element matched the selector <code>{{selector}}</code>;
       {{if elements[0][0]}}
-        <a href="#{{elements[0][0]}}">jump to element</a>
+        <a href="{{base_url}}#{{elements[0][0]}}">jump to element</a>
       {{else}}
         element is in head: {{highlight(elements[0][1])}}
       {{endif}}
@@ -203,7 +207,7 @@ class DeliveranceMiddleware(object):
       <ol>
       {{for anchor, el in elements}}
         {{if anchor}}
-          <li><a href="#{{anchor}}"><code>{{format_tag(el)}}</code></a></li>
+          <li><a href="{{base_url}}#{{anchor}}"><code>{{format_tag(el)}}</code></a></li>
         {{else}}
           <li>{{format_tag(el)}}</li>
         {{endif}}
