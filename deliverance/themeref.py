@@ -54,8 +54,6 @@ class Theme(object):
                     self, 'Rewrote theme href="%s" to "%s"' % (href, new_href))
                 href = new_href
         ## FIXME: is this join a good idea?
-        print 'resolved value is %r (from %r) for request %r (base %r)' % (
-            href, self.href, req.url, self.source_location)
         if href:
             href = urlparse.urljoin(req.url, href)
         return href
