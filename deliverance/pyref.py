@@ -100,6 +100,7 @@ class PyReference(object):
         """
         Returns the instantiated module, or a module created from the filename
         """
+        ## FIXME: this should reload the module as necessary.
         if self.module_name:
             if module_name not in self._modules:
                 new_mod = simple_import(self.module_name)

@@ -1,10 +1,12 @@
 Rule Spec
 =========
 
+**Note:** This document was written before the code, and needs to be corrected (it's close to accurate, though).
+
 Selectors
 ---------
 
-Rules use selectors.  Selectors look like:
+Rules use selectors.  Selectors look like::
 
   type:selector1 || selector2 || ...
 
@@ -44,13 +46,18 @@ For replace, append, and prepend these attributes are required:
 
 These are optional:
 
-  href: a place to find the "content" for this rule.  You can use this to include external content.
-  if-content: a selector; if the selector matches anything then the rule will be run.  If not the rule will be skipped.  No types (elements:, etc) are allowed for this, but you may prefix "not " before the selector.  You may also use "&&", which binds looser than ||.
-  notheme: one of "ignore", "abort", "warn", where the default is "warn".  This is the error action if the theme selector doesn't match anything.
-  nocontent: like notheme.
-  manytheme: if the theme selector matches more than one element, then this is used to decide the action.  The default is "warn:first".  If you use "warn:", then a warning will given.  You can also use "abort" and "ignore", and "first" or "last".  E.g., manytheme="ignore:last", then the last element selected will be used, and no warning given.  If you give just "first" or "last", then ignore: is presumed.  "abort" by itself aborts the theming.
-  manycontent: like manytheme, but for those (few) instances when the content selector must match a single element.
-  move: contains "0" or "1" (default "1").  If "1", then the elements are removed from the content.  You can use this to take pieces out of the content; otherwise if an inner element and outer element from the content are both copied in, then the inner element will show up twice.
+  ``href``: a place to find the "content" for this rule.  You can use this to include external content.
+
+  ``if-content``: a selector; if the selector matches anything then the rule will be run.  If not the rule will be skipped.  No types (elements:, etc) are allowed for this, but you may prefix "not " before the selector.  You may also use "&&", which binds looser than ||.
+
+  ``notheme``: one of "ignore", "abort", "warn", where the default is "warn".  This is the error action if the theme selector doesn't match anything.
+
+  ``nocontent``: like notheme.
+
+  ``manytheme``: if the theme selector matches more than one element, then this is used to decide the action.  The default is "warn:first".  If you use "warn:", then a warning will given.  You can also use "abort" and "ignore", and "first" or "last".  E.g., manytheme="ignore:last", then the last element selected will be used, and no warning given.  If you give just "first" or "last", then ignore: is presumed.  "abort" by itself aborts the theming.
+  ``manycontent``: like manytheme, but for those (few) instances when the content selector must match a single element.
+
+  ``move``: contains "0" or "1" (default "1").  If "1", then the elements are removed from the content.  You can use this to take pieces out of the content; otherwise if an inner element and outer element from the content are both copied in, then the inner element will show up twice.
 
 For drop:
 
@@ -58,7 +65,7 @@ For drop:
 
 Optional attributes for drop:
 
-  if-content, notheme, nocontent
+  ``if-content``, ``notheme``, ``nocontent``
 
 Behavior: replace
 ~~~~~~~~~~~~~~~~~
@@ -67,31 +74,31 @@ Replace replaces the theme with the content.  The theme selector should identify
 
 theme=children, content=elements:
 
-The theme element is cleared of any content and text, and replaced with the content elements.
+    The theme element is cleared of any content and text, and replaced with the content elements.
 
 theme=elements, content=elements:
 
-This element is removed, and the content element(s) are put in the same location.
+    This element is removed, and the content element(s) are put in the same location.
 
 theme=elements, content=children:
 
-The theme element is removed, and replaced with all the children of the content elements (including text).
+    The theme element is removed, and replaced with all the children of the content elements (including text).
 
 theme=children, content=children:
 
-The theme element is cleared and replaced with the children of the content elements.
+    The theme element is cleared and replaced with the children of the content elements.
 
 theme=attributes, content=attributes:
 
-The theme element has all its attributes cleared, and replaced with the attributes of the content.
+    The theme element has all its attributes cleared, and replaced with the attributes of the content.
 
-If the theme is attributes, the content must also be attributes (and vice versa).
+    If the theme is attributes, the content must also be attributes (and vice versa).
 
 theme=tag, content=tag:
 
-Both the theme and content selector must match a single element.  The theme tag is removed and replaced with the content tag, but the theme's children are moved into the content tag.
+    Both the theme and content selector must match a single element.  The theme tag is removed and replaced with the content tag, but the theme's children are moved into the content tag.
 
-Both theme and content must be tag.
+    Both theme and content must be tag.
 
 
 Behavior: append/prepend
@@ -101,27 +108,27 @@ Both these rules work very similarly.
 
 theme=children, content=elements:
 
-The theme (a single element) has the content elements appended after all the theme's children.  prepend puts the children of the contents at the start of the theme element, in their original order.  For prepend any leading text in the theme goes after the children elements.
+    The theme (a single element) has the content elements appended after all the theme's children.  prepend puts the children of the contents at the start of the theme element, in their original order.  For prepend any leading text in the theme goes after the children elements.
 
 theme=elements, content=elements:
 
-The theme (a single element) has all the elements from the content put immediate after the theme element.  prepend puts the content elements immediately before the element, but the content elements themselves retain their original order.
+    The theme (a single element) has all the elements from the content put immediate after the theme element.  prepend puts the content elements immediately before the element, but the content elements themselves retain their original order.
 
 theme=elements, content=children:
 
-The theme element has the children of the content elements appended after it.
+    The theme element has the children of the content elements appended after it.
 
 theme=children, content=children:
 
-The theme element has the children of the content appended or prepended before its children.
+    The theme element has the children of the content appended or prepended before its children.
 
 theme=attributes, content=attributes:
 
-The content attributes are added to the theme attributes.  When attributes overlap, the content attribute is dropped when using append.  With prepend, the theme attribute is dropped.  The class attribute is a special case: these are combined (space-separated).
+    The content attributes are added to the theme attributes.  When attributes overlap, the content attribute is dropped when using append.  With prepend, the theme attribute is dropped.  The class attribute is a special case: these are combined (space-separated).
 
 theme=tag, or content=tag:
 
-Disallowed.
+    Disallowed.
 
 Behavior: drop
 ~~~~~~~~~~~~~~
@@ -130,19 +137,19 @@ You may provide either a theme selector, to drop theme elements, or a content se
 
 elements:
 
-Drop the elements.  (Doesn't include tail text)
+    Drop the elements.  (Doesn't include tail text)
 
 children:
 
-Clear the elements of their children (including contained text).
+    Clear the elements of their children (including contained text).
 
 attributes:
 
-Clear the elements' attributes.
+    Clear the elements' attributes.
 
 tag:
 
-Remove the element tags, but keep their children in place.
+    Remove the element tags, but keep their children in place.
 
 
 
@@ -153,6 +160,8 @@ Here are some examples, explained in English then the rule(s) given:
 
 You want to add the class of the content's body element to the class of the resulting page:
 
+.. code-block:: xml
+
   <append content="attribute(class):body"
           theme="attribute:body" />
 
@@ -162,6 +171,8 @@ Note that the "class" in "attribute(class):" is only required in one of the sele
 
 You want to take content from one of several places (different products put it in different locations).  In all cases it is merged into a single theme element:
 
+.. code-block:: xml
+
   <replace content="#portal-content || children:body"
            theme="children:#content" nocontent="abort" />
 
@@ -170,6 +181,8 @@ Here we want children in one case, but not the other case.  With || it should be
 
 
 You want to copy over content CSS, except for one annoying file:
+
+.. code-block:: xml
 
   <drop content="link[href$='/bad-style.css']" nocontent="ignore" />
   <append theme="children:head" content="link[rel='stylesheet']" />
@@ -182,16 +195,22 @@ FIXME: In this case the behavior when nothing is matched is obvious (just don't 
 
 You want to copy over the title from the content, but if the content has no title then use the title from the theme:
 
+.. code-block:: xml
+
   <drop theme="title" if-content="title" />
   <append theme="children:head" content="title" nocontent="ignore" />
 
-You want to copy over the title from the content.  The theme looks like "<title> | Site Name</title>", and you want to keep "| Site Name" as the tail of the title:
+You want to copy over the title from the content.  The theme looks like ``<title> | Site Name</title>``, and you want to keep ``| Site Name`` as the tail of the title:
+
+.. code-block:: xml
 
   <prepend theme="children:title" content="children:title" />
 
 
 
 You want to copy the login button from the content to a known location of the theme.  It might be a login, or it might be the username.
+
+.. code-block:: xml
 
   <replace theme="#place-for-login"
    content="form[action*='login'] || div.user-info"
@@ -200,6 +219,8 @@ You want to copy the login button from the content to a known location of the th
 
 
 The content has a class that uses a CSS style that breaks out of the theme.  You want to just get rid of that class:
+
+.. code-block:: xml
 
   <drop content="attributes(class):.stupid-class"
         nocontent="ignore" />

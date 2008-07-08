@@ -205,7 +205,9 @@ class Proxy(object):
         proxy_req.headers['X-Forwarded-Scheme'] = request.scheme
         proxy_req.headers['X-Forwarded-Server'] = request.host
         ## FIXME: something with path? proxy_req.headers['X-Forwarded-Path']
+        ## (now we are only doing it with strip_script_name)
         if self.strip_script_name:
+            proxy_req.headers['X-Forwarded-Path'] = proxy_req.script_name
             proxy_req.script_name = ''
         try:
             resp = proxy_req.get_response(proxy_exact_request)
