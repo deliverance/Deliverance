@@ -18,13 +18,18 @@ class SecurityContext(object):
     This uses the `developer auth spec
     <http://wsgi.org/wsgi/Specifications/developer_auth>`_ for
     guessing when a value is None.
+
+    Also if you use ``force_dev_auth=True`` then DevAuth login will
+    not be required, and at all times you will be logged in as a dev
+    user.
     """
 
     def __init__(self, execute_pyref=False, display_logging=None,
-                 display_local_files=None):
+                 display_local_files=None, force_dev_auth=False):
         self._execute_pyref = execute_pyref
         self._display_logging = display_logging
         self._display_local_files = display_local_files
+        self._force_dev_auth = force_dev_auth
     
     @classmethod
     def install(cls, environ, **kw):
@@ -52,6 +57,8 @@ class SecurityContext(object):
         if hasattr(environ, 'environ'):
             # Actually a request
             environ = environ.environ
+        if self._force_dev_auth:
+            return True
         return bool(environ.get('x-wsgiorg.developer_user'))
 
     @classmethod
