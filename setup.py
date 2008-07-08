@@ -36,6 +36,7 @@ transformation.
         "Pygments",
         "WebError",
         "DevAuth",
+        "Paste",
         ],
       dependency_links=[
         "https://svn.openplans.org/svn/DevAuth/trunk#egg=DevAuth-dev",
