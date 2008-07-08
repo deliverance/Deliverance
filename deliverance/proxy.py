@@ -436,7 +436,7 @@ class ProxySettings(object):
     """
     def __init__(self, server_host, execute_pyref=True, display_local_files=True,
                  dev_allow_ips=None, dev_deny_ips=None, dev_htpasswd=None, dev_users=None,
-                 dev_expiration=60,
+                 dev_expiration=0,
                  source_location=None):
         self.server_host = server_host
         self.execute_pyref = execute_pyref
@@ -467,7 +467,7 @@ class ProxySettings(object):
         dev_allow_ips = []
         dev_deny_ips = []
         dev_htpasswd = None
-        dev_expiration = 60
+        dev_expiration = 0
         dev_users = {}
         for child in el:
             if child.tag is Comment:
