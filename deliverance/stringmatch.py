@@ -72,6 +72,12 @@ class Matcher(object):
 
     name = None
 
+    def strip_prefix(self):
+        """
+        String prefix to strip from a matched string
+        """
+        return None
+
     def __init__(self, pattern):
         self.pattern = pattern
 
@@ -156,6 +162,9 @@ class PathMatcher(Matcher):
     def __call__(self, s):
         return (s == self.pattern[:-1]
                 or s.startswith(self.pattern))
+
+    def strip_prefix(self):
+        return self.pattern
 
 _add_matcher(PathMatcher)
 

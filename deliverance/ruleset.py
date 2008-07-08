@@ -3,7 +3,7 @@ from deliverance.pagematch import run_matches, Match
 from deliverance.rules import Rule, remove_content_attribs
 from deliverance.themeref import Theme
 from lxml.html import tostring, document_fromstring
-from lxml.etree import XML
+from lxml.etree import XML, Comment
 import re
 import urlparse
 from webob.headerdict import HeaderDict
@@ -44,10 +44,15 @@ class RuleSet(object):
         if theme is None:
             theme = self.default_theme
             ## FIXME: error if not theme still
-        assert theme is not None
-        theme_href = theme.resolve_href(req, resp, log)
-        theme_doc = self.get_theme(theme_href, resource_fetcher, log)
-        content_doc = self.parse_document(resp.body, req.url)
+        if theme is None:
+            log.error(self, "No theme has been defined for the request")
+            return resp
+        try:
+            theme_href = theme.resolve_href(req, resp, log)
+            theme_doc = self.get_theme(theme_href, resource_fetcher, log)
+            content_doc = self.parse_document(resp.body, req.url)
+        except AbortTheme:
+            return resp
         run_standard = True
         for rule in rules:
             if rule.match is not None:
@@ -71,7 +76,12 @@ class RuleSet(object):
         log.theme_url = url
         ## FIXME: should do caching
         ## FIXME: check response status
-        doc = self.parse_document(resource_fetcher(url).body, url)
+        resp = resource_fetcher(url)
+        if resp.status_int != 200:
+            log.fatal(self, "The resource %s was not 200 OK: %s" % (url, resp.status))
+            raise AbortTheme(
+                "The resource %s returned an error: %s" % (url, resp.status))
+        doc = self.parse_document(resp.body, url)
         doc.make_links_absolute()
         return doc
 
@@ -102,6 +112,9 @@ class RuleSet(object):
             elif el.tag == 'theme':
                 ## FIXME: Add parse error
                 default_theme = Theme.parse_xml(el, source_location)
+            elif el.tag in ('proxy', 'server-settings', Comment):
+                # Handled elsewhere, so we just ignore this element
+                continue
             else:
                 ## FIXME: source location?
                 raise DeliveranceSyntaxError(
@@ -111,8 +124,6 @@ class RuleSet(object):
         for rule in rules:
             for class_name in rule.classes:
                 rules_by_class.setdefault(class_name, []).append(rule)
-        if default_theme and default_theme.href:
-            default_theme.href = urlparse.urljoin(doc.base, default_theme.href)
         return cls(matchers, rules_by_class, default_theme=default_theme,
                    source_location=source_location)
 

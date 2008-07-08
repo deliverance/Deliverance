@@ -2,6 +2,7 @@ from webob import Request, Response
 from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
 from deliverance.log import SavingLogger
+from deliverance.security import display_logging, display_local_files
 import urllib
 import hmac
 import sha
@@ -12,9 +13,12 @@ from tempita import HTMLTemplate, html_quote, html
 from lxml.etree import _Element
 from lxml.html import fromstring, document_fromstring, tostring, Element
 import posixpath
+import mimetypes
+import os
 
 class DeliveranceMiddleware(object):
 
+    ## FIXME: is log_factory etc very useful?
     def __init__(self, app, rule_getter, log_factory=SavingLogger, log_factory_kw={}):
         self.app = app
         self.rule_getter = rule_getter
@@ -25,13 +29,18 @@ class DeliveranceMiddleware(object):
         return 'Deliverance'
 
     def __call__(self, environ, start_response):
-        ## FIXME: copy_get?:
         req = Request(environ)
         if 'deliv_notheme' in req.GET:
             return self.app(environ, start_response)
         req.environ['deliverance.base_url'] = req.application_url
+        ## FIXME: copy_get?:
         orig_req = Request(environ.copy())
-        log = self.log_factory(req, self, **self.log_factory_kw)
+        if 'deliverance.log' in req.environ:
+            log = req.environ['deliverance.log']
+        else:
+            log = self.log_factory(req, self, **self.log_factory_kw)
+            ## FIXME: should this be put in both the orig_req and this req?
+            req.environ['deliverance.log'] = log
         def resource_fetcher(url):
             return self.get_resource(url, orig_req, log)
         if req.path_info_peek() == '.deliverance':
@@ -49,8 +58,31 @@ class DeliveranceMiddleware(object):
 
     def get_resource(self, url, orig_req, log):
         assert url is not None
-        ## FIXME: should this return a webob.Response object?
-        if url.startswith(orig_req.application_url + '/'):
+        if url.lower().startswith('file:'):
+            if not display_local_files(orig_req):
+                ## FIXME: not sure if this applies generally; some calls to get_resource might
+                ## be because of a more valid subrequest than displaying a file
+                return exc.HTTPForbidden(
+                    "You cannot access file: URLs (like %r)" % url)
+            filename = '/' + url[len('file:'):].lstrip('/')
+            filename = urllib.unquote(filename)
+            if not os.path.exists(filename):
+                return exc.HTTPNotFound(
+                    "The file %r was not found" % filename)
+            if os.path.isdir(filename):
+                return exc.HTTPForbidden(
+                    "You cannot display a directory (%r)" % filename)
+            subresp = Response()
+            type, encoding = mimetypes.guess_type(filename)
+            if not type:
+                type = 'application/octet-stream'
+            subresp.content_type = type
+            ## FIXME: reading the whole thing obviously ain't great:
+            f = open(filename, 'rb')
+            subresp.body = f.read()
+            f.close()
+            return subresp
+        elif url.startswith(orig_req.application_url + '/'):
             subreq = orig_req.copy_get()
             subreq.environ['deliverance.subrequest_original_environ'] = orig_req.environ
             new_path_info = url[len(orig_req.application_url):]
@@ -95,6 +127,9 @@ class DeliveranceMiddleware(object):
         return url
 
     def internal_app(self, req, resource_fetcher):
+        if not display_logging(req):
+            return exc.HTTPForbidden(
+                "Logging is not enabled for you")
         segment = req.path_info_peek()
         method = 'action_%s' % segment
         method = getattr(self, method, None)

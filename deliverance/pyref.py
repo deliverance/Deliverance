@@ -3,13 +3,14 @@ Handles loading modules or files for use with the ``pyfunc`` attribute
 in <match>, <theme> or other places with python hooks
 """
 from string import Template
+from tempita import html_quote
 import os
 import new
 from UserDict import DictMixin
 from deliverance.exceptions import DeliveranceSyntaxError
 from deliverance.util.importstring import simple_import
 
-__all__ = ['PyReference', 'PyArgs']
+__all__ = ['PyReference']
 
 class DefaultDict(DictMixin):
     """
@@ -35,16 +36,31 @@ class PyReference(object):
     Represents a reference to a Python function that can be called
     """
 
-    def __init__(self, module_name=None, filename=None, function_name=None, default_objs={}, source_location=None):
+    def __init__(self, module_name=None, filename=None, function_name=None, 
+                 args={}, default_objs={}, attr_name=None, source_location=None):
         self.module_name = module_name
         self.filename = filename
         self.function_name = function_name
+        self.args = args
         self.default_objs = default_objs
+        self.attr_name = attr_name
         self.source_location = source_location
         self._modules = {}
 
     @classmethod
-    def parse(cls, s, source_location, default_function=None, default_objs={}):
+    def parse_xml(cls, el, source_location, attr_name='pyref', default_function=None, default_objs={}):
+        s = el.get(attr_name)
+        args = {}
+        for name, value in el.attrib.items():
+            if name.startswith('pyarg-'):
+                args[name[len('pyarg-'):]] = value
+        if not s:
+            if args:
+                raise DeliveranceSyntaxError(
+                    "You provided pyargs-* attributes (%s) but no %s attribute"
+                    % (cls._format_args(args), attr_name),
+                    element=el, source_location=source_location)
+            return None
         s = s.strip()
         module = filename = None
         if s.startswith('file:'):
@@ -75,33 +91,16 @@ class PyReference(object):
                     raise DeliveranceSyntaxError(
                         "The filename %r does not exist" % full_file,
                         element=s, source_location=source_location)
-        return cls(module_name=module, file=filename, function=function, source_location=source_location,
-                   default_objs=default_objs)
-
-    def __repr__(self):
-        args = [repr(str(self))]
-        if self.default_objs:
-            args.append('default_objs=%r' % self.default_objs)
-        if self.source_location:
-            args.append('source_location=%r' % self.source_location)
-        return '%s.parse(%s)' % (
-            self.__class__.__name__, ', '.join(args))
-
-    def __unicode__(self):
-        if self.file:
-            return 'file:%s:%s' % (self.file, self.function)
-        else:
-            return '%s:%s' % (self.module, self.function)
-
-    def __str__(self):
-        return unicode(self).encode('utf8')
+        return cls(module_name=module, file=filename, function_name=func, args=args, 
+                   attr_name=attr_name, default_objs=default_objs,
+                   source_location=source_location)
 
     @property
     def module(self):
         """
         Returns the instantiated module, or a module created from the filename
         """
-        if module_name:
+        if self.module_name:
             if module_name not in self._modules:
                 new_mod = simple_import(self.module_name)
                 for name, value in self.default_objs.items():
@@ -135,6 +134,8 @@ class PyReference(object):
         return obj
     
     def __call__(self, *args, **kw):
+        for name, value in self.args.iteritems():
+            kw.setdefault(name, value)
         return self.function(*args, **kw)
     
     @staticmethod
@@ -152,30 +153,16 @@ class PyReference(object):
                 % (filename, e),
                 filename, source_location=source_location)
 
-class PyArgs(object):
-    """
-    Represents pyarg-* arguments
-    """
-    def __init__(self, dict):
-        self.dict = dict
-        
-    def __nonzero__(self):
-        return bool(self.dict)
-
     def __unicode__(self):
-        return ' '.join('pyargs-%s="%s"' % (name, value) 
-                        for name, value in sorted(self.dict.items()))
-
+        if self.filename:
+            base = 'file:%s:%s' % (self.filename, self.function_name)
+        else:
+            base = '%s:%s' % (self.module_name, self.function_name)
+        parts = ['%s="%s"' % (self.attr_name, html_quote(base))]
+        for name, value in sorted(self.args.items()):
+            parts.append('pyarg-%s="%s"' % (name, html_quote(value)))
+        return ' '.join(parts)
+    
     def __str__(self):
         return unicode(self).encode('utf8')
-    
-    def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self.dict)
-    
-    @classmethod
-    def from_attrib(cls, attrib):
-        kw = {}
-        for name in attrib:
-            if name.startswith('pyarg-'):
-                kw[name[len('pyarg-'):]] = value
-        return cls(kw)
+

@@ -25,6 +25,11 @@ class AbortTheme(Exception):
     aborted.
     """
 
+class AbortProxy(Exception):
+    """
+    Raised (and caught) when a proxy rule should be ignored
+    """
+
 def add_exception_info(info, exc_info=None):
     """
     Add the given information to the exception (typically context information)

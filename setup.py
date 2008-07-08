@@ -29,12 +29,19 @@ transformation.
       test_suite='nose.collector', 
       tests_require=['nose'],
       install_requires=[
-        "lxml",
+        "lxml>=2.1alpha1",
         "WebOb",
         "WSGIProxy",
         "Tempita",
         "Pygments",
-      ],
+        "WebError",
+        "DevAuth",
+        ],
+      dependency_links=[
+        "https://svn.openplans.org/svn/DevAuth/trunk#egg=DevAuth-dev",
+        ],
       entry_points="""
+      [console_scripts]
+      deliverance-proxy = deliverance.proxycommand:main
       """,
       )

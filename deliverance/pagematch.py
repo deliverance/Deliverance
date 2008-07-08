@@ -5,7 +5,8 @@ Handles the <match> tag and matching requests and responses against these patter
 from deliverance.exceptions import DeliveranceSyntaxError, AbortTheme
 from deliverance.stringmatch import compile_matcher, compile_header_matcher
 from deliverance.util.converters import asbool, html_quote
-from deliverance.pyref import PyReference, PyArgs
+from deliverance.pyref import PyReference
+from deliverance.security import execute_pyref
 
 __all__ = ['MatchSyntaxError', 'Match']
 
@@ -18,15 +19,13 @@ class AbstractMatch(object):
 
     def __init__(self, path=None, domain=None,
                  request_header=None, response_header=None, environ=None,
-                 pyref=None, pyargs=None,
-                 source_location=None):
+                 pyref=None, source_location=None):
         self.path = path
         self.domain = domain
         self.request_header = request_header
         self.response_header = response_header
         self.environ = environ
         self.pyref = pyref
-        self.pyargs = pyargs
         self.source_location = source_location
 
     
@@ -40,17 +39,10 @@ class AbstractMatch(object):
         request_header = cls._parse_attr(el, 'request-header', default='exact', header=True)
         response_header = cls._parse_attr(el, 'response-header', default='exact', header=True)
         environ = cls._parse_attr(el, 'environ', default='exact', header=True)
-        pyref = el.get('pyref')
-        if pyref:
-            pyref = PyReference.parse(pyref, source_location=source_location,
-                                      default_function='match_request',
-                                      default_objs=dict(AbortTheme=AbortTheme))
-        pyargs = PyArgs.from_attrib(el.attrib)
-        if pyargs and not pyref:
-            raise DeliveranceSyntaxError(
-                'You cannot provide arguments (like %s) unless you provide a pyref attribute'
-                % pyargs,
-                element=el, source_location=source_location)
+        pyref = PyReference.parse_xml(
+            el, source_location=source_location,
+            default_function='match_request',
+            default_objs=dict(AbortTheme=AbortTheme))
         return dict(
             path=path,
             domain=domain,
@@ -58,7 +50,6 @@ class AbstractMatch(object):
             response_header=response_header,
             environ=environ,
             pyref=pyref,
-            pyargs=pyargs,
             source_location=source_location)
 
     match_attrs = [
@@ -85,12 +76,11 @@ class AbstractMatch(object):
             ('domain', self.domain),
             ('request-header', self.request_header),
             ('response-header', self.response_header),
-            ('environ', self.environ),
-            ('pyref', self.pyref)]:
+            ('environ', self.environ)]:
             if value:
                 parts.append(u'%s="%s"' % (attr, html_quote(unicode(self.path))))
-        if self.pyargs:
-            parts.append(unicode(self.pyargs))
+        if self.pyref:
+            parts.append(unicode(self.pyref))
         parts.extend(self._uni_late_args())
         parts.append(u'/>')
         return ' '.join(parts)
@@ -151,12 +141,20 @@ class AbstractMatch(object):
                           debug_name, ', '.join(keys), self.environ)
                 return False
         if self.pyref:
-            result = self.pyref(request, resp, response_headers, log, **self.pyargs.dict)
-            if not result:
-                log.debug(debug_context, 'Skipping %s because the pyref="%s" returned false',
-                          debug_name, self.pyref)
-                return False
-        return True
+            if not execute_pyref(request):
+                log.error(
+                    self, "Security disallows executing pyref %s")
+            else:
+                result = self.pyref(request, resp, response_headers, log)
+                if not result:
+                    log.debug(debug_context, 'Skipping %s because the reference <%s> returned false',
+                              debug_name, self.pyref)
+                    return False
+                if isinstance(result, basestring):
+                    result = result.split()
+                if isinstance(result, (list, tuple)):
+                    return self.classes + list(result)
+        return getattr(self, 'classes', None) or True
 
 class Match(AbstractMatch):
 
@@ -216,13 +214,14 @@ def run_matches(matchers, request, resp, response_headers, log):
     """
     results = []
     for matcher in matchers:
-        if matcher(request, resp, response_headers, log):
+        classes = matcher(request, resp, response_headers, log)
+        if classes:
             if matcher.abort:
                 log.debug(matcher, '<match> matched request, aborting')
                 raise AbortTheme('<match> matched request, aborting')
             log.debug(matcher, '<match> matched request, adding classes %s',
-                      ', '.join(matcher.classes))
-            for item in matcher.classes:
+                      ', '.join(classes))
+            for item in classes:
                 if item not in results:
                     results.append(item)
             if matcher.last:

@@ -9,6 +9,7 @@ messages to be strictly per-request.
 import logging
 from lxml.etree import tostring, _Element
 from tempita import HTMLTemplate, html_quote, html
+from deliverance.security import display_logging
 
 NOTIFY = (logging.INFO + logging.WARN) / 2
 
@@ -47,7 +48,7 @@ class SavingLogger(object):
         return self.message(logging.FATAL, el, msg, *args, **kw)
 
     def finish_request(self, req, resp):
-        if 'deliv_log' in req.GET:
+        if 'deliv_log' in req.GET and display_logging(req):
             resp.body += self.format_html_log()
             resp.cache_expires()
         return resp
@@ -56,7 +57,11 @@ class SavingLogger(object):
     <h1 style="border-top: 3px dotted #f00">Deliverance Information</h1>
 
     <div>
-      <a href="{{theme_url}}" target="_blank">theme: {{log.theme_url}}</a>
+      {{if log.theme_url}}
+        <a href="{{theme_url}}" target="_blank">theme: {{log.theme_url}}</a>
+      {{else}}
+        theme: no theme set
+      {{endif}}
       | <a href="{{unthemed_url}}" target="_blank">unthemed content</a>
       | <a href="{{content_source}}" target="_blank">content source</a>
     </div>
@@ -101,6 +106,8 @@ class SavingLogger(object):
             **self.tags)
 
     def _add_notheme(self, url):
+        if url is None:
+            return None
         if '?' in url:
             url += '&'
         else:

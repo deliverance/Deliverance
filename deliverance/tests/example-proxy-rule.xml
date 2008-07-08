@@ -1,0 +1,50 @@
+<ruleset>
+
+  <server-settings>
+    <server>127.0.0.1:8080</server>
+    <execute-pyref>true</execute-pyref>
+    <dev-allow>127.0.0.1</dev-allow>
+    <dev-user username="guest" password="guest" />
+  </server-settings>
+
+  <!-- 
+  <proxy path="/">
+    <dest next="1" />
+    <request header="X-Openplans-Project" content="opencore" />
+  </proxy>
+
+  <proxy path="/blog">
+    <dest href="http://localhost:10003" />
+  </proxy>
+
+  <proxy path="/tasks">
+    <dest href="http://localhost:10004" />
+  </proxy>
+
+  <proxy path="/theme">
+    <dest href="file://{here}/example-files/proxy-theme/" />
+  </proxy>
+
+  <proxy path="/">
+    [!- FIXME: I don't support {vh_SCRIPT_NAME} here -]
+    [!- <dest href="http://localhost:10001/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/openplans/projects/{X-Openplans-Project}/VirtualHostRoot" /> -]
+    <dest href="http://localhost:10001/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/openplans/VirtualHostRoot" />
+  </proxy>
+  -->
+
+  <proxy path="/theme-files">
+    <dest href="{here}/example-files/" />
+  </proxy>
+
+  <proxy path="/">
+    <dest href="http://www.openplans.org" />
+    <response rewrite-links="1" />
+  </proxy>
+
+  <theme href="/theme-files/theme.html" />
+
+  <rule>
+    <replace content="children:body" theme="children:#content" nocontent="abort" />
+  </rule>
+
+</ruleset>
