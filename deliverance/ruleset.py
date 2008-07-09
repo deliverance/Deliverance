@@ -150,6 +150,8 @@ def parse_meta_headers(body):
         headers.append((http_equiv, content))
     return headers
 
+# Note: these are included in the documentation; any changes should be
+# reflected there as well.
 standard_rule = Rule.parse_xml(XML('''\
 <rule>
   <!-- FIXME: append-or-replace for title? -->

@@ -20,6 +20,7 @@ class AbstractMatch(object):
     def __init__(self, path=None, domain=None,
                  request_header=None, response_header=None, environ=None,
                  pyref=None, source_location=None):
+        ## FIXME: this should add response_status
         self.path = path
         self.domain = domain
         self.request_header = request_header
@@ -35,7 +36,7 @@ class AbstractMatch(object):
         Parses out the match-related arguments
         """
         path = cls._parse_attr(el, 'path', default='path')
-        domain = cls._parse_attr(el, 'domain', default='wildcard')
+        domain = cls._parse_attr(el, 'domain', default='wildcard-insensitive')
         request_header = cls._parse_attr(el, 'request-header', default='exact', header=True)
         response_header = cls._parse_attr(el, 'response-header', default='exact', header=True)
         environ = cls._parse_attr(el, 'environ', default='exact', header=True)

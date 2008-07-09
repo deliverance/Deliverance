@@ -5,9 +5,12 @@ Deliverance is a tool to theme HTML, applying a consistent style to applications
 
 .. toctree::
 
-   rules
-   proxy
+   configuration
    pyref
-   page-classes
    news
    license
+   page-classes
+   rules
+   proxy
+
+.. comment: FIXME: should those last 3 documents just be deleted?
