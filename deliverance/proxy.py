@@ -10,7 +10,7 @@ from deliverance.security import execute_pyref
 from lxml.etree import tostring as xml_tostring
 from lxml.html import document_fromstring, tostring
 from pyref import PyReference
-from webob import Request
+from webob import Request, Response
 from webob import exc
 import urlparse
 from wsgiproxy.exactproxy import proxy_exact_request
@@ -23,6 +23,8 @@ import string
 from paste.fileapp import FileApp
 import urllib
 import posixpath
+from deliverance.util.filetourl import filename_to_url, url_to_filename
+from lxml.etree import parse
 
 class ProxySet(object):
 
@@ -40,6 +42,12 @@ class ProxySet(object):
                 proxies.append(Proxy.parse_xml(child, source_location))
         ruleset = RuleSet.parse_xml(el, source_location)
         return cls(proxies, ruleset, source_location)
+
+    @classmethod
+    def parse_file(cls, filename):
+        file_url = filename_to_url(filename)
+        el = parse(filename, base_url=file_url).getroot()
+        return cls.parse_xml(el, file_url)
 
     def proxy_app(self, environ, start_response):
         request = Request(environ)
@@ -72,8 +80,8 @@ class Proxy(object):
 
     def __init__(self, match, dest,
                  request_modifications, response_modifications,
-                 strip_script_name=False, keep_host=False,
-                 source_location=None):
+                 strip_script_name=True, keep_host=False,
+                 source_location=None, classes=None):
         self.match = match
         self.match.proxy = self
         self.dest = dest
@@ -82,6 +90,7 @@ class Proxy(object):
         self.request_modifications = request_modifications
         self.response_modifications = response_modifications
         self.source_location = source_location
+        self.classes = classes
 
     def log_description(self, log=None):
         parts = []
@@ -89,11 +98,12 @@ class Proxy(object):
             parts.append('&lt;proxy')
         else:
             parts.append('&lt;<a href="%s" target="_blank">proxy</a>' % log.link_to(self.source_location, source=True))
-        if self.strip_script_name:
-            parts.append('strip-script-name="1"')
+        ## FIXME: defaulting to true is bad
+        if not self.strip_script_name:
+            parts.append('strip-script-name="0"')
         if self.keep_host:
             parts.append('keep-host="1"')
-        parts.append('/&gt;<br>\n')
+        parts.append('&gt;<br>\n')
         parts.append('&nbsp;' + self.dest.log_description(log))
         parts.append('<br>\n')
         if self.request_modifications:
@@ -116,7 +126,7 @@ class Proxy(object):
         dest = None
         request_modifications = []
         response_modifications = []
-        strip_script_name = False
+        strip_script_name = True
         keep_host = False
         for child in el:
             if child.tag == 'dest':
@@ -144,9 +154,10 @@ class Proxy(object):
                 raise DeliveranceSyntaxError(
                     "Unknown tag in <proxy>: %s" % xml_tostring(child),
                     element=child, source_location=source_location)
+        classes = el.get('class', '').split() or None
         return cls(match, dest, request_modifications, response_modifications,
                    strip_script_name=strip_script_name, keep_host=keep_host,
-                   source_location=source_location)
+                   source_location=source_location, classes=classes)
 
     def forward_request(self, environ, start_response):
         request = Request(environ)
@@ -155,7 +166,8 @@ class Proxy(object):
             if prefix.endswith('/'):
                 prefix = prefix[:-1]
             path_info = request.path_info
-            if not path_info.startswith(prefix + '/'):
+            if not path_info.startswith(prefix + '/') and not path_info == prefix:
+                log = environ['deliverance.log']
                 log.warn(self, "The match would strip the prefix %r from the request path (%r), but they do not match"
                          % (prefix + '/', path_info))
             else:
@@ -168,6 +180,9 @@ class Proxy(object):
             raise AbortProxy
         dest = self.dest(request, log)
         log.debug(self, '<proxy> matched; forwarding request to %s' % dest)
+        if self.classes:
+            log.debug(self, 'Adding class="%s" to page' % ' '.join(self.classes))
+            request.environ.setdefault('deliverance.page_classes', []).extend(self.classes)
         response, orig_base, proxied_base, proxied_url = self.proxy_to_dest(request, dest)
         for modifier in self.response_modifications:
             response = modifier.modify_response(request, response, orig_base, proxied_base, proxied_url, log)
@@ -195,7 +210,6 @@ class Proxy(object):
             assert 0, "bad scheme: %r (from %r)" % (scheme, dest)
         if not self.keep_host:
             proxy_req.host = netloc
-        proxied_url = '%s://%s%s' % (scheme, netloc, proxy_req.path_qs)
         if query:
             if proxy_req.query_string:
                 proxy_req.query_string += '&'
@@ -204,11 +218,13 @@ class Proxy(object):
         proxy_req.headers['X-Forwarded-For'] = request.remote_addr
         proxy_req.headers['X-Forwarded-Scheme'] = request.scheme
         proxy_req.headers['X-Forwarded-Server'] = request.host
+        proxy_req.scheme = scheme
         ## FIXME: something with path? proxy_req.headers['X-Forwarded-Path']
         ## (now we are only doing it with strip_script_name)
         if self.strip_script_name:
             proxy_req.headers['X-Forwarded-Path'] = proxy_req.script_name
             proxy_req.script_name = ''
+        proxied_url = '%s://%s%s' % (scheme, netloc, proxy_req.path_qs)
         try:
             resp = proxy_req.get_response(proxy_exact_request)
         except socket.error, e:
@@ -227,14 +243,33 @@ class Proxy(object):
         orig_base = request.application_url
         ## FIXME: security restrictions here?
         assert dest.startswith('file:')
-        filename = urllib.unquote('/' + dest[len('file:'):].lstrip('/'))
+        if '?' in dest:
+            dest = dest.split('?', 1)[0]
+        filename = url_to_filename(dest)
         rest = posixpath.normpath(request.path_info)
         proxied_url = dest.lstrip('/') + '/' + urllib.quote(rest.lstrip('/'))
         ## FIXME: handle /->/index.html
         filename = filename.rstrip('/') + '/' + rest.lstrip('/')
-        app = FileApp(filename)
-        # I don't really need a copied request here, because FileApp is so simple:
-        resp = request.get_response(app)
+        if os.path.isdir(filename):
+            if not request.path.endswith('/'):
+                new_url = request.path + '/'
+                if request.query_string:
+                    new_url += '?' + request.query_string
+                resp = exc.HTTPMovedPermanently(location=new_url)
+                return resp, orig_base, dest, proxied_url
+            ## FIXME: configurable?  StaticURLParser?
+            for base in ['index.html', 'index.htm']:
+                if os.path.exists(os.path.join(filename, base)):
+                    filename = os.path.join(filename, base)
+                    break
+            else:
+                resp = exc.HTTPNotFound("There was no index.html file in the directory")
+        if not os.path.exists(filename):
+            resp = exc.HTTPNotFound("The file %s could not be found" % filename)
+        else:
+            app = FileApp(filename)
+            # I don't really need a copied request here, because FileApp is so simple:
+            resp = request.get_response(app)
         return resp, orig_base, dest, proxied_url
         
 class ProxyMatch(AbstractMatch):
@@ -324,11 +359,13 @@ class ProxyRequestModification(object):
             default_objs=dict(AbortProxy=AbortProxy))
         header = el.get('header')
         content = el.get('content')
+        ## FIXME: the misspelling is annoying :(
         if (not header and content) or (not content and header):
             raise DeliveranceSyntaxError(
                 "If you provide a header attribute you must provide a content attribute, and vice versa",
                 element=el, source_location=source_location)
-        return cls(pyref, header, content, source_location)
+        return cls(pyref, header, content,
+                   source_location=source_location)
         
     def modify_request(self, request, log):
         if self.pyref:
@@ -378,10 +415,10 @@ class ProxyResponseModification(object):
             proxied_base += '/'
         if not orig_base.endswith('/'):
             orig_base += '/'
-        assert proxied_url.startswith(proxied_base), (
+        assert proxied_url.startswith(proxied_base) or proxied_url.split('?', 1)[0] == proxied_base[:-1], (
             "Unexpected proxied_url %r, doesn't start with proxied_base %r"
             % (proxied_url, proxied_base))
-        assert request.url.startswith(orig_base), (
+        assert request.url.startswith(orig_base) or request.url.split('?', 1)[0] == orig_base[:-1], (
             "Unexpected request.url %r, doesn't start with orig_base %r"
             % (request.url, orig_base))
         if self.pyref:
@@ -395,19 +432,24 @@ class ProxyResponseModification(object):
         if self.header:
             response.headers[self.header] = self.content
         if self.rewrite_links:
-            if response.content_type != 'text/html':
-                log.debug(self, 'Not rewriting links in response from %s, because Content-Type is %s' % (proxied_url, response.content_type))
-                return response
-            body_doc = document_fromstring(response.body, base_url=proxied_url)
-            body_doc.make_links_absolute()
             def link_repl_func(link):
                 if not link.startswith(proxied_base):
                     # External link, so we don't rewrite it
                     return link
                 new = orig_base + link[len(proxied_base):]
                 return new
-            body_doc.rewrite_links(link_repl_func)
-            response.body = tostring(body_doc)
+            if response.content_type != 'text/html':
+                log.debug(self, 'Not rewriting links in response from %s, because Content-Type is %s' % (proxied_url, response.content_type))
+            else:
+                if not response.charset:
+                    ## FIXME: maybe we should guess the encoding?
+                    body = response.body
+                else:
+                    body = response.unicode_body
+                body_doc = document_fromstring(body, base_url=proxied_url)
+                body_doc.make_links_absolute()
+                body_doc.rewrite_links(link_repl_func)
+                response.body = tostring(body_doc)
             if response.location:
                 ## FIXME: if you give a proxy like http://openplans.org, and it redirects to
                 ## http://www.openplans.org, it won't be rewritten and that can be confusing
@@ -418,7 +460,7 @@ class ProxyResponseModification(object):
             if response.headers.get('set-cookie'):
                 cook = response.headers['set-cookie']
                 old_domain = urlparse.urlsplit(proxied_url)[1].lower()
-                new_domain = req.host.split(':', 1)[0].lower()
+                new_domain = request.host.split(':', 1)[0].lower()
                 def rewrite_domain(match):
                     domain = match.group(2)
                     if domain == old_domain:
@@ -515,6 +557,12 @@ class ProxySettings(object):
                    dev_allow_ips=dev_allow_ips, dev_deny_ips=dev_deny_ips, 
                    dev_users=dev_users, dev_expiration=dev_expiration,
                    source_location=source_location)
+
+    @classmethod
+    def parse_file(cls, filename):
+        file_url = filename_to_url(filename)
+        el = parse(filename, base_url=file_url).getroot()
+        return cls.parse_xml(el, file_url, traverse=True)
 
     @property
     def host(self):

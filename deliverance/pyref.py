@@ -6,9 +6,12 @@ from string import Template
 from tempita import html_quote
 import os
 import new
+import urllib
 from UserDict import DictMixin
 from deliverance.exceptions import DeliveranceSyntaxError
 from deliverance.util.importstring import simple_import
+from deliverance.util.nesteddict import NestedDict
+from deliverance.util import filetourl
 
 __all__ = ['PyReference']
 
@@ -91,7 +94,7 @@ class PyReference(object):
                     raise DeliveranceSyntaxError(
                         "The filename %r does not exist" % full_file,
                         element=s, source_location=source_location)
-        return cls(module_name=module, file=filename, function_name=func, args=args, 
+        return cls(module_name=module, filename=filename, function_name=func, args=args, 
                    attr_name=attr_name, default_objs=default_objs,
                    source_location=source_location)
 
@@ -112,7 +115,7 @@ class PyReference(object):
         else:
             filename = self.expand_filename(self.filename, self.source_location)
             if filename not in self._modules:
-                name = self.pyfile.strip('/').strip('\\')
+                name = filename.strip('/').strip('\\')
                 name = os.path.splitext(name)[0]
                 name = name.replace('\\', '_').replace('/', '_')
                 new_mod = new.module(name)
@@ -120,6 +123,7 @@ class PyReference(object):
                 for name, value in self.default_objs.items():
                     if not hasattr(new_mod, name):
                         setattr(new_mod, name, value)
+                execfile(filename, new_mod.__dict__)
                 self._modules[filename] = new_mod
             return self._modules[filename]
 
@@ -131,7 +135,12 @@ class PyReference(object):
         obj = self.module
         for p in self.function_name.split('.'):
             ## FIXME: better error handling:
-            obj = getattr(obj, p)
+            try:
+                obj = getattr(obj, p)
+            except AttributeError, e:
+                raise Exception(
+                    "Could not get function %s: %s; existing attributes: %s"
+                    % (p, e, ', '.join(dir(obj))))
         return obj
     
     def __call__(self, *args, **kw):
@@ -144,10 +153,15 @@ class PyReference(object):
         """
         Expand environmental variables in a filename
         """
-        vars = DefautDict(os.environ)
+        if source_location and source_location.startswith('file:'):
+            here = os.path.dirname(filetourl.url_to_filename(source_location))
+        else:
+            ## FIXME: this is a lousy default:
+            here = ''
+        vars = NestedDict(dict(here=here), DefaultDict(os.environ))
         tmpl = Template(filename)
         try:
-            return tmpl.substitute(os.environ)
+            return tmpl.substitute(vars)
         except ValueError, e:
             raise DeliveranceSyntaxError(
                 "The filename %r contains bad $ substitutions: %s"

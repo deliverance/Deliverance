@@ -64,6 +64,7 @@ class SavingLogger(object):
       {{endif}}
       | <a href="{{unthemed_url}}" target="_blank">unthemed content</a>
       | <a href="{{content_source}}" target="_blank">content source</a>
+      | <a href="{{content_browse}}" target="_blank">browse content</a>
     </div>
 
     {{if log.messages}}
@@ -98,11 +99,13 @@ class SavingLogger(object):
 
     def format_html_log(self):
         content_source = self.link_to(self.request.url, source=True)
+        content_browse = self.link_to(self.request.url, browse=True)
         return self.log_template.substitute(
             log=self, middleware=self.middleware, 
             unthemed_url=self._add_notheme(self.request.url),
             theme_url=self._add_notheme(self.theme_url),
             content_source=content_source,
+            content_browse=content_browse,
             **self.tags)
 
     def _add_notheme(self, url):
@@ -137,8 +140,9 @@ class SavingLogger(object):
             logging.ERROR: ('#fff', '#600'),
             logging.CRITICAL: ('#000', '#f33')}[level]
 
-    def link_to(self, url, source=False, line=None, selector=None):
-        return self.middleware.link_to(self.request, url, source=source, line=line, selector=selector)
+    def link_to(self, url, source=False, line=None, selector=None, browse=False):
+        return self.middleware.link_to(self.request, url, source=source, line=line, 
+                                       selector=selector, browse=browse)
 
 class PrintingLogger(SavingLogger):
 

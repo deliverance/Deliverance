@@ -3,6 +3,7 @@ from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
 from deliverance.log import SavingLogger
 from deliverance.security import display_logging, display_local_files
+from deliverance.util.filetourl import url_to_filename
 import urllib
 import hmac
 import sha
@@ -64,8 +65,7 @@ class DeliveranceMiddleware(object):
                 ## be because of a more valid subrequest than displaying a file
                 return exc.HTTPForbidden(
                     "You cannot access file: URLs (like %r)" % url)
-            filename = '/' + url[len('file:'):].lstrip('/')
-            filename = urllib.unquote(filename)
+            filename = url_to_filename(url)
             if not os.path.exists(filename):
                 return exc.HTTPNotFound(
                     "The file %r was not found" % filename)
@@ -108,7 +108,7 @@ class DeliveranceMiddleware(object):
                       url, subresp.status, subresp.content_type)
             return subresp
 
-    def link_to(self, req, url, source=False, line=None, selector=None):
+    def link_to(self, req, url, source=False, line=None, selector=None, browse=False):
         base = req.environ['deliverance.base_url']
         base += '/.deliverance/view'
         source = int(bool(source))
@@ -119,6 +119,8 @@ class DeliveranceMiddleware(object):
             args['line'] = str(line)
         if selector:
             args['selector'] = selector
+        if browse:
+            args['browse'] = '1'
         url = base + '?' + urllib.urlencode(args)
         if selector:
             url += '#deliverance-selection'
@@ -140,83 +142,142 @@ class DeliveranceMiddleware(object):
         except exc.HTTPException, e:
             return e
 
+    def action_media(self, req, resource_fetcher):
+        ## FIXME: I'm not using this currently, because the Javascript didn't work.  Dunno why.
+        from paste.urlparser import StaticURLParser
+        app = StaticURLParser(os.path.join(os.path.dirname(__file__), 'media'))
+        ## FIXME: need to pop some segments from the req?
+        req.path_info_pop()
+        resp = req.get_response(app)
+        if resp.content_type == 'application/x-javascript':
+            resp.content_type = 'application/javascript'
+        return resp
+
     def action_view(self, req, resource_fetcher):
         url = req.GET['url']
         source = int(req.GET.get('source', '0'))
+        browse = int(req.GET.get('browse', '0'))
         line = int(req.GET.get('line', '0')) or ''
         selector = req.GET.get('selector', '')
         subresp = resource_fetcher(url)
         if source:
-            ct = subresp.content_type
-            if ct.startswith('application/xml'):
-                lexer = XmlLexer()
-            elif ct == 'text/html':
-                lexer = HtmlLexer()
-            else:
-                ## FIXME: what then?
-                lexer = HtmlLexer()
-            text = pygments_highlight(
-                subresp.body, lexer,
-                HtmlFormatter(full=True, linenos=True, lineanchors='code'))
+            return self.view_source(req, subresp)
+        elif browse:
+            return self.view_browse(req, subresp)
         else:
-            from deliverance.selector import Selector
-            doc = document_fromstring(subresp.body)
-            el = Element('base')
-            el.set('href', posixpath.dirname(url) + '/')
-            doc.head.insert(0, el)
-            selector = Selector.parse(selector)
-            type, elements, attributes = selector(doc)
-            if not elements:
-                template = self._not_found_template
+            return self.view_selection(req, subresp)
+
+    def view_source(self, req, resp):
+        ct = resp.content_type
+        if ct.startswith('application/xml'):
+            lexer = XmlLexer()
+        elif ct == 'text/html':
+            lexer = HtmlLexer()
+        else:
+            ## FIXME: what then?
+            lexer = HtmlLexer()
+        text = pygments_highlight(
+            resp.body, lexer,
+            HtmlFormatter(full=True, linenos=True, lineanchors='code'))
+        return Response(text)
+
+    def view_browse(self, req, resp):
+        import re
+        body = resp.body
+        f = open(os.path.join(os.path.dirname(__file__), 'media', 'browser.js'))
+        content = f.read()
+        f.close()
+        extra_head = '''
+        <!-- Added by Deliverance for browsing: -->
+        <script src="http://www.google.com/jsapi"></script>
+        <script>
+        %s
+        </script>
+        <style type="text/css">
+          .deliverance-highlight {
+            border: 2px dotted #f00;
+          }
+        </style>
+        <base href="%s">
+        <!-- Begin original page -->
+        ''' % (
+            content, posixpath.dirname(req.GET['url']) + '/')
+        match = re.search(r'<head>', body, re.I)
+        if match:
+            body = body[:match.end()] + extra_head + body[match.end():]
+        else:
+            body = extra_head + body
+        extra_body = '''
+        <div style="display: block; color: #000; background-color: #dfd; font-family: sans-serif; font-size: 100%; border-bottom: 2px dotted #f00" id="deliverance-browser">
+        <span style="float: right"><button onclick="window.close()">close</button></span>
+        View by id/class: <select onchange="deliveranceChangeId()" name="deliverance-ids" id="deliverance-ids"></select>
+        </div>'''
+        match = re.search('<body.*?>', body, re.I)
+        if match:
+            body = body[:match.end()] + extra_body + body[match.end():]
+        else:
+            body = extra_body + body
+        return Response(body)
+
+    def view_selection(self, req, resp):
+        from deliverance.selector import Selector
+        doc = document_fromstring(resp.body)
+        el = Element('base')
+        el.set('href', posixpath.dirname(req.GET['url']) + '/')
+        doc.head.insert(0, el)
+        selector = Selector.parse(selector)
+        type, elements, attributes = selector(doc)
+        if not elements:
+            template = self._not_found_template
+        else:
+            template = self._found_template
+        all_elements = []
+        els_in_head = False
+        for index, el in enumerate(elements):
+            el_in_head = self._el_in_head(el)
+            if el_in_head:
+                els_in_head = True
+            anchor = 'deliverance-selection'
+            if index:
+                anchor += '-%s' % index
+            if el.get('id'):
+                anchor = el.get('id')
+            ## FIXME: is a <a name> better?
+            if not el_in_head:
+                el.set('id', anchor)
             else:
-                template = self._found_template
-            all_elements = []
-            els_in_head = False
-            for index, el in enumerate(elements):
-                el_in_head = self._el_in_head(el)
-                if el_in_head:
-                    els_in_head = True
-                anchor = 'deliverance-selection'
-                if index:
-                    anchor += '-%s' % index
-                if el.get('id'):
-                    anchor = el.get('id')
-                ## FIXME: is a <a name> better?
-                if not el_in_head:
-                    el.set('id', anchor)
-                else:
-                    anchor = None
-                ## FIXME: add :target CSS rule
-                ## FIXME: or better, some Javascript
-                all_elements.append((anchor, el))
-                if not el_in_head:
-                    style = el.get('style', '')
-                    if style:
-                        style += '; '
-                    style += '/* deliverance */ border: 2px dotted #f00'
-                    el.set('style', style)
-                else:
-                    el.set('DELIVERANCE-MATCH', '1')
-            def highlight(html_code):
-                if isinstance(html_code, _Element):
-                    html_code = tostring(html_code)
-                return html(pygments_highlight(html_code, HtmlLexer(),
-                                               HtmlFormatter(noclasses=True)))
-            def format_tag(tag):
-                return highlight(tostring(tag).split('>')[0]+'>')
-            text = template.substitute(
-                base_url=req.url,
-                els_in_head=els_in_head, doc=doc,
-                elements=all_elements, selector=selector, 
-                format_tag=format_tag, highlight=highlight)
-            message = fromstring(self._message_template.substitute(message=text, url=url))
-            if doc.body.text:
-                message.tail = doc.body.text
-                doc.body.text = ''
-            doc.body.insert(0, message)
-            text = tostring(doc)
-        resp = Response(text)
-        return resp
+                anchor = None
+            ## FIXME: add :target CSS rule
+            ## FIXME: or better, some Javascript
+            all_elements.append((anchor, el))
+            if not el_in_head:
+                style = el.get('style', '')
+                if style:
+                    style += '; '
+                style += '/* deliverance */ border: 2px dotted #f00'
+                el.set('style', style)
+            else:
+                el.set('DELIVERANCE-MATCH', '1')
+        def highlight(html_code):
+            if isinstance(html_code, _Element):
+                html_code = tostring(html_code)
+            return html(pygments_highlight(html_code, HtmlLexer(),
+                                           HtmlFormatter(noclasses=True)))
+        def format_tag(tag):
+            return highlight(tostring(tag).split('>')[0]+'>')
+        text = template.substitute(
+            base_url=req.url,
+            els_in_head=els_in_head, doc=doc,
+            elements=all_elements, selector=selector, 
+            format_tag=format_tag, highlight=highlight)
+        message = fromstring(self._message_template.substitute(message=text, url=url))
+        if doc.body.text:
+            message.tail = doc.body.text
+            doc.body.text = ''
+        doc.body.insert(0, message)
+        text = tostring(doc)
+        return Response(text)
+
 
     def _el_in_head(self, el):
         while el is not None:

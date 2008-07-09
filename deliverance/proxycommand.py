@@ -4,7 +4,6 @@ import optparse
 from deliverance.proxy import ProxySet
 from deliverance.proxy import ProxySettings
 
-from lxml.etree import parse
 from paste.httpserver import serve
 import urllib
 
@@ -30,23 +29,53 @@ parser.add_option(
     dest='interactive_debugger',
     help='Use an interactive debugger (note: security hole when done publically; '
     'if interface is not explicitly given it will be set to 127.0.0.1)')
+parser.add_option(
+    '--debug-headers',
+    action='count',
+    dest='debug_headers',
+    help='Show (in the console) all the incoming and outgoing headers; use twice for bodies')
 
-def run_command(rule_filename, debug=False, interactive_debugger=False):
-    rule_url = 'file://' + urllib.quote(os.path.abspath(rule_filename).replace(os.path.sep, '/'))
-    el = parse(rule_filename, base_url=rule_url).getroot()
-    ## FIXME: rule_filename isn't browsable in the logs
-    ps = ProxySet.parse_xml(el, rule_url)
-    settings = ProxySettings.parse_xml(el, rule_url, traverse=True)
-    app = ps.application
-    app = settings.middleware(app)
+def run_command(rule_filename, debug=False, interactive_debugger=False, debug_headers=False):
+    settings = ProxySettings.parse_file(rule_filename)
+    app = ReloadingApp(rule_filename, settings)
     if interactive_debugger:
         from weberror.evalexception import EvalException
         app = EvalException(app, debug=True)
     else:
         from weberror.errormiddleware import ErrorMiddleware
         app = ErrorMiddleware(app, debug=debug)
+    if debug_headers:
+        from wsgifilter.proxyapp import DebugHeaders
+        app = DebugHeaders(app, show_body=debug_headers > 1)
     print 'To see logging, visit %s/.deliverance/login' % settings.base_url
     serve(app, host=settings.host, port=settings.port)
+
+class ReloadingApp(object):
+    """
+    This is a WSGI app that notices when the rule file changes, and
+    reloads it in that case.
+    """
+    def __init__(self, rule_filename, settings):
+        self.rule_filename = rule_filename
+        self.settings = settings
+        self.proxy_set = None
+        self.proxy_set_mtime = None
+        self.application = None
+        # This gives syntax errors earlier:
+        self.load_proxy_set(warn=False)
+        
+    def __call__(self, environ, start_response):
+        if (self.proxy_set is None
+            or self.proxy_set_mtime < os.path.getmtime(self.rule_filename)):
+            self.load_proxy_set()
+        return self.application(environ, start_response)
+
+    def load_proxy_set(self, warn=True):
+        if warn:
+            print 'Reloading rule file %s' % self.rule_filename
+        self.proxy_set = ProxySet.parse_file(self.rule_filename)
+        self.proxy_set_mtime = os.path.getmtime(self.rule_filename)
+        self.application = self.settings.middleware(self.proxy_set.application)
 
 def main(args=None):
     if args is None:
@@ -59,7 +88,7 @@ def main(args=None):
     rule_filename = args[0]
     run_command(rule_filename,
                 interactive_debugger=options.interactive_debugger,
-                debug=options.debug)
+                debug=options.debug, debug_headers=options.debug_headers)
 
 if __name__ == '__main__':
     main()

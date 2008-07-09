@@ -18,19 +18,53 @@ table#table-layout td {
   vertical-align: top;
 }
 
-td#sidebar {
+#sidebar {
   background-color: #bfb;
   border-right: 2px solid #0f0;
   width: 8em;
   padding-top: 1em;
+  font-size: 85%
 }
 
-td#content {
+#sidebar li {
+  list-style: none;
+}
+
+#sidebar ul {
+  padding-left: 0;
+}
+
+#sidebar a, #sidebar a:link{
+  text-decoration: none;
+  width: 100%;
+  display: block;
+}
+
+#sidebar a:hover {
+  text-decoration: underline;
+  background-color: #8f8;
+}
+
+td#theme-content {
   border-top: 2px solid #0f0;
   padding: 0.5em;
 }
 
-h1#header {
+#header {
   background-color: #bfb;
   margin-bottom: 0;
+  width: 100%;
+}
+
+#header h1 {
+  margin: 0;
+}
+
+#header a, #header a:link, #header a:visited {
+  text-decoration: none;
+  color: #000;
+}
+
+#header a:hover {
+  text-decoration: underline;
 }

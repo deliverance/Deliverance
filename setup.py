@@ -37,6 +37,7 @@ transformation.
         "WebError",
         "DevAuth",
         "Paste",
+        "WSGIFilter",
         ],
       dependency_links=[
         "https://svn.openplans.org/svn/DevAuth/trunk#egg=DevAuth-dev",

@@ -36,15 +36,15 @@ Now, some matches:
 
     >>> m = make('<match path="/foo" class="a" />')
     >>> match(m, Request.blank('/foo'), Response(), [])
-    True
+    ['a']
     >>> match(m, Request.blank('/foobar'), Response(), [])
     log: Skipping class="a" because request URL (/foobar) does not match path="path:/foo/"
     False
     >>> match(m, Request.blank('/foo/bar'), Response(), [])
-    True
+    ['a']
     >>> m = make('<match response-header="Content-Type: contains: html" class="x" />')
     >>> match(m, Request.blank('/'), Response(content_type='text/plain'), [('content-type', 'text/plain')])
     log: Skipping class="x" because the response headers Content-Type do not match response-header="Content-Type: contains:html"
     False
     >>> match(m, Request.blank('/'), Response(content_type='text/html'), [('content-type', 'text/html')])
-    True
+    ['x']
