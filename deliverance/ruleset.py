@@ -29,6 +29,8 @@ class RuleSet(object):
             return resp
         if 'X-Deliverance-Page-Class' in resp.headers:
             classes.extend(resp.headers['X-Deliverance-Page-Class'].strip().split())
+        if 'deliverance.page_classes' in req.environ:
+            classes.extend(req.environ['deliverance.page_classes'])
         if not classes:
             classes = ['default']
         rules = []
@@ -36,7 +38,7 @@ class RuleSet(object):
         for class_name in classes:
             ## FIXME: handle case of unknown classes
             ## Or do that during compilation?
-            for rule in self.rules_by_class[class_name]:
+            for rule in self.rules_by_class.get(class_name, []):
                 if rule not in rules:
                     rules.append(rule)
                     if rule.theme:
@@ -51,21 +53,21 @@ class RuleSet(object):
             theme_href = theme.resolve_href(req, resp, log)
             theme_doc = self.get_theme(theme_href, resource_fetcher, log)
             content_doc = self.parse_document(resp.body, req.url)
+            run_standard = True
+            for rule in rules:
+                if rule.match is not None:
+                    matches = rule.match(req, resp, response_headers, log)
+                    if not matches:
+                        log.debug(rule, "Skipping <rule>")
+                        continue
+                rule.apply(content_doc, theme_doc, resource_fetcher, log)
+                if rule.suppress_standard:
+                    run_standard = False
+            if run_standard:
+                ## FIXME: should it be possible to put the standard rule in the ruleset?
+                standard_rule.apply(content_doc, theme_doc, resource_fetcher, log)
         except AbortTheme:
             return resp
-        run_standard = True
-        for rule in rules:
-            if rule.match is not None:
-                matches = rule.match(req, resp, response_headers, log)
-                if not matches:
-                    log.debug(rule, "Skipping <rule>")
-                    continue
-            rule.apply(content_doc, theme_doc, resource_fetcher, log)
-            if rule.suppress_standard:
-                run_standard = False
-        if run_standard:
-            ## FIXME: should it be possible to put the standard rule in the ruleset?
-            standard_rule.apply(content_doc, theme_doc, resource_fetcher, log)
         remove_content_attribs(theme_doc)
         ## FIXME: handle caching?
         resp.body = tostring(theme_doc)
