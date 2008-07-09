@@ -3,7 +3,7 @@ Represents individual actions (``<append>`` etc) and the RuleSet that
 puts them together
 """
 
-from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError
+from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError, AbortTheme
 from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
 from deliverance.pagematch import AbstractMatch
@@ -297,7 +297,7 @@ class AbstractAction(object):
         parts = ['&lt;%s' % linked_item(self.source_location, self.name, source=True)]
         if getattr(self, 'content', None):
             body = 'content="%s"' % html_quote(self.content)
-            if self.content_href:
+            if getattr(self, 'content_href', None):
                 if request_url:
                     content_url = urlparse.urljoin(request_url, self.content_href)
                 else:
@@ -688,8 +688,14 @@ class Append(TransformAction):
                     theme_el.extend(els)
                     pos_text = 'end'
                 else:
-                    add_tail(els[-1], theme_el.text)
-                    theme_el.text = text
+                    if len(els):
+                        add_tail(els[-1], theme_el.text)
+                        theme_el.text = text
+                    else:
+                        old_text = theme_el.text
+                        theme_el.text = text or ''
+                        if old_text:
+                            theme_el.text += old_text
                     theme_el[:0] = els
                     pos_text = 'beginning'
                 if self.move:
@@ -853,7 +859,6 @@ class Drop(AbstractAction):
         ## FIXME: proper error:
         assert content is not None or theme is not None
         self.content = content
-        assert theme is not None
         self.theme = theme
         self.if_content = if_content
         self.nocontent = self.convert_error('nocontent', nocontent)
