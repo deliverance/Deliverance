@@ -3,10 +3,10 @@ Implements the element selection; XPath, CSS, and the modifiers on
 those selections.
 """
 
-from deliverance.exceptions import DeliveranceSyntaxError
+import re
 from lxml.etree import XPath
 from lxml.cssselect import CSSSelector
-import re
+from deliverance.exceptions import DeliveranceSyntaxError
 
 type_re = re.compile(r'^(elements?|children|tag|attributes?):')
 type_map = dict(element='elements', attribute='attributes')
@@ -54,7 +54,8 @@ class Selector(object):
         else:
             match = attributes_re.match(expr)
             if match:
-                attributes = [name.strip() for name in match.group(1).split(',') if name.strip()]
+                attributes = [name.strip() for name in match.group(1).split(',') 
+                              if name.strip()]
                 rest_expr = expr[match.end():]
                 return ('attributes', attributes, rest_expr)
         return (default_type, None, expr)
@@ -72,12 +73,6 @@ class Selector(object):
             return type2 in ('children', 'elements')
         else:
             return type1 == type2
-
-    def __unicode__(self):
-        ' || '.join(
-            [unicode(selector)
-             for sel_type, selector, sel_expr, sel_attributes
-             in self.selectors])
             
     def __str__(self):
         return unicode(self).encode('utf8')
@@ -95,8 +90,8 @@ class Selector(object):
         type, attributes, rest_expr = self.parse_prefix(expr, default_type=default_type)
         if not self.types_compatible(type, self.major_type):
             raise DeliveranceSyntaxError(
-                "Expression %s in selector %r uses the type %r, but this is not compatible "
-                "with the type %r already declared earlier in the selector"
+                "Expression %s in selector %r uses the type %r, but this is not "
+                "compatible with the type %r already declared earlier in the selector"
                 % (expr, self, type, self.major_type))
         if rest_expr.startswith('/'):
             selector = XPath(rest_expr)
@@ -129,7 +124,7 @@ class Selector(object):
     
     def __unicode__(self):
         parts = []
-        for sel_type, selector, sel_expr, sel_attributes in self.selectors:
+        for sel_type, dummy_selector, sel_expr, sel_attributes in self.selectors:
             if sel_attributes:
                 sel_type = '%s(%s)' % (sel_type, ','.join(sel_attributes))
             parts.append('%s:%s' % (sel_type, sel_expr))

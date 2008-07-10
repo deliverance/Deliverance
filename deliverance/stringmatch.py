@@ -65,6 +65,7 @@ class MatchSyntaxError(Exception):
 _matches = {}
 
 def _add_matcher(cls):
+    """Registers a matcher"""
     _matches[cls.name] = cls
 
 class Matcher(object):
@@ -164,6 +165,7 @@ class PathMatcher(Matcher):
                 or s.startswith(self.pattern))
 
     def strip_prefix(self):
+        """The prefix that can be stripped (path: actually can do this)"""
         return self.pattern
 
 _add_matcher(PathMatcher)

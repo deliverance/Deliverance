@@ -1,3 +1,7 @@
+"""
+Exceptions for use throughout Deliverance
+"""
+
 import sys
 
 class DeliveranceError(Exception):
@@ -8,7 +12,8 @@ class DeliveranceError(Exception):
     attached to it.  Elements are the objects (maybe XML, or maybe
     not) that is applicable.
     """
-    def __init__(self, msg=None, request=None, element=None, source_location=None):
+    def __init__(self, msg=None, request=None, element=None, 
+                 source_location=None):
         Exception.__init__(self, msg)
         self.request = request
         self.element = element

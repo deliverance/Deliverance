@@ -1,6 +1,13 @@
+"""Implements NestedDict"""
+
 from UserDict import DictMixin
 
-class NestedDict(object):
+class NestedDict(DictMixin):
+    """
+    A dictionary that dispatches to one of its sub-dictionaries,
+    returning whatever the value is for the first dictionary with the
+    key.
+    """
     def __init__(self, *dicts):
         self.dicts = dicts
     def __getitem__(self, key):

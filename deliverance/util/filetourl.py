@@ -1,6 +1,9 @@
+"""Converts filenames to ``file:`` URLs and back again"""
 import urllib
 import os
 import re
+
+__all__ = ['filename_to_url', 'url_to_filename']
 
 drive_re = re.compile('^([a-z]):', re.I)
 url_drive_re = re.compile('^([a-z])[|]', re.I)

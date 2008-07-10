@@ -2,12 +2,11 @@
 Handles loading modules or files for use with the ``pyfunc`` attribute
 in <match>, <theme> or other places with python hooks
 """
-from string import Template
-from tempita import html_quote
 import os
 import new
-import urllib
+from string import Template
 from UserDict import DictMixin
+from tempita import html_quote
 from deliverance.exceptions import DeliveranceSyntaxError
 from deliverance.util.importstring import simple_import
 from deliverance.util.nesteddict import NestedDict
@@ -40,7 +39,8 @@ class PyReference(object):
     """
 
     def __init__(self, module_name=None, filename=None, function_name=None, 
-                 args={}, default_objs={}, attr_name=None, source_location=None):
+                 args={}, default_objs={}, attr_name=None, 
+                 source_location=None):
         self.module_name = module_name
         self.filename = filename
         self.function_name = function_name
@@ -51,7 +51,12 @@ class PyReference(object):
         self._modules = {}
 
     @classmethod
-    def parse_xml(cls, el, source_location, attr_name='pyref', default_function=None, default_objs={}):
+    def parse_xml(cls, el, source_location, attr_name='pyref', 
+                  default_function=None, default_objs={}):
+        """
+        Parse an instance of this object from the attributes in the
+        given element.
+        """
         s = el.get(attr_name)
         args = {}
         for name, value in el.attrib.items():
@@ -94,8 +99,8 @@ class PyReference(object):
                     raise DeliveranceSyntaxError(
                         "The filename %r does not exist" % full_file,
                         element=s, source_location=source_location)
-        return cls(module_name=module, filename=filename, function_name=func, args=args, 
-                   attr_name=attr_name, default_objs=default_objs,
+        return cls(module_name=module, filename=filename, function_name=func, 
+                   args=args, attr_name=attr_name, default_objs=default_objs,
                    source_location=source_location)
 
     @property
@@ -105,13 +110,13 @@ class PyReference(object):
         """
         ## FIXME: this should reload the module as necessary.
         if self.module_name:
-            if module_name not in self._modules:
+            if self.module_name not in self._modules:
                 new_mod = simple_import(self.module_name)
                 for name, value in self.default_objs.items():
                     if not hasattr(new_mod, name):
                         setattr(new_mod, name, value)
-                self._modules[module_name] = new_mod
-            return self._modules[module_name]
+                self._modules[self.module_name] = new_mod
+            return self._modules[self.module_name]
         else:
             filename = self.expand_filename(self.filename, self.source_location)
             if filename not in self._modules:
@@ -133,14 +138,14 @@ class PyReference(object):
         Returns the function object
         """
         obj = self.module
-        for p in self.function_name.split('.'):
+        for part in self.function_name.split('.'):
             ## FIXME: better error handling:
             try:
-                obj = getattr(obj, p)
+                obj = getattr(obj, part)
             except AttributeError, e:
                 raise Exception(
                     "Could not get function %s: %s; existing attributes: %s"
-                    % (p, e, ', '.join(dir(obj))))
+                    % (part, e, ', '.join(dir(obj))))
         return obj
     
     def __call__(self, *args, **kw):
@@ -167,6 +172,13 @@ class PyReference(object):
                 "The filename %r contains bad $ substitutions: %s"
                 % (filename, e),
                 filename, source_location=source_location)
+
+    @staticmethod
+    def _format_args(args):
+        """Formats the pyargs dict as XML attributes"""
+        return ' '.join(
+            '%s="%s"' % (name, html_quote(value))
+            for name, value in sorted(args.items()))
 
     def __unicode__(self):
         if self.filename:

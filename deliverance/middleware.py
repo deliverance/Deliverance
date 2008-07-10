@@ -1,32 +1,41 @@
-from webob import Request, Response
-from webob import exc
-from wsgiproxy.exactproxy import proxy_exact_request
-from deliverance.log import SavingLogger
-from deliverance.security import display_logging, display_local_files
-from deliverance.util.filetourl import url_to_filename
-import urllib
-import hmac
-import sha
-from pygments import highlight as pygments_highlight
-from pygments.lexers import XmlLexer, HtmlLexer, guess_lexer_for_filename
-from pygments.formatters import HtmlFormatter
-from tempita import HTMLTemplate, html_quote, html
-from lxml.etree import _Element
-from lxml.html import fromstring, document_fromstring, tostring, Element
+"""
+Implements the middleware that does the Deliverance transformations.
+"""
+
 import posixpath
 import mimetypes
 import os
+import urllib
+from webob import Request, Response
+from webob import exc
+from wsgiproxy.exactproxy import proxy_exact_request
+from pygments import highlight as pygments_highlight
+from pygments.lexers import XmlLexer, HtmlLexer
+from pygments.formatters import HtmlFormatter
+from tempita import HTMLTemplate, html
+from lxml.etree import _Element
+from lxml.html import fromstring, document_fromstring, tostring, Element
+from deliverance.log import SavingLogger
+from deliverance.security import display_logging, display_local_files
+from deliverance.util.filetourl import url_to_filename
+
+__all__ = ['DeliveranceMiddleware', 'SubrequestRuleGetter']
 
 class DeliveranceMiddleware(object):
+    """
+    The middleware that implements the Deliverance transformations
+    """
 
     ## FIXME: is log_factory etc very useful?
-    def __init__(self, app, rule_getter, log_factory=SavingLogger, log_factory_kw={}):
+    def __init__(self, app, rule_getter, log_factory=SavingLogger, 
+                 log_factory_kw={}):
         self.app = app
         self.rule_getter = rule_getter
         self.log_factory = log_factory
         self.log_factory_kw = log_factory_kw
 
     def log_description(self, log=None):
+        """The description shown in the log for this context"""
         return 'Deliverance'
 
     def __call__(self, environ, start_response):
@@ -43,6 +52,9 @@ class DeliveranceMiddleware(object):
             ## FIXME: should this be put in both the orig_req and this req?
             req.environ['deliverance.log'] = log
         def resource_fetcher(url):
+            """
+            Return the Response object for the given URL
+            """
             return self.get_resource(url, orig_req, log)
         if req.path_info_peek() == '.deliverance':
             req.path_info_pop()
@@ -58,11 +70,17 @@ class DeliveranceMiddleware(object):
         return resp(environ, start_response)
 
     def get_resource(self, url, orig_req, log):
+        """
+        Gets the resource at the given url, using the original request
+        `orig_req` as the basis for constructing the subrequest.
+        Returns a `webob.Response` object.
+        """
         assert url is not None
         if url.lower().startswith('file:'):
             if not display_local_files(orig_req):
-                ## FIXME: not sure if this applies generally; some calls to get_resource might
-                ## be because of a more valid subrequest than displaying a file
+                ## FIXME: not sure if this applies generally; some
+                ## calls to get_resource might be because of a more
+                ## valid subrequest than displaying a file
                 return exc.HTTPForbidden(
                     "You cannot access file: URLs (like %r)" % url)
             filename = url_to_filename(url)
@@ -73,7 +91,7 @@ class DeliveranceMiddleware(object):
                 return exc.HTTPForbidden(
                     "You cannot display a directory (%r)" % filename)
             subresp = Response()
-            type, encoding = mimetypes.guess_type(filename)
+            type, dummy = mimetypes.guess_type(filename)
             if not type:
                 type = 'application/octet-stream'
             subresp.content_type = type
@@ -108,7 +126,24 @@ class DeliveranceMiddleware(object):
                       url, subresp.status, subresp.content_type)
             return subresp
 
-    def link_to(self, req, url, source=False, line=None, selector=None, browse=False):
+    def link_to(self, req, url, source=False, line=None, selector=None, 
+                browse=False):
+        """
+        Creates a link to the given url for debugging purposes.
+
+        ``source=True``: 
+            link to the highlighted source for the file.
+
+        ``line=#``:
+            link to the specific line number
+
+        ``selector="css/xpath"``: 
+            highlight the element that matches that css/xpath selector
+
+        ``browse=True``:
+            link to a display that lets you see ids and classes in the
+            document
+        """
         base = req.environ['deliverance.base_url']
         base += '/.deliverance/view'
         source = int(bool(source))
@@ -129,6 +164,9 @@ class DeliveranceMiddleware(object):
         return url
 
     def internal_app(self, req, resource_fetcher):
+        """
+        Handles all internal (``/.deliverance``) requests.
+        """
         if not display_logging(req):
             return exc.HTTPForbidden(
                 "Logging is not enabled for you")
@@ -143,7 +181,11 @@ class DeliveranceMiddleware(object):
             return e
 
     def action_media(self, req, resource_fetcher):
-        ## FIXME: I'm not using this currently, because the Javascript didn't work.  Dunno why.
+        """
+        Serves up media from the ``deliverance/media`` directory.
+        """
+        ## FIXME: I'm not using this currently, because the Javascript
+        ## didn't work.  Dunno why.
         from paste.urlparser import StaticURLParser
         app = StaticURLParser(os.path.join(os.path.dirname(__file__), 'media'))
         ## FIXME: need to pop some segments from the req?
@@ -154,24 +196,33 @@ class DeliveranceMiddleware(object):
         return resp
 
     def action_view(self, req, resource_fetcher):
+        """
+        Views files; ``.link_to()`` creates links that go to this
+        method.
+        """
         url = req.GET['url']
         source = int(req.GET.get('source', '0'))
         browse = int(req.GET.get('browse', '0'))
-        line = int(req.GET.get('line', '0')) or ''
         selector = req.GET.get('selector', '')
         subresp = resource_fetcher(url)
         if source:
             return self.view_source(req, subresp)
         elif browse:
             return self.view_browse(req, subresp)
-        else:
+        elif selector:
             return self.view_selection(req, subresp)
+        else:
+            return exc.HTTPBadRequest(
+                "You must have a query variable source, browse, or selector")
 
     def view_source(self, req, resp):
-        ct = resp.content_type
-        if ct.startswith('application/xml'):
+        """
+        View the highlighted source (from `action_view`).
+        """
+        content_type = resp.content_type
+        if content_type.startswith('application/xml'):
             lexer = XmlLexer()
-        elif ct == 'text/html':
+        elif content_type == 'text/html':
             lexer = HtmlLexer()
         else:
             ## FIXME: what then?
@@ -182,6 +233,9 @@ class DeliveranceMiddleware(object):
         return Response(text)
 
     def view_browse(self, req, resp):
+        """
+        View the id/class browser (from `action_view`)
+        """
         import re
         body = resp.body
         f = open(os.path.join(os.path.dirname(__file__), 'media', 'browser.js'))
@@ -220,13 +274,16 @@ class DeliveranceMiddleware(object):
         return Response(body)
 
     def view_selection(self, req, resp):
+        """
+        View the highlighted selector (from `action_view`)
+        """
         from deliverance.selector import Selector
         doc = document_fromstring(resp.body)
         el = Element('base')
         el.set('href', posixpath.dirname(req.GET['url']) + '/')
         doc.head.insert(0, el)
-        selector = Selector.parse(selector)
-        type, elements, attributes = selector(doc)
+        selector = Selector.parse(req.GET['selector'])
+        dummy_type, elements, dummy_attributes = selector(doc)
         if not elements:
             template = self._not_found_template
         else:
@@ -259,18 +316,21 @@ class DeliveranceMiddleware(object):
             else:
                 el.set('DELIVERANCE-MATCH', '1')
         def highlight(html_code):
+            """Highlights the given code (for use in the template)"""
             if isinstance(html_code, _Element):
                 html_code = tostring(html_code)
             return html(pygments_highlight(html_code, HtmlLexer(),
                                            HtmlFormatter(noclasses=True)))
         def format_tag(tag):
+            """Highlights the lxml HTML tag"""
             return highlight(tostring(tag).split('>')[0]+'>')
         text = template.substitute(
             base_url=req.url,
             els_in_head=els_in_head, doc=doc,
             elements=all_elements, selector=selector, 
             format_tag=format_tag, highlight=highlight)
-        message = fromstring(self._message_template.substitute(message=text, url=url))
+        message = fromstring(
+            self._message_template.substitute(message=text, url=req.url))
         if doc.body.text:
             message.tail = doc.body.text
             doc.body.text = ''
@@ -280,6 +340,7 @@ class DeliveranceMiddleware(object):
 
 
     def _el_in_head(self, el):
+        """True if the given element is in the HTML ``<head>``"""
         while el is not None:
             if el.tag == 'head':
                 return True
@@ -329,6 +390,11 @@ class DeliveranceMiddleware(object):
 
 
 class SubrequestRuleGetter(object):
+    """
+    An implementation of `rule_getter` for `DeliveranceMiddleware`.
+    This retrieves and instantiates the rules using a subrequest with
+    the given url.
+    """
 
     def __init__(self, url):
         self.url = url
@@ -350,6 +416,7 @@ class SubrequestRuleGetter(object):
         try:
             doc = XML(doc_text, base_url=url)
         except XMLSyntaxError, e:
-            raise 'Invalid syntax in %s: %s' % (url, e)
-        assert doc.tag == 'ruleset', 'Bad rule tag <%s> in document %s' % (doc.tag, url)
+            raise Exception('Invalid syntax in %s: %s' % (url, e))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, url))
         return RuleSet.parse_xml(doc, url)

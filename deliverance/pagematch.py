@@ -16,6 +16,9 @@ class AbstractMatch(object):
 
     You can call this object to apply the match
     """
+    
+    # Subclasses must override:
+    element_name = None
 
     def __init__(self, path=None, domain=None,
                  request_header=None, response_header=None, environ=None,
@@ -37,8 +40,10 @@ class AbstractMatch(object):
         """
         path = cls._parse_attr(el, 'path', default='path')
         domain = cls._parse_attr(el, 'domain', default='wildcard-insensitive')
-        request_header = cls._parse_attr(el, 'request-header', default='exact', header=True)
-        response_header = cls._parse_attr(el, 'response-header', default='exact', header=True)
+        request_header = cls._parse_attr(el, 'request-header', default='exact', 
+                                         header=True)
+        response_header = cls._parse_attr(el, 'response-header', default='exact', 
+                                          header=True)
         environ = cls._parse_attr(el, 'environ', default='exact', header=True)
         pyref = PyReference.parse_xml(
             el, source_location=source_location,
@@ -70,6 +75,8 @@ class AbstractMatch(object):
             return compile_matcher(value, default)
 
     def __unicode__(self):
+        assert self.element_name, (
+            "You must set element_name in subclasses")
         parts = [u'<%s' % self.element_name]
         parts.extend(self._uni_early_args())
         for attr, value in [
@@ -87,59 +94,74 @@ class AbstractMatch(object):
         return ' '.join(parts)
 
     def _uni_early_args(self):
+        """Override to change the unicode() of this object"""
         return []
 
     def _uni_late_args(self):
+        """Override to change the unicode() of this object"""
         return []
 
     def __str__(self):
         return unicode(self).encode('utf8')
 
     def debug_description(self):
+        """Override to control the way this object displays in debugging contexts"""
         raise NotImplementedError
 
     def log_context(self):
+        """The return value is used for the context to ``log.debug()`` etc methds"""
         return self
 
     def __call__(self, request, resp, response_headers, log):
         """
-        Checks this match against the given request and response_headers object.
+        Checks this match against the given request and
+        response_headers object.
 
-        `response_headers` should be a case-insensitive dictionary.  `request` should be a
-        :class:webob.Request object.
+        `response_headers` should be a case-insensitive dictionary.
+        `request` should be a :class:webob.Request object.
         """
         result = True
         debug_name = self.debug_description()
         debug_context = self.log_context()
         if self.path:
             if not self.path(request.path):
-                log.debug(debug_context, 'Skipping %s because request URL (%s) does not match path="%s"',
-                          debug_name, request.path, self.path)
+                log.debug(
+                    debug_context, 'Skipping %s because request URL (%s) does not '
+                    'match path="%s"',
+                    debug_name, request.path, self.path)
                 return False
         if self.domain:
             host = request.host.split(':', 1)[0]
             if not self.domain(host):
-                log.debug(debug_context, 'Skipping %s because request domain (%s) does not match domain="%s"',
-                          debug_name, host, self.domain)
+                log.debug(
+                    debug_context, 'Skipping %s because request domain (%s) does '
+                    'not match domain="%s"',
+                    debug_name, host, self.domain)
                 return False
         if self.request_header:
             result, headers = self.request_header(request.headers)
             if not result:
-                log.debug(debug_context, 'Skipping %s because request headers %s do not match request-header="%s"',
-                          debug_name, ', '.join(headers), self.request_header)
+                log.debug(
+                    debug_context, 'Skipping %s because request headers %s do not '
+                    'match request-header="%s"',
+                    debug_name, ', '.join(headers), self.request_header)
                 return False
         if self.response_header:
             result, headers = self.response_header(response_headers)
             if not result:
                 ## FIXME: maybe distinguish <meta> headers and real headers?
-                log.debug(debug_context, 'Skipping %s because the response headers %s do not match response-header="%s"',
-                          debug_name, ', '.join(headers), self.response_header)
+                log.debug(
+                    debug_context, 'Skipping %s because the response headers %s '
+                    'do not match response-header="%s"',
+                    debug_name, ', '.join(headers), self.response_header)
                 return False
         if self.environ:
             result, keys = self.environ(request.environ)
             if not result:
-                log.debug(debug_context, 'Skipping %s because the request environ (keys %s) did not match environ="%s"',
-                          debug_name, ', '.join(keys), self.environ)
+                log.debug(
+                    debug_context, 'Skipping %s because the request environ (keys %s) '
+                    'did not match environ="%s"',
+                    debug_name, ', '.join(keys), self.environ)
                 return False
         if self.pyref:
             if not execute_pyref(request):
@@ -148,16 +170,21 @@ class AbstractMatch(object):
             else:
                 result = self.pyref(request, resp, response_headers, log)
                 if not result:
-                    log.debug(debug_context, 'Skipping %s because the reference <%s> returned false',
-                              debug_name, self.pyref)
+                    log.debug(
+                        debug_context, 
+                        'Skipping %s because the reference <%s> returned false',
+                        debug_name, self.pyref)
                     return False
                 if isinstance(result, basestring):
                     result = result.split()
                 if isinstance(result, (list, tuple)):
-                    return self.classes + list(result)
+                    return getattr(self, 'classes', []) + list(result)
         return getattr(self, 'classes', None) or True
 
 class Match(AbstractMatch):
+    """
+    Represents the ``<match>`` page-class applicator.
+    """
 
     element_name = 'match'
 
@@ -190,12 +217,14 @@ class Match(AbstractMatch):
             classes=classes, abort=abort, last=last, **matchargs)
 
     def _uni_early_args(self):
+        """Add the extra args <match> uses"""
         if self.classes:
             return [u'class="%s"' % html_quote(' '.join(self.classes))]
         else:
             return []
 
     def _uni_late_args(self):
+        """Add the extra args <match> uses"""
         parts = []
         if self.abort:
             parts.append(u'abort="1"')
@@ -204,6 +233,7 @@ class Match(AbstractMatch):
         return parts
 
     def debug_description(self):
+        """Description for debugging messages"""
         if self.abort:
             return 'abort'
         else:

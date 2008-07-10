@@ -1,11 +1,11 @@
+#!/usr/bin/env python
+"""Implements the ``deliverance-proxy`` command"""
 import sys
 import os
 import optparse
+from paste.httpserver import serve
 from deliverance.proxy import ProxySet
 from deliverance.proxy import ProxySettings
-
-from paste.httpserver import serve
-import urllib
 
 description = """\
 Starts up a proxy server using the given rule file.
@@ -33,9 +33,12 @@ parser.add_option(
     '--debug-headers',
     action='count',
     dest='debug_headers',
-    help='Show (in the console) all the incoming and outgoing headers; use twice for bodies')
+    help='Show (in the console) all the incoming and outgoing headers; '
+    'use twice for bodies')
 
-def run_command(rule_filename, debug=False, interactive_debugger=False, debug_headers=False):
+def run_command(rule_filename, debug=False, interactive_debugger=False, 
+                debug_headers=False):
+    """Actually runs the command from the parsed arguments"""
     settings = ProxySettings.parse_file(rule_filename)
     app = ReloadingApp(rule_filename, settings)
     if interactive_debugger:
@@ -71,6 +74,7 @@ class ReloadingApp(object):
         return self.application(environ, start_response)
 
     def load_proxy_set(self, warn=True):
+        """Loads or reloads the ProxySet object from the file"""
         if warn:
             print 'Reloading rule file %s' % self.rule_filename
         self.proxy_set = ProxySet.parse_file(self.rule_filename)
@@ -78,6 +82,7 @@ class ReloadingApp(object):
         self.application = self.settings.middleware(self.proxy_set.application)
 
 def main(args=None):
+    """Runs the command from ``sys.argv``"""
     if args is None:
         args = sys.argv[1:]
     options, args = parser.parse_args()

@@ -3,16 +3,16 @@ Represents individual actions (``<append>`` etc) and the RuleSet that
 puts them together
 """
 
-from deliverance.exceptions import add_exception_info, DeliveranceSyntaxError, AbortTheme
+import copy
+import urlparse
+from lxml import etree
+from lxml.html import document_fromstring
+from tempita import html
+from deliverance.exceptions import DeliveranceSyntaxError, AbortTheme
 from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
 from deliverance.pagematch import AbstractMatch
 from deliverance.themeref import Theme
-from lxml import etree
-from lxml.html import document_fromstring
-from tempita import html
-import copy
-import urlparse
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
@@ -21,7 +21,8 @@ class Rule(object):
     This represents everything in a <rule></rule> section.
     """
 
-    def __init__(self, classes, actions, theme, match, suppress_standard, source_location):
+    def __init__(self, classes, actions, theme, match, suppress_standard, 
+                 source_location):
         self.classes = classes
         self._actions = actions
         self.theme = theme
@@ -41,22 +42,23 @@ class Rule(object):
         theme = None
         actions = []
         suppress_standard = asbool(el.get('suppress-standard'))
-        for el in el.iterchildren():
-            if el.tag == 'theme':
+        for child in el.iterchildren():
+            if child.tag == 'theme':
                 ## FIXME: error if more than one theme
-                theme = Theme.parse_xml(el, source_location)
+                theme = Theme.parse_xml(child, source_location)
                 continue
-            if el.tag is etree.Comment:
+            if child.tag is etree.Comment:
                 continue
-            action = parse_action(el, source_location)
+            action = parse_action(child, source_location)
             actions.append(action)
         match = None
+        inst = cls(classes, actions, theme, match, suppress_standard, source_location)
         for attr in RuleMatch.match_attrs:
             if el.get(attr):
-                match = RuleMatch.parse_xml(self, el, source_location)
+                inst.match = RuleMatch.parse_xml(inst, el, source_location)
                 ## FIXME: would last="1" be a good alternative to suppress-standard?
                 break
-        return cls(classes, actions, theme, match, suppress_standard, source_location)
+        return inst
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
         """
@@ -79,14 +81,19 @@ class RuleMatch(AbstractMatch):
 
     @classmethod
     def parse_xml(cls, rule, el, source_location):
+        """
+        Parse this match from the attributes in the given element.
+        """
         inst = cls(**cls.parse_match_xml(el, source_location))
         inst.rule = rule
         return rule
 
     def debug_description(self):
+        """Used by AbstractMatch for logging"""
         return '<rule>'
 
     def log_context(self):
+        """Used by AbstractMatch for logging"""
         return self.rule
 
 ## A dictionary mapping element names to their rule classes:
@@ -105,13 +112,20 @@ def parse_action(el, source_location):
     return instance
 
 class AbstractAction(object):
-    # This is the abstract class for all other rules
+    """Abstract superclass for Actions (replace, etc)"""
 
     # These values are allowed for nocontent and notheme attributes:
     _no_allowed = (None, 'ignore', 'abort', 'warn')
     # These values are allowed for manycontent and manytheme attributes:
     _many_allowed = _no_allowed + ('last', 'first', 'ignore:first', 'ignore:last',
                                    'warn:first', 'warn:last')
+
+    # Subclasses should set these up in instantiation:
+    if_content = None
+    source_location = None
+    content = None
+    content_href = None
+    theme = None
 
     def convert_error(self, name, value):
         """
@@ -188,7 +202,8 @@ class AbstractAction(object):
         if self.if_content is None:
             # No if-content means always run
             return True
-        sel_type, els, attributes = self.select_elements(self.if_content, content_doc, theme=False)
+        sel_type, els, attributes = self.select_elements(
+            self.if_content, content_doc, theme=False)
         matched = bool(els)
         if sel_type == 'elements':
             # els is fine then
@@ -217,7 +232,8 @@ class AbstractAction(object):
             assert 0
         if ((not matched and not self.if_content.inverted)
             or (matched and self.if_content.inverted)):
-            log.info(self, 'skipping rule because if-content="%s" does not match', self.if_content)
+            log.info(self, 'skipping rule because if-content="%s" does not match', 
+                     self.if_content)
             return False
         return True
 
@@ -270,7 +286,6 @@ class AbstractAction(object):
         originating in the content are not selectable).
         """
         type, elements, attributes = selector(doc)
-        orig_elements = list(elements)
         if theme:
             bad_els = []
             for el in elements:
@@ -285,6 +300,7 @@ class AbstractAction(object):
         A text description of this rule, for use in log messages and errors
         """
         def linked_item(url, body, source=None, line=None, selector=None):
+            """Creates a link, if we have a log context"""
             body = html_quote(body)
             if log is None or url is None:
                 return body
@@ -333,6 +349,11 @@ class AbstractAction(object):
         return html(' '.join(parts) + ' /&gt;')
         
     def format_tags(self, elements, include_name=True):
+        """Formats the tags for display in a log message.
+
+        If `include_name` is true then "element" or "elements" is put
+        before the elements.
+        """
         if not elements:
             if include_name:
                 return 'no elements'
@@ -348,9 +369,18 @@ class AbstractAction(object):
             return text
 
     def format_tag(self, tag, include_name=False):
+        """
+        Formats a single tag.
+        """
         return self.format_tags([tag], include_name=include_name)
 
     def format_attribute_names(self, attributes, include_name=True):
+        """
+        Formats attribute names for display in a log message.
+
+        If `include_name` is true, then "attribute" or "attributes" is
+        put before the attribute names.
+        """
         if not attributes:
             if include_name:
                 return 'no attributes'
@@ -366,10 +396,15 @@ class AbstractAction(object):
             return text
         
 class TransformAction(AbstractAction):
-    # Abstract class for the rules that move from the content to the theme (replace, append, prepend)
+    """Abstract class for the rules that move from the content to the
+    theme (replace, append, prepend)"""
 
-    def __init__(self, source_location, content, theme, if_content=None, content_href=None,
-                 move=True, nocontent=None, notheme=None, manytheme=None, manycontent=None):
+    # Subclasses must set this:
+    _compatible_types = []
+
+    def __init__(self, source_location, content, theme, if_content=None, 
+                 content_href=None, move=True, nocontent=None, notheme=None, 
+                 manytheme=None, manycontent=None):
         self.source_location = source_location
         assert content is not None
         self.content = content
@@ -379,7 +414,8 @@ class TransformAction(AbstractAction):
             for theme_type in self.theme.selector_types():
                 if (theme_type, content_type) not in self._compatible_types:
                     raise DeliveranceSyntaxError(
-                        'Selector type %s (from content="%s") and type %s (from theme="%s") are not compatible'
+                        'Selector type %s (from content="%s") and type %s '
+                        '(from theme="%s") are not compatible'
                         % (content_type, self.content, theme_type, self.theme))
         self.if_content = if_content
         self.content_href = content_href
@@ -414,42 +450,58 @@ class TransformAction(AbstractAction):
             ## FIXME: Is this a weird way to resolve the href?
             href = urlparse.urljoin(log.request.url, self.content_href)
             content_resp = resource_fetcher(href)
-            log.debug(self, 'Fetching resource from href="%s": %s',
-                      href, content_resp.status)
+            log.debug(
+                self, 'Fetching resource from href="%s": %s',
+                href, content_resp.status)
             if content_resp.status_int != 200:
-                log.warn(self, 'Resource %s returned the status %s; skipping rule',
-                         href, content_resp.status)
+                log.warn(
+                    self, 'Resource %s returned the status %s; skipping rule',
+                    href, content_resp.status)
                 return
-            content_doc = document_fromstring(content_resp.body, base_url=self.content_href)
+            content_doc = document_fromstring(
+                content_resp.body, base_url=self.content_href)
         if not self.if_content_matches(content_doc, log):
             return
-        content_type, content_els, content_attributes = self.select_elements(self.content, content_doc, theme=False)
+        content_type, content_els, content_attributes = self.select_elements(
+            self.content, content_doc, theme=False)
         if not content_els:
             if self.nocontent == 'abort':
-                log.debug(self, 'aborting theming because no content matches rule content="%s"', self.content)
+                log.debug(
+                    self, 'aborting theming because no content matches rule content="%s"',
+                    self.content)
                 raise AbortTheme('No content matches content="%s"' % self.content)
             elif self.nocontent == 'ignore':
                 log_meth = log.debug
             else:
                 log_meth = log.warn
-            log_meth(self, 'skipping rule because no content matches rule content="%s"', self.content)
+            log_meth(
+                self, 'skipping rule because no content matches rule content="%s"', 
+                self.content)
             return
-        theme_type, theme_els, theme_attributes = self.select_elements(self.theme, theme_doc, theme=True)
+        theme_type, theme_els, theme_attributes = self.select_elements(
+            self.theme, theme_doc, theme=True)
         attributes = self.join_attributes(content_attributes, theme_attributes)
         if not theme_els:
             if self.notheme == 'abort':
-                log.debug(self, 'aborting theming because no theme elements match rule theme="%s"', self.theme)
+                log.debug(
+                    self, 
+                    'aborting theming because no theme elements match rule theme="%s"', 
+                    self.theme)
                 raise AbortTheme('No theme element matches theme="%s"' % self.theme)
             elif self.notheme == 'ignore':
                 log_meth = log.debug
             else:
                 log_meth = log.warn
-            log_meth(self, 'skipping rule because no theme element matches rule theme="%s"', self.theme)
+            log_meth(
+                self, 'skipping rule because no theme element matches rule theme="%s"', 
+                self.theme)
             return
         if len(theme_els) > 1:
             if self.manytheme[0] == 'abort':
-                log.debug(self, 'aborting theming because %i elements (%s) match theme="%s"',
-                          len(theme_els), self.format_tags(theme_els, include_name=False), self.theme)
+                log.debug(
+                    self, 'aborting theming because %i elements (%s) match theme="%s"',
+                    len(theme_els), self.format_tags(theme_els, include_name=False), 
+                    self.theme)
                 raise AbortTheme('Many elements match theme="%s"' % self.theme)
             elif self.manytheme[0] == 'warn':
                 log_meth = log.warn
@@ -459,14 +511,16 @@ class TransformAction(AbstractAction):
                 theme_el = theme_els[0]
             else:
                 theme_el = theme_els[-1]
-            log_meth(self, '%s elements match theme="%s", using the %s match',
-                     len(theme_els), self.theme, self.manytheme[1])
+            log_meth(
+                self, '%s elements match theme="%s", using the %s match',
+                len(theme_els), self.theme, self.manytheme[1])
         else:
             theme_el = theme_els[0]
         if not self.move and theme_type in ('children', 'elements'):
             content_els = copy.deepcopy(content_els)
         mark_content_els(content_els)
-        self.apply_transformation(content_type, content_els, attributes, theme_type, theme_el, log)
+        self.apply_transformation(content_type, content_els, attributes, 
+                                  theme_type, theme_el, log)
 
     def join_attributes(self, attr1, attr2):
         """
@@ -483,10 +537,14 @@ class TransformAction(AbstractAction):
         attr |= attr2
         return list(attr)
 
-    def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
+    def apply_transformation(self, content_type, content_els, attributes, 
+                             theme_type, theme_el, log):
+        """Subclasses override this to implement the actual transformation
+        """
         raise NotImplementedError
 
 class Replace(TransformAction):
+    """Implements the <replace> action"""
 
     # Compatible types of child and theme selector types:
     _compatible_types = [
@@ -500,10 +558,10 @@ class Replace(TransformAction):
 
     name = 'replace'
  
-    def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
+    def apply_transformation(self, content_type, content_els, attributes, 
+                             theme_type, theme_el, log):
+        """Apply the <replace> action"""
         if theme_type == 'children':
-            existing_children = len(theme_el) or theme_el.text
-            theme_empty = not len(theme_el) and not theme_el.text
             if len(theme_el):
                 log_text = 'and removed the chilren and text of the theme element'
             elif theme_el.text:
@@ -514,33 +572,42 @@ class Replace(TransformAction):
             theme_el.text = ''
             if content_type == 'elements':
                 if self.move:
-                    # If we aren't working with copies then we have to move the tails up as we remove the elements:
+                    # If we aren't working with copies then we have to
+                    # move the tails up as we remove the elements:
                     for el in reversed(content_els):
-                        move_tail_upward(el)
+                        move_tail_upwards(el)
                     verb = 'Moving'
                 else:
-                    # If we are working with copies, then we can just throw away the tails:
+                    # If we are working with copies, then we can just
+                    # throw away the tails:
                     for el in content_els:
                         el.tail = None
                     verb = 'Copying'
                 theme_el.extend(content_els)
-                log.debug(self, '%s %s from content into theme element %s %s',
-                          verb, self.format_tags(content_els), self.format_tag(theme_el), log_text)
+                log.debug(
+                    self, '%s %s from content into theme element %s %s',
+                    verb, self.format_tags(content_els), self.format_tag(theme_el), 
+                    log_text)
             elif content_type == 'children':
                 text, els = self.prepare_content_children(content_els)
                 add_text(theme_el, text)
                 theme_el.extend(els)
                 if self.move:
-                    # Since we moved just the children of the content elements, we still need to remove the parent
+                    # Since we moved just the children of the content
+                    # elements, we still need to remove the parent
                     # elements.
                     for el in content_els:
                         el.getparent().remove(el)
-                    log.debug(self, 'Moving children of content %s into theme element %s, '
-                              'and removing now-empty content elements %s',
-                              self.format_tags(content_els), self.format_tag(theme_el), log_text)
+                    log.debug(
+                        self, 'Moving children of content %s into theme element %s, '
+                        'and removing now-empty content elements %s',
+                        self.format_tags(content_els), self.format_tag(theme_el), 
+                        log_text)
                 else:
-                    log.debug(self, 'Copying children of content %s into theme element %s %s',
-                              self.format_tags(content_els), self.format_tag(theme_el), log_text)
+                    log.debug(
+                        self, 'Copying children of content %s into theme element %s %s',
+                        self.format_tags(content_els), self.format_tag(theme_el), 
+                        log_text)
             else:
                 assert 0
             
@@ -558,8 +625,9 @@ class Replace(TransformAction):
                         el.tail = None
                     verb = 'copied'
                 parent[pos:pos+1] = content_els
-                log.debug(self, 'Replaced the theme element %s with the content %s (%s)',
-                          self.format_tag(theme_el), self.format_tags(content_els), verb)
+                log.debug(
+                    self, 'Replaced the theme element %s with the content %s (%s)',
+                    self.format_tag(theme_el), self.format_tags(content_els), verb)
             elif content_type == 'children':
                 text, els = self.prepare_content_children(content_els)
                 if pos == 0:
@@ -570,12 +638,15 @@ class Replace(TransformAction):
                 if self.move:
                     for el in content_els:
                         el.getparent().remove(el)
-                    log.debug(self, 'Replaced the theme element %s with the children of the content %s, '
-                              'and removed the now-empty content element(s)',
-                              self.format_tag(theme_el), self.format_tags(content_els))
+                    log.debug(
+                        self, 'Replaced the theme element %s with the children of the '
+                        'content %s, and removed the now-empty content element(s)',
+                        self.format_tag(theme_el), self.format_tags(content_els))
                 else:
-                    log.debug(self, 'Replaced the theme element %s with copies of the children of the content %s',
-                              self.format_tag(theme_el), self.format_tags(content_els))
+                    log.debug(
+                        self, 'Replaced the theme element %s with copies of the '
+                        'children of the content %s',
+                        self.format_tag(theme_el), self.format_tags(content_els))
             else:
                 assert 0
 
@@ -584,16 +655,23 @@ class Replace(TransformAction):
             assert content_type == 'attributes'
             if len(content_els) > 1:
                 if self.manycontent[0] == 'abort':
-                    log.debug(self, 'aborting because %i elements in the content (%s) match content="%s"',
-                              len(content_els), self.format_tags(content_els, include_name=False), self.content)
+                    log.debug(
+                        self, 'aborting because %i elements in the content (%s) '
+                        'match content="%s"',
+                        len(content_els), 
+                        self.format_tags(content_els, include_name=False), self.content)
                     raise AbortTheme()
                 else:
                     if self.manycontent[0] == 'warn':
                         log_meth = log.warn
                     else:
                         log_meth = log.debug
-                    log_meth(self, '%s elements match content="%s" (%s) when only one is expected, using the %s match',
-                             len(content_els), self.content, self.format_tags(content_els, include_name=False), self.manycontent[1])
+                    log_meth(
+                        self, '%s elements match content="%s" (%s) when only one is '
+                        'expected, using the %s match',
+                        len(content_els), self.content, 
+                        self.format_tags(content_els, include_name=False), 
+                        self.manycontent[1])
                     if self.manycontent[1] == 'first':
                         content_els = [content_els[0]]
                     else:
@@ -602,7 +680,8 @@ class Replace(TransformAction):
                 log_text = ' and cleared all existing theme attributes'
             else:
                 log_text = ''
-            ## FIXME: should this only clear the named attribute? (when attributes are named)
+            ## FIXME: should this only clear the named attribute?
+            ## (when attributes are named)
             theme_el.attrib.clear()
             if attributes:
                 c_attrib = content_els[0].attrib
@@ -615,18 +694,20 @@ class Replace(TransformAction):
                             del c_attrib[name]
                     log_text += ' and removed the attributes from the content'
                 ## FIXME: only list attributes that were actually found?
-                log.debug(self, 'Copied the %s from the content element %s to the '
-                          'theme element %s%s',
-                          self.format_attribute_names(attributes), self.format_tag(content_els[0]), 
-                          self.format_tag(theme_el), log_text)
+                log.debug(
+                    self, 'Copied the %s from the content element %s to the '
+                    'theme element %s%s',
+                    self.format_attribute_names(attributes), 
+                    self.format_tag(content_els[0]), self.format_tag(theme_el), log_text)
             else:
                 theme_el.attrib.update(content_els[0].attrib)
                 if self.move:
                     content_els[0].attrib.clear()
                     log_text += ' and removed all attributes from the content'
-                log.debug(self, 'Moved all the attributes from the content element %s to the '
-                          'theme element %s%s',
-                          self.format_tag(content_els[0]), self.format_tag(theme_el), log_text)
+                log.debug(
+                    self, 'Moved all the attributes from the content element %s to the '
+                    'theme element %s%s',
+                    self.format_tag(content_els[0]), self.format_tag(theme_el), log_text)
 
         if theme_type == 'tag':
             ## FIXME: warn about manycontent
@@ -636,12 +717,15 @@ class Replace(TransformAction):
             theme_el.attrib.clear()
             theme_el.attrib.update(content_els[0].attrib)
             # "move" in this case doesn't mean anything
-            log.debug(self, 'Changed the tag name of the theme element <%s> to the name of the content element: %s',
-                      old_tag, self.format_tag(content_els[0]))
+            log.debug(
+                self, 'Changed the tag name of the theme element <%s> to the '
+                'name of the content element: %s',
+                old_tag, self.format_tag(content_els[0]))
 
 _actions['replace'] = Replace
 
 class Append(TransformAction):
+    """Implements the <append> action"""
 
     name = 'append'
 
@@ -657,7 +741,9 @@ class Append(TransformAction):
         # Removing 'tag'
         ]
 
-    def apply_transformation(self, content_type, content_els, attributes, theme_type, theme_el, log):
+    def apply_transformation(self, content_type, content_els, attributes, 
+                             theme_type, theme_el, log):
+        """Applies the transformation"""
         if theme_type == 'children':
             if content_type == 'elements':
                 if self.move:
@@ -676,8 +762,10 @@ class Append(TransformAction):
                     theme_el.text = None
                     theme_el[:0] = content_els
                     pos_text = 'beginning'
-                log.debug(self, '%s content %s to the %s of theme element %s',
-                          verb, self.format_tags(content_els), pos_text, self.format_tag(theme_el))
+                log.debug(
+                    self, '%s content %s to the %s of theme element %s',
+                    verb, self.format_tags(content_els), pos_text, 
+                    self.format_tag(theme_el))
             elif content_type == 'children':
                 text, els = self.prepare_content_children(content_els)
                 if self._append:
@@ -707,8 +795,11 @@ class Append(TransformAction):
                 else:
                     verb = 'Copying'
                     log_text = ''
-                log.debug(self, '%s the children of content %s to the %s of the theme element %s%s',
-                          verb, self.format_tags(content_els), pos_text, self.format_tag(theme_el), log_text)
+                log.debug(
+                    self, '%s the children of content %s to the %s of the '
+                    'theme element %s%s',
+                    verb, self.format_tags(content_els), pos_text, 
+                    self.format_tag(theme_el), log_text)
             else:
                 assert 0
 
@@ -730,8 +821,10 @@ class Append(TransformAction):
                 else:
                     parent[pos:pos] = content_els
                     pos_text = 'before'
-                log.debug(self, '%s content %s %s the theme element %s',
-                          verb, self.format_tags(content_els), pos_text, self.format_tag(theme_el))
+                log.debug(
+                    self, '%s content %s %s the theme element %s',
+                    verb, self.format_tags(content_els), pos_text, 
+                    self.format_tag(theme_el))
             elif content_type == 'children':
                 text, els = self.prepare_content_children(content_els)
                 if self._append:
@@ -754,24 +847,31 @@ class Append(TransformAction):
                 else:
                     verb = 'Copying'
                     log_text = ''
-                log.debug(self, '%s the children of content %s %s the theme element %s%s',
-                          verb, self.format_tags(content_els), pos_text, self.format_tag(theme_el), log_text)
+                log.debug(
+                    self, '%s the children of content %s %s the theme element %s%s',
+                    verb, self.format_tags(content_els), pos_text, 
+                    self.format_tag(theme_el), log_text)
 
         if theme_type == 'attributes':
             ## FIXME: handle named attributes
             assert content_type == 'attributes'
             if len(content_els) > 1:
                 if self.manycontent[0] == 'abort':
-                    log.debug(self, 'aborting because %i elements in the content (%s) match content="%s"',
-                              len(content_els), self.format_tags(content_els), self.content)
+                    log.debug(
+                        self, 'aborting because %i elements in the content (%s) '
+                        'match content="%s"',
+                        len(content_els), self.format_tags(content_els), self.content)
                     raise AbortTheme()
                 else:
                     if self.manycontent[0] == 'warn':
                         log_meth = log.warn
                     else:
                         log_meth = log.debug
-                    log_meth(self, '%s elements match content="%s" (%s) but only one is expected, using the %s match',
-                             len(content_els), self.content, self.format_tags(content_els), self.manycontent[1])
+                    log_meth(
+                        self, '%s elements match content="%s" (%s) but only one '
+                        'is expected, using the %s match',
+                        len(content_els), self.content, self.format_tags(content_els),
+                        self.manycontent[1])
                     if self.manycontent[1] == 'first':
                         content_els = [content_els[0]]
                     else:
@@ -794,16 +894,19 @@ class Append(TransformAction):
                                 theme_attrib[name] = content_attrib[name]
                                 copied_attrs.append(name)
                     if avoided_attrs:
-                        log.debug(self, '%s %s from the content element %s to the theme element %s, '
-                                  'and did not copy the %s because they were already '
-                                  'present in the theme element',
-                                  verb, self.format_attribute_names(copied_attrs), self.format_tag(content_els[0]), 
-                                  self.format_tag(theme_el), self.format_attribute_names(avoided_attrs))
+                        log.debug(
+                            self, '%s %s from the content element %s to the theme '
+                            'element %s, and did not copy the %s because they were '
+                            'already present in the theme element',
+                            verb, self.format_attribute_names(copied_attrs), 
+                            self.format_tag(content_els[0]), self.format_tag(theme_el), 
+                            self.format_attribute_names(avoided_attrs))
                     else:
-                        log.debug(self, '%s %s from the content element %s to the theme '
-                                  'element %s',
-                                  verb, self.format_attribute_names(copied_attrs), self.format_tag(content_els[0]),
-                                  self.format_tag(theme_el))
+                        log.debug(
+                            self, '%s %s from the content element %s to the theme '
+                            'element %s',
+                            verb, self.format_attribute_names(copied_attrs), 
+                            self.format_tag(content_els[0]), self.format_tag(theme_el))
                 else:
                     avoided_attrs = []
                     copied_attrs = []
@@ -814,25 +917,34 @@ class Append(TransformAction):
                             copied_attrs.append(key)
                             theme_attrib[key] = value
                     if avoided_attrs:
-                        log.debug(self, '%s %s from the content element %s to the theme element %s, '
-                                  'and did not copy the %s because they were already present in the theme element',
-                                  verb, self.format_attribute_names(copied_attrs), self.format_tag(content_els[0]), 
-                                  self.format_tag(theme_el), self.format_attribute_names(avoided_attrs))
+                        log.debug(
+                            self, '%s %s from the content element %s to the theme '
+                            'element %s, and did not copy the %s because they were '
+                            'already present in the theme element',
+                            verb, self.format_attribute_names(copied_attrs), 
+                            self.format_tag(content_els[0]), self.format_tag(theme_el), 
+                            self.format_attribute_names(avoided_attrs))
                     else:
-                        log.debug(self, '%s %s from the content element %s to the theme element %s',
-                                  verb, self.format_attribute_names(copied_attrs), self.format_tag(content_els[0]), 
-                                  self.format_tab(theme_el))
+                        log.debug(
+                            self, 
+                            '%s %s from the content element %s to the theme element %s',
+                            verb, self.format_attribute_names(copied_attrs), 
+                            self.format_tag(content_els[0]), self.format_tag(theme_el))
             else:
                 if attributes:
                     for name in attributes:
                         if name in content_attrib:
                             theme_attrib.set(name, content_attrib[name])
-                    log.debug(self, '%s %s from the content element %s to the theme element %s',
-                              verb, self.format_attribute_names(attributes), self.format_tag(content_els[0]), self.format_tag(theme_el))
+                    log.debug(
+                        self, '%s %s from the content element %s to the theme element %s',
+                        verb, self.format_attribute_names(attributes), 
+                        self.format_tag(content_els[0]), self.format_tag(theme_el))
                 else:
                     theme_attrib.update(content_attrib)
-                    log.debug(self, '%s all the attributes from the content element %s to the theme element %s',
-                              verb, self.format_tag(content_els[0]), self.format_tag(theme_el))
+                    log.debug(
+                        self, '%s all the attributes from the content element %s '
+                        'to the theme element %s',
+                        verb, self.format_tag(content_els[0]), self.format_tag(theme_el))
             if self.move:
                 if attributes:
                     for name in attributes:
@@ -844,12 +956,14 @@ class Append(TransformAction):
 _actions['append'] = Append
 
 class Prepend(Append):
+    """Implements the <prepend> action"""
     name = 'prepend'
     _append = False
 
 _actions['prepend'] = Prepend
 
 class Drop(AbstractAction):
+    """Implements the <drop> action"""
     
     name = 'drop'
 
@@ -865,44 +979,55 @@ class Drop(AbstractAction):
         self.notheme = self.convert_error('notheme', notheme)
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
+        """Applies the action"""
         if not self.if_content_matches(content_doc, log):
             return
-        for doc, selector, error, name in [(theme_doc, self.theme, self.notheme, 'theme'), (content_doc, self.content, self.nocontent, 'content')]:
+        for doc, selector, error, name in [
+            (theme_doc, self.theme, self.notheme, 'theme'), 
+            (content_doc, self.content, self.nocontent, 'content')]:
             if selector is None:
                 continue
             sel_type, els, attributes = self.select_elements(selector, doc, name=='theme')
             if not els:
                 if error == 'abort':
-                    log.debug(self, 'aborting %s because no %s element matches rule %s="%s"', name, name, name, selector)
+                    log.debug(
+                        self, 'aborting %s because no %s element matches rule %s="%s"', 
+                        name, name, name, selector)
                     raise AbortTheme('No %s matches %s="%s"' % (name, name, selector))
                 elif error == 'ignore':
                     log_meth = log.debug
                 else:
                     log_meth = log.warn
-                log_meth(self, 'skipping rule because no %s matches rule %s="%s"', name, name, selector)
+                log_meth(
+                    self, 'skipping rule because no %s matches rule %s="%s"', 
+                    name, name, selector)
                 return
             if sel_type == 'elements':
                 for el in els:
                     move_tail_upwards(el)
                     el.getparent().remove(el)
-                log.debug(self, 'Dropping %s %s', name, self.format_tags(els))
+                log.debug(
+                    self, 'Dropping %s %s', name, self.format_tags(els))
             elif sel_type == 'children':
                 for el in els:
                     el[:] = []
                     el.text = ''
-                log.debug(self, 'Dropping the children of %s %s', name, self.format_tags(els))
+                log.debug(
+                    self, 'Dropping the children of %s %s', name, self.format_tags(els))
             elif sel_type == 'attributes':
                 for el in els:
                     attrib = el.attrib
                     if attributes:
-                        for name in attributes:
-                            if name in attrib:
-                                del attrib[name]
+                        for attr_name in attributes:
+                            if attr_name in attrib:
+                                del attrib[attr_name]
                     else:
                         attrib.clear()
                 if attributes:
-                    log.debug(self, 'Dropping the %s from the %s %s',
-                              self.format_attribute_names(attributes), name, self.format_tags(els))
+                    log.debug(
+                        self, 'Dropping the %s from the %s %s',
+                        self.format_attribute_names(attributes), 
+                        name, self.format_tags(els))
                 else:
                     log.debug(self, 'Dropping all the attributes of %s %s',
                               name, self.format_tags(els))
@@ -920,13 +1045,15 @@ class Drop(AbstractAction):
                     else:
                         add_tail(parent[pos-1], el.text)
                     parent[pos:pos+1] = children
-                log.debug(self, 'Dropping the tag (flattening the element) of %s %s',
-                          name, self.format_tags(els))
+                log.debug(
+                    self, 'Dropping the tag (flattening the element) of %s %s',
+                    name, self.format_tags(els))
             else:
                 assert 0
 
     @classmethod
     def from_xml(cls, tag, source_location):
+        """Parses and instantiates the class from an element"""
         content = cls.compile_selector(tag, 'content', source_location)
         theme = cls.compile_selector(tag, 'theme', source_location)
         if_content = cls.compile_selector(tag, 'if_content', source_location)
@@ -986,7 +1113,8 @@ def mark_content_els(els):
     Mark an element as originating from the content (this uses a special attribute)
     """
     for el in els:
-        ## FIXME: maybe put something that is trackable to the rule that moved the element
+        ## FIXME: maybe put something that is trackable to the rule
+        ## that moved the element
         el.set(CONTENT_ATTRIB, '1')
 
 def is_content_element(el):
@@ -994,8 +1122,8 @@ def is_content_element(el):
     Tests if the element came from the content (which includes if any of its ancestors)
     """
     ## FIXME: should this check children too?
-    for p in iter_self_and_ancestors(el):
-        if p.get(CONTENT_ATTRIB):
+    for parent in iter_self_and_ancestors(el):
+        if parent.get(CONTENT_ATTRIB):
             return True
     return False
 
@@ -1003,7 +1131,7 @@ def remove_content_attribs(doc):
     """
     Remove the markers placed by :func:`mark_content_els`
     """
-    for p in doc.getiterator():
-        if p.get(CONTENT_ATTRIB, None) is not None:
-            del p.attrib[CONTENT_ATTRIB]
+    for parent in doc.getiterator():
+        if parent.get(CONTENT_ATTRIB, None) is not None:
+            del parent.attrib[CONTENT_ATTRIB]
 

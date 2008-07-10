@@ -1,13 +1,14 @@
 """
 Represents <theme> elements
 """
+
+import posixpath
+import urlparse
 from deliverance.exceptions import DeliveranceSyntaxError, AbortTheme
 from deliverance.pyref import PyReference
 from deliverance.security import execute_pyref
 from deliverance.util.uritemplate import uri_template_substitute
 from deliverance.util.nesteddict import NestedDict
-import posixpath
-import urlparse
 
 class Theme(object):
     """
@@ -21,6 +22,7 @@ class Theme(object):
 
     @classmethod
     def parse_xml(cls, el, source_location):
+        """Parse an instance from an etree XML element"""
         assert el.tag == 'theme'
         href = el.get('href')
         pyref = PyReference.parse_xml(el, source_location, default_function='get_theme',
@@ -28,12 +30,16 @@ class Theme(object):
         if not pyref and not href:
             ## FIXME: also warn when pyref and href?
             raise DeliveranceSyntaxError(
-                'You must provide at least one of href, pymodule, or the pyfile attribute',
-                element=el)
+                'You must provide at least one of href, pymodule, or the '
+                'pyfile attribute', element=el)
         return cls(href=href, pyref=pyref,
                    source_location=source_location)
 
     def resolve_href(self, req, resp, log):
+        """Figure out the theme URL given a request and response.
+
+        This calls the pyref, or does URI template substitution on an
+        href attribute"""
         substitute = True
         if self.pyref:
             if not execute_pyref(req):
@@ -47,7 +53,8 @@ class Theme(object):
         else:
             href = self.href
         if substitute:
-            vars = NestedDict(req.environ, req.headers, dict(here=posixpath.dirname(self.source_location)))
+            vars = NestedDict(req.environ, req.headers, 
+                              dict(here=posixpath.dirname(self.source_location)))
             new_href = uri_template_substitute(href, vars)
             if new_href != href:
                 log.debug(

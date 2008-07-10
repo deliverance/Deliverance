@@ -1,3 +1,7 @@
+"""Implements SecurityContext"""
+
+__all__ = ['SecurityContext']
+
 class SecurityContext(object):
     """
     This represents the security context of the Deliverance request.
@@ -41,19 +45,25 @@ class SecurityContext(object):
         return inst
     
     def display_logging(self, environ):
+        """True if it is allowed to display the log to a user"""
         if self._display_logging is not None:
             return self._display_logging
         return self.is_developer_user(environ)
 
     def display_local_files(self, environ):
+        """True if it is allowed to display local files to developers"""
         if self._display_logging is not None:
             return self._display_logging
         return self.is_developer_user(environ)
 
     def execute_pyref(self, environ):
+        """True if it is allowed to execute pyref statements"""
         return self._execute_pyref
 
     def is_developer_user(self, environ):
+        """
+        True if a developer user (with DevAuth) is logged in.
+        """
         if hasattr(environ, 'environ'):
             # Actually a request
             environ = environ.environ
@@ -73,12 +83,15 @@ class SecurityContext(object):
         return replacement_app
 
 def make_getter(meth_name):
+    """Creates a getter for the given method, that works on an environment alone"""
     def getter(environ):
+        """Get the security context and call ``.%(name)s`` on it"""
         if hasattr(environ, 'environ'):
             environ = environ.environ
         ## FIXME: handle case when security context isn't in place?
         return getattr(environ['deliverance.security_context'], meth_name)(environ)
     getter.func_name = meth_name
+    getter.__doc__ = getter.__doc__ % dict(name=meth_name)
     return getter
 
 display_logging = make_getter('display_logging')

@@ -11,6 +11,11 @@ __all__ = ['uri_template_substitute']
 _uri_var_re = re.compile(r'\{(.*?)\}')
 
 def uri_template_substitute(uri_template, vars):
+    """Does URI template substitution
+    
+    This only substitutes simple ``{var}``, none of the fancier
+    substitution techniques.
+    """
     def subber(match):
         try:
             return vars[match.group(1)]
