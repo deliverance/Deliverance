@@ -254,7 +254,7 @@ This appends all the elements in the body of ``/sidebar`` into the theme.  This 
 Moving and copying
 ++++++++++++++++++
 
-By default actions *move* elements from the content to the theme.  That is, if you select content with an action, later actions won't be able to access that action.  This is particularly useful in cases like this:
+By default actions *move* elements from the content to the theme.  That is, if you select content with an action, later actions won't be able to access those content elements.  This is particularly useful in cases like this:
 
 .. code-block:: html
 
