@@ -5,6 +5,7 @@ Deliverance is a tool to theme HTML, applying a consistent style to applications
 
 .. toctree::
 
+   philosophy
    configuration
    pyref
    news
