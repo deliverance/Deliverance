@@ -10,6 +10,11 @@ Deliverance is a tool to theme HTML, applying a consistent style to applications
    pyref
    news
    license
+
+These are some documents that may or may not be accurate; they are a little out of date:
+
+.. toctree::
+
    page-classes
    rules
    proxy

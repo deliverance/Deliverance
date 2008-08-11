@@ -1,12 +1,14 @@
 The Philosophy Of Deliverance
-=============================
++++++++++++++++++++++++++++++
 
 :author: Ian Bicking <ianb@openplans.org>
+
+.. contents::
 
 Why is Deliverance?  Why was it made, what purpose does it serve, why should you use it, how can it change the way you do web development?
 
 On the Subject of Platforms
----------------------------
+===========================
 
 Right now we live in an age of *platforms*.  Developers (or management or coincidence) decides on a platform, and that serves as the basis for all future development.  Usually there's some old things from a previous platform (or a primordial pre-platform age: I'm looking at you ``formmail.pl``!)  The goal is always to eliminate all of these old pieces, rewriting them for the new platform.  That goal is seldom attained in a timely manner, and even before it is accomplished you may be moving to the next platform.
 
@@ -14,18 +16,18 @@ Why do you have to port everything forward to the newest platform?  Well, presum
 
 A similar conflict arises when you consider how to add new functionality to a site.  For example, you may want to add a blog.  Do you:
 
-a. Use the best blogging software available?  
-b. Use something native to your platform?  
-c. Write something yourself?
+1. Use the best blogging software available?  
+2. Use something native to your platform?  
+3. Write something yourself?
 
-The answer is probably (b) or (c), because it would be too hard to integrate something foreign to your platform.  This form of choice means that every platform has some kind of "blog", but the users of that blog are likely to only be a subset of the users of the parent platform.  This makes it difficult for winners to emerge, or for a well-developed piece of software to really be successful.  Platform-based software is limited by the adoption of the platform.
+The answer is probably 2 or 3, because it would be too hard to integrate something foreign to your platform.  This form of choice means that every platform has some kind of "blog", but the users of that blog are likely to only be a subset of the users of the parent platform.  This makes it difficult for winners to emerge, or for a well-developed piece of software to really be successful.  Platform-based software is limited by the adoption of the platform.
 
 Not all software has a platform.  These tend to be the most successful web applications, things like `Trac <http://trac.edgewall.org/>`_, `WordPress <http://wordpress.org>`_, etc.
 
 "Aha!" you think "I'll just use those best-of-breed applications!"  But no!  Those applications themselves turn into platforms.  WordPress is practically a CMS.  Trac too.  Extensible applications, if successful, become their own platform.  This is not to place blame, they aren't necessarily any worse than any other platform, just an acknowledgment that this move to platform can happen anywhere.
 
 Beyond Platforms, or A Better Platform
---------------------------------------
+======================================
 
 One of the major goals of Deliverance is to move beyond platforms.  It is an *integration tool*, to allow applications from different frameworks or languages to be integrated gracefully.
 
@@ -41,23 +43,19 @@ Deliverance specifically addresses 1, providing a common look-and-feel across a 
 
 Deliverance applies a common theme across all the applications in your site.  It's basic unit of abstraction is **HTML**.  It doesn't use a particular templating language.  It doesn't know what an object is.  HTML is something every web application produces.  Deliverance's means of communication is **HTTP**.  It doesn't call functions or create request objects [*]_.  Again, everything speaks HTTP.
 
-.. [*] This isn't entirely true, Deliverance internally uses `WSGI <http://wsgi.org/wsgi/>`_ which is a Python-level abstraction of HTTP calls.
-
 Deliverance also allows you to include output from multiple locations.  In all cases there's the *theme*, a plain HTML page, and the *content*, whatever the underlying application returns.  You can also include output from other parts of the site, most commonly navigation content that you can manage separately.  All of these pieces can be dynamic -- again, Deliverance only cares about HTML and HTTP, it doesn't worry about what produces the response.
 
 This is all very similar to systems built on XSLT transforms, except without the XSLT [*]_, and without XML.  Strictly speaking you can apply XSLT to any parseable markup, even HTML, but the most common (or at least most talked about) way to apply XSLT is using "semantic" XML output that is transformed into HTML.  Deliverance does not try to understand the semantics of applications, and instead expects them to provide appropriate *presentation* of whatever semantics the underlying application possesses.  Presentation is more universal than semantics.
 
-.. [*] At different times in the past, and potentially again in the future, Deliverance has been compiled down to XSLT rules.  So Deliverance could be seen even as an simple transformation language that compiles down to XSLT.
-
 While Deliverance does its best to work with applications as-they-exist, without making particular demands on those applications, it is not perfect.  Conflicting CSS can be a serious problem.  Some applications don't have very good structure to work with.  You can't generate any content in Deliverance, you can only manipulate existing content, and often that means finding new ways to generate content, or making sure you have a place to store your content (as in the case of navigation).  This is why arguably Deliverance does not *remove* the need for a platform, but is just its own platform.  In so far as this is true, Deliverance tries to be a *better* platform, where "better" is "more universal" rather than "more powerful".  Most templating systems are more powerful than Deliverance transformations.  It can be useful to have access to the underlying objects used to procude the markup.  But Deliverance doesn't give you these things, because it only implements things that can be applied to any source of content.  Static files are entirely workable in Deliverance, just as any application written in Python, PHP, or even an application hosted on an entirely separate service is usable through Deliverance.
 
 The Missing Parts
------------------
+=================
 
 As mentioned before, two important benefits of a platform are missing from Deliverance.  I'll try to describe what I believe are the essential aspects.  I hope at some time that Deliverance or some complementary application will be able to satisfy these needs.  Also, I suggest some lines of development that might be easier than others.
 
 Indexing The Entire Site
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 Typically each application has a notion of what all the interesting pages in that application are.  Most applications have a set of *uninteresting* pages, or transient pages.  A search result is transient, as an example.  An application also knows when new pages appear, and when other pages disappear.  A site-wide index of these pages would allow things like site maps, cross-application search, and cross-application reporting to be done.
 
@@ -68,7 +66,7 @@ To do indexing you need both events (to signal the creation, update, or deletion
 One thing that indexing can provide is a way to use `microformats <http://microformats.org/>`_.  Right now microformats are interesting, but for most sites they are largely useless.  You can mark up your content, but no one will do anything interesting with that markup.  If you could easily code up an indexer that could keep up-to-date on all the content on your site, you could produce interesting results like cross-application mapping.
 
 Shared Authentication And User Accounts
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
 
 Authentication is one of the most common and annoying integration tasks when crossing platform boundaries.  Systems like `Open ID <http://openid.net/>`_ offer the ability to unify *cross-site* authentication, but they don't actually solve the problem of a single site with multiple applications.
 
@@ -137,3 +135,10 @@ Application farming is when one instance of an application can support many "sit
 It would be nice if you could add a simple header to a request, like ``X-Project-Name: foo`` and that would be used by all these products to select the site (or sub-site or project or any other organization unit).  Then mapping domain names, paths, or other aspects of a request to the project could be handled once and the applications could all consistently consume it.
 
 (Internally for `openplans.org <http://openplans.org>`_ we're using ``X-OpenPlans-Project`` and custom patches to several projects to support this, but it's all ad hoc.)
+
+Footnotes
+=========
+
+.. [*] This isn't entirely true, Deliverance internally uses `WSGI <http://wsgi.org/wsgi/>`_ which is a Python-level abstraction of HTTP calls.
+
+.. [*] At different times in the past, and potentially again in the future, Deliverance has been compiled down to XSLT rules.  So Deliverance could be seen even as an simple transformation language that compiles down to XSLT.

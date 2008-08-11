@@ -48,7 +48,7 @@ The theme element also supports `pyref Python references`_.  If you use:
 
 Then define a function like:
 
-.. code-bock:: python
+.. code-block:: python
 
     def get_theme(request, response, log):
         return "/%s/theme.html" % request.host
@@ -319,7 +319,7 @@ There are several ways to define classes on a page.  If you have control of the 
 
 A third way is with ``<match>``.  These elements match requests and add classes.  You can use them like:
 
-.. code-block::
+.. code-block:: python
 
     <match domain="lists.*" class="lists" />
 
