@@ -83,7 +83,7 @@ Some pages:
     ... <html><head></head><body>A simple page</body></html>''')
     >>> app['/magic'].headers['x-no-deliverate'] = '1'
     >>> app['/magic2'] = Response('''\
-    ... <html><head><meta http-equiv="X-No-Deliverate" content="1"></head><body>something</body></html>''')
+    ... <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>''')
 
 Now to deliverate:
 
@@ -171,9 +171,9 @@ Now the magic response, which shouldn't get themed at all:
     <html><head></head><body>A simple page</body></html>
     >>> compare_request('/magic2')
     Original content:
-    <html><head><meta http-equiv="X-No-Deliverate" content="1"></head><body>something</body></html>
+    <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
     Themed content:
-    <html><head><meta http-equiv="X-No-Deliverate" content="1"></head><body>something</body></html>
+    <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
 
 
 Other rule formats
