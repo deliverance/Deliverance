@@ -44,7 +44,9 @@ Now, some matches:
     ['a']
     >>> m = make('<match response-header="Content-Type: contains: html" class="x" />')
     >>> match(m, Request.blank('/'), Response(content_type='text/plain'), [('content-type', 'text/plain')])
-    log: Skipping class="x" because the response headers Content-Type do not match response-header="Content-Type: contains:html"
+    log: Skipping class="x" because the response headers Content-Type: text/plain do not match response-header="Content-Type: contains:html"
     False
     >>> match(m, Request.blank('/'), Response(content_type='text/html'), [('content-type', 'text/html')])
     ['x']
+    >>> print m
+    <match class="x" response-header="Content-Type: contains:html" />

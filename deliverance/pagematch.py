@@ -86,7 +86,7 @@ class AbstractMatch(object):
             ('response-header', self.response_header),
             ('environ', self.environ)]:
             if value:
-                parts.append(u'%s="%s"' % (attr, html_quote(unicode(self.path))))
+                parts.append(u'%s="%s"' % (attr, html_quote(unicode(value))))
         if self.pyref:
             parts.append(unicode(self.pyref))
         parts.extend(self._uni_late_args())
@@ -149,11 +149,14 @@ class AbstractMatch(object):
         if self.response_header:
             result, headers = self.response_header(response_headers)
             if not result:
+                header_debug = []
+                for header in headers:
+                    header_debug.append('%s: %s' % (header, response_headers.get(header, '(empty)')))
                 ## FIXME: maybe distinguish <meta> headers and real headers?
                 log.debug(
                     debug_context, 'Skipping %s because the response headers %s '
                     'do not match response-header="%s"',
-                    debug_name, ', '.join(headers), self.response_header)
+                    debug_name, ', '.join(header_debug), self.response_header)
                 return False
         if self.environ:
             result, keys = self.environ(request.environ)
