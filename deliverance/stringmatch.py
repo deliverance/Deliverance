@@ -180,6 +180,9 @@ class ExactMatcher(Matcher):
     def __call__(self, s):
         return s == self.pattern
 
+    def strip_prefix(self):
+        return self.pattern
+
 _add_matcher(ExactMatcher)
         
 class ExactInsensitiveMatcher(Matcher):

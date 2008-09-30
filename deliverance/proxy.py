@@ -480,8 +480,11 @@ class ProxyResponseModification(object):
         """
         Modify the response however the user wanted.
         """
+        # This might not have a trailing /:
+        exact_proxied_base = proxied_base
         if not proxied_base.endswith('/'):
             proxied_base += '/'
+        exact_orig_base = orig_base
         if not orig_base.endswith('/'):
             orig_base += '/'
         assert (proxied_url.startswith(proxied_base) 
@@ -506,6 +509,8 @@ class ProxyResponseModification(object):
         if self.rewrite_links:
             def link_repl_func(link):
                 """Rewrites a link to point to this proxy"""
+                if link == exact_proxied_base:
+                    return exact_orig_base
                 if not link.startswith(proxied_base):
                     # External link, so we don't rewrite it
                     return link
@@ -535,20 +540,22 @@ class ProxyResponseModification(object):
                 loc = urlparse.urljoin(proxied_url, response.location)
                 loc = link_repl_func(loc)
                 response.location = loc
-            if response.headers.get('set-cookie'):
-                cook = response.headers['set-cookie']
-                old_domain = urlparse.urlsplit(proxied_url)[1].lower()
-                new_domain = request.host.split(':', 1)[0].lower()
-                def rewrite_domain(match):
-                    """Rewrites domains to point to this proxy"""
-                    domain = match.group(2)
-                    if domain == old_domain:
-                        ## FIXME: doesn't catch wildcards and the sort
-                        return match.group(1) + new_domain + match.group(3)
-                    else:
-                        return match.group(0)
-                cook = self._cookie_domain_re.sub(rewrite_domain, cook)
-                response.headers['set-cookie'] = cook
+            if 'set-cookie' in response.headers:
+                cookies = response.headers.getall('set-cookie')
+                del response.headers['set-cookie']
+                for cook in cookies:
+                    old_domain = urlparse.urlsplit(proxied_url)[1].lower()
+                    new_domain = request.host.split(':', 1)[0].lower()
+                    def rewrite_domain(match):
+                        """Rewrites domains to point to this proxy"""
+                        domain = match.group(2)
+                        if domain == old_domain:
+                            ## FIXME: doesn't catch wildcards and the sort
+                            return match.group(1) + new_domain + match.group(3)
+                        else:
+                            return match.group(0)
+                    cook = self._cookie_domain_re.sub(rewrite_domain, cook)
+                    response.headers.add('set-cookie', cook)
         return response
 
 class ProxySettings(object):
