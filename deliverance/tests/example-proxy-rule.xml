@@ -21,13 +21,13 @@
   </proxy>
 
   <proxy path="/people" class="default openplans">
-    <dest href="http://www.openplans.org/people/" />
+    <dest href="https://www.openplans.org/people/" />
     <response rewrite-links="1" />
     <response pyref="file:$here/fixup_openplans.py:fixup_openplans_response" />
   </proxy>
 
   <proxy path="exact:/login" class="default openplans">
-    <dest href="https://www.openplans.org/login/" />
+    <dest href="https://www.openplans.org/login" />
     <response rewrite-links="1" />
     <response pyref="file:$here/fixup_openplans.py:fixup_openplans_response" />
   </proxy>    
