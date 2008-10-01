@@ -16,15 +16,17 @@ fi
 echo "CREATING BUNDLE: $FILE"
 echo
 
+## httplib2 location is a temporary problem with a bad pypi entry
 pyinstall.py --bundle=$FILE --build=build-bundle-files/ --src=src-bundle-files/ \
-  -e svn+http://codespeak.net/svn/z3/deliverance/sandbox/ianb/deliverance/trunk#egg=Deliverance \
+  http://httplib2.googlecode.com/files/httplib2-0.4.0.tar.gz \
+  -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
   || fail 'Bundle failed'
 
 echo 'INSTALLING'
 echo
 
 rm -rf TEST
-pyinstall.py -E TEST Deliverance.pybundle \
+pyinstall.py -E TEST $FILE \
   || fail 'Install failed'
 
 cd TEST/src/deliverance
