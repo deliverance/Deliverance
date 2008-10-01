@@ -21,7 +21,7 @@ transformation.
       keywords='wsgi theming html',
       author='Ian Bicking, The Open Planning Project',
       author_email='deliverance-discuss@lists.openplans.org',
-      url='http://openplans.org/projects/deliverance/',
+      url='http://deliverance.openplans.org/',
       license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
