@@ -3,8 +3,7 @@
 mkdir -p docs/_static docs/_build
 sphinx-build -E -b html docs/ docs/_build || exit 1
 if [ "$1" = "publish" ] ; then
-  cd docs/
+  cd docs/_build
   echo "Uploading files..."
-  #scp -r _build/* <location>
-  echo "(no upload location set)"
+  tar czvf - . | ssh flow.openplans.org 'ssh acura.openplans.org "cd /www/deliverance.openplans.org/; tar xzvf -"'
 fi
