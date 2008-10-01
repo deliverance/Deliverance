@@ -27,6 +27,7 @@ from deliverance.util.nesteddict import NestedDict
 from deliverance.security import execute_pyref
 from deliverance.pyref import PyReference
 from deliverance.util.filetourl import filename_to_url, url_to_filename
+from deliverance.util.urlnormalize import url_normalize
 
 class ProxySet(object):
     """
@@ -229,9 +230,11 @@ class Proxy(object):
     def proxy_to_dest(self, request, dest):
         """Do the actual proxying, without applying any transformations"""
         # Not using request.copy because I don't want to copy wsgi.input:
-        orig_base = request.application_url
+        orig_base = url_normalize(request.application_url)
+        dest = url_normalize(dest)
         proxy_req = Request(request.environ.copy())
         scheme, netloc, path, query, fragment = urlparse.urlsplit(dest)
+        path = urllib.unquote(path)
         assert not fragment, (
             "Unexpected fragment: %r" % fragment)
         if scheme == 'file':
@@ -262,7 +265,7 @@ class Proxy(object):
         if self.strip_script_name:
             proxy_req.headers['X-Forwarded-Path'] = proxy_req.script_name
             proxy_req.script_name = ''
-        proxied_url = '%s://%s%s' % (scheme, netloc, proxy_req.path_qs)
+        proxied_url = url_normalize('%s://%s%s' % (scheme, netloc, proxy_req.path_qs))
         try:
             resp = proxy_req.get_response(proxy_exact_request)
         except socket.error, e:
