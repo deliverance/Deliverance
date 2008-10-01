@@ -1,120 +1,99 @@
+#!/usr/bin/env python
+"""Implements the ``deliverance-proxy`` command"""
+import sys
 import os
 import optparse
-import pkg_resources
-import sys
-from deliverance import proxyapp
+from paste.httpserver import serve
+from deliverance.proxy import ProxySet
+from deliverance.proxy import ProxySettings
 
-my_package = pkg_resources.get_distribution('Deliverance')
-
-pkg_resources.require('Paste')
-
-from paste import httpserver
-
-help = """\
+description = """\
+Starts up a proxy server using the given rule file.
 """
 
 parser = optparse.OptionParser(
-    version=str(my_package),
-    usage="%%prog [OPTIONS]\n\n%s" % help)
-parser.add_option('--new-layout',
-                  dest="new_layout",
-                  metavar="DEST_DIR",
-                  help="Create a self-contained layout for running the proxy server, with a pre-built theme, rules, and configuration file")
-parser.add_option('-s', '--serve',
-                  help="The interface to serve on (default 0.0.0.0:80)",
-                  dest="serve",
-                  metavar="HOST",
-                  default="0.0.0.0:80")
-parser.add_option('-p', '--proxy',
-                  help="The host and port to proxy to (default localhost:8080)",
-                  dest="proxy",
-                  metavar="PROXY_TO",
-                  default='localhost:8080')
-parser.add_option('--theme',
-                  help="The URI of the theme to use",
-                  dest="theme")
-parser.add_option('--rule',
-                  help="The URI of the ruleset to use",
-                  dest="rule")
-parser.add_option('--transparent',
-                  help="Do not rewrite the Host header when passing the request on",
-                  action='store_true',
-                  dest='transparent')
-parser.add_option('--debug',
-                  help="Show tracebacks when an error occurs (use twice for fancy/dangerous traceback)",
-                  action="count",
-                  dest="debug")
-parser.add_option('--request-log',
-                  help="Show an apache-style log of requests (use twice for more logging)",
-                  action="count",
-                  dest="request_log",
-                  default=0)
-parser.add_option('--rewrite',
-                  help="Rewrite all headers and links",
-                  action="store_true",
-                  dest="rewrite")
-parser.add_option('--renderer',
-                  dest="renderer",
-                  help="Select which renderer to use: 'py' or 'xslt'",
-                  default='py')
+    usage='%prog [OPTIONS] RULE.xml',
+    ## FIXME: get from pkg_resources:
+    version='0.1',
+    description=description,
+    )
+## FIXME: these should be handled by the settings (or just picked up from devauth):
+parser.add_option(
+    '--debug',
+    action='store_true',
+    dest='debug',
+    help='Show debugging information about unexpected exceptions in the browser')
+parser.add_option(
+    '--interactive-debugger',
+    action='store_true',
+    dest='interactive_debugger',
+    help='Use an interactive debugger (note: security hole when done publically; '
+    'if interface is not explicitly given it will be set to 127.0.0.1)')
+parser.add_option(
+    '--debug-headers',
+    action='count',
+    dest='debug_headers',
+    help='Show (in the console) all the incoming and outgoing headers; '
+    'use twice for bodies')
 
-def strip(prefix, string):
-    if string.startswith(prefix):
-        return string[len(prefix):]
+def run_command(rule_filename, debug=False, interactive_debugger=False, 
+                debug_headers=False):
+    """Actually runs the command from the parsed arguments"""
+    settings = ProxySettings.parse_file(rule_filename)
+    app = ReloadingApp(rule_filename, settings)
+    if interactive_debugger:
+        from weberror.evalexception import EvalException
+        app = EvalException(app, debug=True)
     else:
-        return string
+        from weberror.errormiddleware import ErrorMiddleware
+        app = ErrorMiddleware(app, debug=debug)
+    if debug_headers:
+        from wsgifilter.proxyapp import DebugHeaders
+        app = DebugHeaders(app, show_body=debug_headers > 1)
+    print 'To see logging, visit %s/.deliverance/login' % settings.base_url
+    serve(app, host=settings.host, port=settings.port)
+
+class ReloadingApp(object):
+    """
+    This is a WSGI app that notices when the rule file changes, and
+    reloads it in that case.
+    """
+    def __init__(self, rule_filename, settings):
+        self.rule_filename = rule_filename
+        self.settings = settings
+        self.proxy_set = None
+        self.proxy_set_mtime = None
+        self.application = None
+        # This gives syntax errors earlier:
+        self.load_proxy_set(warn=False)
+        
+    def __call__(self, environ, start_response):
+        if (self.proxy_set is None
+            or self.proxy_set_mtime < os.path.getmtime(self.rule_filename)):
+            self.load_proxy_set()
+        return self.application(environ, start_response)
+
+    def load_proxy_set(self, warn=True):
+        """Loads or reloads the ProxySet object from the file"""
+        if warn:
+            print 'Reloading rule file %s' % self.rule_filename
+        self.proxy_set = ProxySet.parse_file(self.rule_filename)
+        self.proxy_set_mtime = os.path.getmtime(self.rule_filename)
+        self.application = self.settings.middleware(self.proxy_set.application)
 
 def main(args=None):
+    """Runs the command from ``sys.argv``"""
     if args is None:
         args = sys.argv[1:]
-    options, args = parser.parse_args(args)
-    if options.new_layout:
-        make_new_layout(options.new_layout)
-        return
-    serve = strip('http://', options.serve)
-    if ':' not in serve:
-        serve += ':80'
-    proxy = strip('http://', options.proxy)
-    if ':' not in proxy:
-        proxy += ':80'
-    if not options.rule or not options.theme:
-        if not options.rule:
-            op = '--rule'
-        else:
-            op = '--theme'
-        print 'You must provide the %s option' % op
-        sys.exit(2)
-    debug_headers = options.request_log > 1
-    app = proxyapp.ProxyDeliveranceApp(
-        theme_uri=options.theme,
-        rule_uri=options.rule,
-        proxy=proxy,
-        transparent=options.transparent,
-        debug_headers=debug_headers,
-        relocate_content=options.rewrite, 
-        renderer=options.renderer)
-    if options.request_log:
-        from paste.translogger import TransLogger
-        app = TransLogger(app)
-    if options.debug:
-        if options.debug > 1:
-            from paste.evalexception.middleware import EvalException
-            app = EvalException(app)
-        else:
-            from paste.exceptions.errormiddleware import ErrorMiddleware
-            app = ErrorMiddleware(app, debug=True)
-    print 'Serving on http://%s' % serve
-    print 'Proxying from http://%s' % proxy
-    try:
-        httpserver.serve(app, host=serve)
-    except KeyboardInterrupt:
-        print 'Exiting.'
-        sys.exit()
-    
-def make_new_layout(dest_dir):
-    source = os.path.join(os.path.dirname(__file__), 'new_layout_template')
-    from paste.script import copydir
-    copydir.copy_dir(
-        source, dest_dir, {}, 1, simulate=False, interactive=True,
-        svn_add=False)
+    options, args = parser.parse_args()
+    if not args:
+        parser.error('You must provide a rule file')
+    if len(args) > 1:
+        parser.error('Only one argument (the rule file) allowed')
+    rule_filename = args[0]
+    run_command(rule_filename,
+                interactive_debugger=options.interactive_debugger,
+                debug=options.debug, debug_headers=options.debug_headers)
 
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,144 @@
+The Philosophy Of Deliverance
++++++++++++++++++++++++++++++
+
+:author: Ian Bicking <ianb@openplans.org>
+
+.. contents::
+
+Why is Deliverance?  Why was it made, what purpose does it serve, why should you use it, how can it change the way you do web development?
+
+On the Subject of Platforms
+===========================
+
+Right now we live in an age of *platforms*.  Developers (or management or coincidence) decides on a platform, and that serves as the basis for all future development.  Usually there's some old things from a previous platform (or a primordial pre-platform age: I'm looking at you ``formmail.pl``!)  The goal is always to eliminate all of these old pieces, rewriting them for the new platform.  That goal is seldom attained in a timely manner, and even before it is accomplished you may be moving to the next platform.
+
+Why do you have to port everything forward to the newest platform?  Well, presumably it is better engineered.  The newest platform is presumably what people are most familiar with.  But if those were the only reasons it would be hard to justify a rewrite of working software.  Often the real push comes because your systems don't work together.  It's hard to keep templates in sync across all the platforms.  Multiple logins may be required.  Navigation is inconsistent and incomplete.  Functionality that cross-cuts pages -- comments, login status, shopping cart status, etc -- isn't universally available.
+
+A similar conflict arises when you consider how to add new functionality to a site.  For example, you may want to add a blog.  Do you:
+
+1. Use the best blogging software available?  
+2. Use something native to your platform?  
+3. Write something yourself?
+
+The answer is probably 2 or 3, because it would be too hard to integrate something foreign to your platform.  This form of choice means that every platform has some kind of "blog", but the users of that blog are likely to only be a subset of the users of the parent platform.  This makes it difficult for winners to emerge, or for a well-developed piece of software to really be successful.  Platform-based software is limited by the adoption of the platform.
+
+Not all software has a platform.  These tend to be the most successful web applications, things like `Trac <http://trac.edgewall.org/>`_, `WordPress <http://wordpress.org>`_, etc.
+
+"Aha!" you think "I'll just use those best-of-breed applications!"  But no!  Those applications themselves turn into platforms.  WordPress is practically a CMS.  Trac too.  Extensible applications, if successful, become their own platform.  This is not to place blame, they aren't necessarily any worse than any other platform, just an acknowledgment that this move to platform can happen anywhere.
+
+Beyond Platforms, or A Better Platform
+======================================
+
+One of the major goals of Deliverance is to move beyond platforms.  It is an *integration tool*, to allow applications from different frameworks or languages to be integrated gracefully.
+
+There are only a few core reasons that people use platforms:
+
+1. A common look-and-feel across the site.
+2. Cohesive navigation.
+3. Indexing of the entire site.
+4. Shared authentication and user accounts.
+5. Cross-cutting functionality (e.g., commenting).
+
+Deliverance specifically addresses 1, providing a common look-and-feel across a site.  It can provide some help with 2, by allowing navigation to be more centrally managed, without relying purely on per-application navigation (though per-application navigation is still essential to navigating the individual applications).  3, 4, and 5 are not addressed by Deliverance (at least not yet).
+
+Deliverance applies a common theme across all the applications in your site.  It's basic unit of abstraction is **HTML**.  It doesn't use a particular templating language.  It doesn't know what an object is.  HTML is something every web application produces.  Deliverance's means of communication is **HTTP**.  It doesn't call functions or create request objects [*]_.  Again, everything speaks HTTP.
+
+Deliverance also allows you to include output from multiple locations.  In all cases there's the *theme*, a plain HTML page, and the *content*, whatever the underlying application returns.  You can also include output from other parts of the site, most commonly navigation content that you can manage separately.  All of these pieces can be dynamic -- again, Deliverance only cares about HTML and HTTP, it doesn't worry about what produces the response.
+
+This is all very similar to systems built on XSLT transforms, except without the XSLT [*]_, and without XML.  Strictly speaking you can apply XSLT to any parseable markup, even HTML, but the most common (or at least most talked about) way to apply XSLT is using "semantic" XML output that is transformed into HTML.  Deliverance does not try to understand the semantics of applications, and instead expects them to provide appropriate *presentation* of whatever semantics the underlying application possesses.  Presentation is more universal than semantics.
+
+While Deliverance does its best to work with applications as-they-exist, without making particular demands on those applications, it is not perfect.  Conflicting CSS can be a serious problem.  Some applications don't have very good structure to work with.  You can't generate any content in Deliverance, you can only manipulate existing content, and often that means finding new ways to generate content, or making sure you have a place to store your content (as in the case of navigation).  This is why arguably Deliverance does not *remove* the need for a platform, but is just its own platform.  In so far as this is true, Deliverance tries to be a *better* platform, where "better" is "more universal" rather than "more powerful".  Most templating systems are more powerful than Deliverance transformations.  It can be useful to have access to the underlying objects used to procude the markup.  But Deliverance doesn't give you these things, because it only implements things that can be applied to any source of content.  Static files are entirely workable in Deliverance, just as any application written in Python, PHP, or even an application hosted on an entirely separate service is usable through Deliverance.
+
+The Missing Parts
+=================
+
+As mentioned before, two important benefits of a platform are missing from Deliverance.  I'll try to describe what I believe are the essential aspects.  I hope at some time that Deliverance or some complementary application will be able to satisfy these needs.  Also, I suggest some lines of development that might be easier than others.
+
+Indexing The Entire Site
+------------------------
+
+Typically each application has a notion of what all the interesting pages in that application are.  Most applications have a set of *uninteresting* pages, or transient pages.  A search result is transient, as an example.  An application also knows when new pages appear, and when other pages disappear.  A site-wide index of these pages would allow things like site maps, cross-application search, and cross-application reporting to be done.
+
+An interesting exception to the knowledge an application has of itself: search results are generally boring.  But a search result based on a category might still be interesting.  The difference between a "search" and a "report" is largely in the eye of the beholder.  An important feature is that the application shouldn't be the sole entity allowed to mark interesting pages.  Manually-managed lists of resources that may point to specific applications can allow people to usefully and easily tweak the site.  Ideally even fully external resources could be included, such as a resource on an entirely different site.
+
+To do indexing you need both events (to signal the creation, update, or deletion of an entity/page), and a list of entities (so the index can be completely regenerated).  A simple way of giving a list of entities would be the `Google Site Map XML resource <https://www.google.com/webmasters/tools/docs/en/protocol.html#sitemapXMLFormat>`_.  Signaling events is much more complex, so I won't go into it in any greater depth here, but we're working on a product called `Cabochon <http://www.openplans.org/projects/cabochon/>`_ to handle events.
+
+One thing that indexing can provide is a way to use `microformats <http://microformats.org/>`_.  Right now microformats are interesting, but for most sites they are largely useless.  You can mark up your content, but no one will do anything interesting with that markup.  If you could easily code up an indexer that could keep up-to-date on all the content on your site, you could produce interesting results like cross-application mapping.
+
+Shared Authentication And User Accounts
+---------------------------------------
+
+Authentication is one of the most common and annoying integration tasks when crossing platform boundaries.  Systems like `Open ID <http://openid.net/>`_ offer the ability to unify *cross-site* authentication, but they don't actually solve the problem of a single site with multiple applications.
+
+There is a basic protocol in HTTP for authentication, one that is workable for a system like Deliverance, and there are already several existing products (like `repoze.who <http://svn.repoze.org/repoze.who/trunk/>`_) that work this way.  It works like this:
+
+* The logged-in username is sent in some header, e.g., ``X-Remote-User``.  Some kind of signing is necessary to really trust this header (Deliverance could filter out that header in incoming requests, but if you removed Deliverance from the stack you'd have a security hole).
+
+* If the user isn't logged in, and the application wants them to log in, the application response with a ``401 Unauthorized`` response.  It is supposed to set the ``WWW-Authenticate`` header, probably to some value indicating that the intermediary should determine the authentication type.  In some cases a kind of HTTP authentication is required (typically `Basic <http://en.wikipedia.org/wiki/Basic_access_authentication>`_ or `Digest <http://en.wikipedia.org/wiki/Digest_access_authentication>`_) because cookie-based logins are too stateful (e.g., in APIs, or for WebDAV access).
+
+* The intermediary catches the 401 and initiates the login process.  This might mean a redirect to a login page, and setting a cookie on successful login.  The login page and setting the cookie could potentially be done by an application outside of the intermediary; the intermediary only has to do the appropriate redirects and setting of headers.
+
+* In the case when a user is logged in but isn't permitted, the application simply sends a ``403 Forbidden`` response.  The intermediary shouldn't actually do anything in this case (though maybe it could usefully add a logout link to that message).  I only mention this because some systems use ``401`` for Forbidden, which causes no end of problems.
+
+While some applications allow for this kind of authentication scheme, many do not.  However, the scheme is general enough that I think it is justifiable that applications could be patched to work like this.
+
+This handles shared authentication, but the only information handed around is a username.  Information about the user -- the real name, email, homepage, permission roles, etc -- are not shared in this model.
+
+You could add something like an internal location to the username.  E.g.: ``X-Remote-User: bob; info_url=http://mysite.com/users/bob.xml``.  It would be the application's responsibility to make a subrequest to fetch that information.  This can be somewhat inefficient, though with appropriate caching perhaps it would be fine.  But many applications want very much to have a complete record of all users.  Changing this is likely to be much harder than changing the authentication scheme.  A more feasible system might be something on the order of what is described in `Indexing the Entire Site`_: provide a complete listing of the site as well as events when users are created, updated, or deleted, and allow applications to maintain their own private but synced databases of users.
+
+A common permission system is another level of integration.  One way of handling this would be if applications had a published set of actions that could be performed, and the person integrating the application could map actions to roles/groups on the system.
+
+Cross-cutting Functionality
+---------------------------
+
+This item requires a bit of explanation.  This is functionality that cuts across multiple parts of the site.  An example might be comments, where you want a commenting system to be applicable to a variety of entities (though probably not all entities).  Or you might want page-update notification, or to provide a feed of changes to the entity.
+
+You might also want to include some request logger like `Google Analytics <http://www.google.com/analytics/>`_ to all pages, but this is already handled well by Deliverance theming.  Deliverance's aggregation handles universal content well, but it doesn't handle content (or subrequests) that should only be present in a portion of pages.
+
+One possible way to address this is `transclusion <http://en.wikipedia.org/wiki/Transclusion>`_, where a page can specifically request some other resource to be included in the page.  A simple subrequest could accomplish this, but many applications make it relatively easy to include some extra markup (e.g., by editing their templates) but not so easy to do something like a subrequest.  We've written a product `Transcluder <http://www.openplans.org/projects/transcluder/>`_ to use an HTML format to indicate transclusion.
+
+It's also possible using Deliverance that you could implement this functionality without any application modification, though it means added configuration -- an application written to be inserted into a page via Deliverance, and a Deliverance rule that plugs everything together (but if written incorrectly would have to be debugged).
+
+Other Conventions
+-----------------
+
+In addition to this, other platform-like conventions would make the life of the integrator much easier.
+
+Template Customization
+~~~~~~~~~~~~~~~~~~~~~~
+
+While Deliverance handles the look-and-feel of a page, it leaves the inner chunk of content to the application.  If you want to tweak something small you will still need to customize the template of the application.
+
+It would be wonderful if applications could report on what files were used in the construction of a request, and used a common search path so you could easily override those files.
+
+Backups and Other Maintenance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Process management can be handled by something like `Supervisor <http://supervisord.org/>`_, and maybe in the future Deliverance will even embed Supervisor.
+
+But even then, regular backups of the system are important.  Typically each application has its own way of producing a backup.  Conventions for producing backups would be ideal.  Additional conventions for restoring backups would be even better.
+
+Many systems also require periodic maintenance -- compacting databases, checking for any integrity problems, etc.  Some unified cron-like system might be handy, though it's also workable for applications to handle this internally in whatever ad hoc way seems appropriate.
+
+Common Error Reporting
+~~~~~~~~~~~~~~~~~~~~~~
+
+With a system where one of many components can fail, it's important to keep track of these problems.  If errors just end up in one of 10 log files, it's unlikely anyone is closely tracking them.
+
+One product we're working on to help with this is `ErrorEater <https://svn.openplans.org/svn/ErrorEater/trunk/>`_, which works along with `Supervisor <http://supervisord.org/>`_.  Applications have to be modified to emit errors in a specific format that Supervisor understands, but this is generally not too difficult.
+
+Farming
+~~~~~~~
+
+Application farming is when one instance of an application can support many "sites".  These might be sites with their own domains, or just distinct projects.  Examples are `Trac <http://trac.edgewall.org/>`_, which supports multiple projects in one instance, or `WordPress MU <http://mu.wordpress.org/>`_ which supports many WordPress instances running off a single database and code base.
+
+It would be nice if you could add a simple header to a request, like ``X-Project-Name: foo`` and that would be used by all these products to select the site (or sub-site or project or any other organization unit).  Then mapping domain names, paths, or other aspects of a request to the project could be handled once and the applications could all consistently consume it.
+
+(Internally for `openplans.org <http://openplans.org>`_ we're using ``X-OpenPlans-Project`` and custom patches to several projects to support this, but it's all ad hoc.)
+
+Footnotes
+=========
+
+.. [*] This isn't entirely true, Deliverance internally uses `WSGI <http://wsgi.org/wsgi/>`_ which is a Python-level abstraction of HTTP calls.
+
+.. [*] At different times in the past, and potentially again in the future, Deliverance has been compiled down to XSLT rules.  So Deliverance could be seen even as an simple transformation language that compiles down to XSLT.

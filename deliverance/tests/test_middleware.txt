@@ -1,0 +1,261 @@
+This tests the middleware, using a basically static site and applying themes.
+
+First we'll setup the site, using urlmap:
+
+    >>> from paste.urlmap import URLMap
+    >>> from webob import Request, Response
+    >>> app = URLMap()
+
+A theme:
+
+    >>> app['/theme.html'] = Response('''\
+    ... <html>
+    ...  <head>
+    ...   <title>This is a theme title</title>
+    ...   <link rel=Stylesheet type="text/css" href="style.css">
+    ...   <style type="text/css">
+    ...     @import "style2.css";
+    ...   </style>
+    ...  </head>
+    ...  <body>
+    ... 
+    ...   <div id="header" class="title-bar">
+    ...     <h1 id="title">This is the theme title</h1>
+    ...     <div class="topnav"></div>
+    ...   </div>
+    ...   <div id="content-wrapper">
+    ...     <div id="content">
+    ...       This content will be replaced.
+    ...     </div>
+    ...   </div>
+    ... 
+    ...   <div id="footer">
+    ...     Copyright (C) 2000 Some Corporation
+    ...   </div>
+    ... 
+    ...  </body>
+    ... </html>''')
+
+The rule file:
+
+    >>> app['/rules.xml'] = Response('''\
+    ... <ruleset>
+    ...   <match path="/blog" class="blog" />
+    ...   <match path="exact:/about.html" class="breakout" />
+    ...   <match request-header="X-No-Deliverate: boolean:true" abort="1" />
+    ...   <match response-header="X-No-Deliverate: boolean:true" abort="1" />
+    ...   <match environ="wsgi.url_scheme: https" class="via-https" />
+    ...   <theme href="/theme.html" />
+    ...   <rule class="default">
+    ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
+    ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
+    ...   </rule>
+    ...   <rule class="breakout">
+    ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
+    ...     <replace content="children:body" theme="children:#content-wrapper" nocontent="abort" />
+    ...   </rule>
+    ...   <rule class="blog">
+    ...     <replace content="children:#content" theme="children:#content" nocontent="abort" />
+    ...   </rule>
+    ... </ruleset>''', content_type="application/xml")
+
+Some pages:
+
+    >>> app['/blog/index.html'] = Response('''\
+    ... <html><head><title>A blog post</title>
+    ... <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
+    ... </head>
+    ... <body>
+    ... Some junk
+    ... <div id="content">the blog post <b>with some style</b></div>
+    ... some more junk
+    ... <div id="footer">a footer that will be ignored</div>
+    ... </body></html>
+    ... ''')
+    >>> app['/about.html'] = Response('''\
+    ... <html><title>About this site</title></html>
+    ... <body>
+    ... This is all about this site.
+    ... <div id="footer">a footer that will be ignored</div>
+    ... </body></html>
+    ... ''')
+    >>> app['/magic'] = Response('''\
+    ... <html><head></head><body>A simple page</body></html>''')
+    >>> app['/magic'].headers['x-no-deliverate'] = '1'
+    >>> app['/magic2'] = Response('''\
+    ... <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>''')
+
+Now to deliverate:
+
+    >>> from deliverance.middleware import DeliveranceMiddleware, SubrequestRuleGetter
+    >>> from deliverance.log import PrintingLogger
+    >>> import logging
+    >>> deliv = DeliveranceMiddleware(app, SubrequestRuleGetter('/rules.xml'),
+    ...                               PrintingLogger,
+    ...                               log_factory_kw=dict(print_level=logging.WARNING))
+
+Now lets look at some plain content and its deliverated equivalent
+
+    >>> def compare_request(path):
+    ...     resp = Request.blank(path).get_response(app)
+    ...     print 'Original content:'
+    ...     print resp.body.strip()
+    ...     resp = Request.blank(path).get_response(deliv)
+    ...     print 'Themed content:'
+    ...     print resp.body.strip()
+
+First the blog, fairly simple:
+
+    >>> compare_request('/blog/index.html') # doctest: +REPORT_UDIFF
+    Original content:
+    <html><head><title>A blog post</title>
+    <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
+    </head>
+    <body>
+    Some junk
+    <div id="content">the blog post <b>with some style</b></div>
+    some more junk
+    <div id="footer">a footer that will be ignored</div>
+    </body></html>
+    Themed content:
+    <html><head><title>A blog post</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+        @import "http://localhost/style2.css";
+      </style><link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed"></head><body>
+    <BLANKLINE>
+      <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+      <div id="content-wrapper">
+        <div id="content">the blog post <b>with some style</b></div>
+      </div>
+    <BLANKLINE>
+      <div id="footer">
+        Copyright (C) 2000 Some Corporation
+      </div>
+    <BLANKLINE>
+     </body></html>
+
+Now the about page, with its breakout style:
+
+    >>> compare_request('/about.html') # doctest: +REPORT_UDIFF
+    Original content:
+    <html><title>About this site</title></html>
+    <body>
+    This is all about this site.
+    <div id="footer">a footer that will be ignored</div>
+    </body></html>
+    Themed content:
+    <html><head><title>About this site</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+        @import "http://localhost/style2.css";
+      </style></head><body>
+    <BLANKLINE>
+      <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+      <div id="content-wrapper">
+    This is all about this site.
+    </div>
+    <BLANKLINE>
+      <div id="footer">a footer that will be ignored</div>
+    <BLANKLINE>
+     </body></html>
+
+Now the magic response, which shouldn't get themed at all:
+
+    >>> compare_request('/magic')
+    Original content:
+    <html><head></head><body>A simple page</body></html>
+    Themed content:
+    <html><head></head><body>A simple page</body></html>
+    >>> compare_request('/magic2')
+    Original content:
+    <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
+    Themed content:
+    <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
+
+
+Other rule formats
+==================
+
+One could imagine the rules looking more like:
+
+    default_theme = /theme.html
+
+    [match:blog]
+    path = /blog
+
+    [match:breakout]
+    path = exact:/about.html
+
+    [match abort]
+    request-header X-No-Deliverate = boolean: true
+
+    [rule:default]
+    append content="children:body" theme="children:#content" nocontent=abort
+    replace content="children:#footer" theme="children:#footer" nocontent=ignore
+
+    [rule:breakout]
+    append content="children:body" theme="children:#content-wrapper" nocontent=abort
+    replace content="children#footer" theme="children#footer" nocontent=ignore
+
+    [rule:blog]
+    append content="children:#content" theme="children:#content" nocontent=abort
+
+Or something like:
+
+    theme "/theme.html";
+    match (path=/blog) {
+        class: blog;
+    }
+    match (path="exact:/about.html") {
+        class: breakout;
+    }
+    match (request X-No-Deliverate="boolean: true") {
+        abort;
+    }
+    .default {
+        append content "children:body"
+               theme "children:#content"
+               nocontent abort;
+        replace content "children:#footer" theme "children:#footer" nocontent ignore;
+    }
+
+Blech.  Maybe:
+
+    theme "/theme.html"
+    match (path="/blog") blog
+    match (path="exact:/about.html") (breakout)
+    match (request X-No-Deliverate="boolean: true") abort
+
+    rule default {
+      append "children:body" "children:#content" nocontent=abort
+      replace "children:#footer" "children:#footer" nocontent=ignore
+    }
+    rule breakout {
+      append "children:body" "children:#content-wrapper" nocontent=abort
+      replace "children:#footer" "children:#footer" nocontent=ignore
+    }
+    rule blog {
+      append "children:#content" "children:#content" nocontent=abort
+    }
+
+Or YAMLish:
+
+    theme: /theme.html
+    match: blog
+      path: /blog
+    match: breakout
+      path: exact:/about.html
+    match: abort
+      request X-No-Deliverate: boolean:true
+
+    rule default:
+      append "children:body" "children:#content" nocontent=abort
+      replace "children:#footer" "children:#footer" nocontent=ignore
+    rule breakout:
+      append "children:body" "children:#content-wrapper" nocontent=abort
+      replace "children:#footer" "children:#footer" nocontent=ignore
+    rule blog:
+      append "children:#content" "children:#content" nocontent=abort

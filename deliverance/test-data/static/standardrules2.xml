@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-
-<rules xmlns="http://www.plone.org/deliverance">
-  <append theme="//head" content="//head/script" />    
-  <append theme="//head" content="//head/style" />    
-  <append theme="//head" content="//head/meta" />
-</rules>

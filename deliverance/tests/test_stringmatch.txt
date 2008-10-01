@@ -1,0 +1,51 @@
+This tests different kinds of matchers.
+
+     >>> from deliverance.stringmatch import compile_matcher, compile_header_matcher
+     >>> def match(pattern, *values):
+     ...     for value in values:
+     ...         result = compile_matcher(pattern)(value)
+     ...         print '%s: %s' % (value, result)
+     >>> match('exact:foo', 'foo', ' foo')
+     foo: True
+      foo: False
+     >>> match('exact-insensitive:foo', 'foo', 'fOo', ' FOO')
+     foo: True
+     fOo: True
+      FOO: False
+     >>> match('wildcard:foo*', 'foobar', 'barfoo', 'FOOBAR')
+     foobar: True
+     barfoo: False
+     FOOBAR: False
+     >>> match('wildcard-insensitive:*foo*', 'foobar', 'BARFOOBAR', 'fobar')
+     foobar: True
+     BARFOOBAR: True
+     fobar: False
+     >>> match('regex:^\\w+$', 'asdf', '1234', ' ', '')
+     asdf: True
+     1234: True
+      : False
+     : False
+     >>> match('path:/foo', '/foo', '/foo/', '/foo/something', '/foobar')
+     /foo: True
+     /foo/: True
+     /foo/something: True
+     /foobar: False
+     >>> match('contains:foo', 'somefoo thing')
+     somefoo thing: True
+
+And then some header matching:
+
+     >>> def mheader(pattern, headers):
+     ...     return compile_header_matcher(pattern)(headers)
+     >>> mheader('Something: foo', {'Something': 'foo'})
+     (True, ['Something'])
+     >>> mheader('Something: foo', {'Something': 'foobar'})
+     (False, ['Something'])
+     >>> mheader('Something: contains:foo', {'Something': 'foobar'})
+     (True, ['Something'])
+     >>> mheader('X-*: contains:evil', {'X-Other': 'nothing', 'X-Foo-Bar': 'some evil!'})
+     (True, ['X-Foo-Bar'])
+     >>> mheader('X-*: contains:evil', {'X-Foo-Bar': 'okay'})
+     (False, ['X-Foo-Bar'])
+     >>> mheader('X-*: contains:other', {'X-Other': 'nothing', 'X-Foo-Bar': 'some evil!'})
+     (False, ['X-Foo-Bar', 'X-Other'])

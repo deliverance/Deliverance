@@ -1,6 +1,0 @@
-
-<!-- helper file for doing hand transforms with this theme -->
-<blend 
-   theme="./test-data/nabuur/nabuur.html" 
-   baseurl="http://www.nabuur.com" 
-   rules="./test-data/nabuur/rules.xml" /> 

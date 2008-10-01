@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-  <rules xmlns="http://www.plone.org/deliverance">
-       <append content="//div[@id='nomatch']|//div[@class='foo']" theme="//body"/>
-       <drop content="//div[@id='irrelevant']" href="/irrelevant.html" />
-  </rules>

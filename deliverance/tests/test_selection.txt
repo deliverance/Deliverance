@@ -1,0 +1,146 @@
+First we create a theme document to test out:
+
+    >>> from lxml.html import fromstring, tostring
+    >>> theme = fromstring('''\
+    ... <html>
+    ...  <head>
+    ...   <title>This is a theme title</title>
+    ...   <link rel=Stylesheet type="text/css" href="style.css">
+    ...   <style type="text/css">
+    ...     @import "style2.css";
+    ...   </style>
+    ...  </head>
+    ...  <body>
+    ... 
+    ...   <div id="header" class="title-bar">
+    ...     <h1 id="title">This is the theme title</h1>
+    ...     <div class="topnav"></div>
+    ...   </div>
+    ... 
+    ...   <div id="content">
+    ...     This content will be replaced.
+    ...   </div>
+    ... 
+    ...   <div id="footer">
+    ...     Copyright (C) 2000 Some Corporation
+    ...   </div>
+    ... 
+    ...  </body>
+    ... </html>''',
+    ... base_url='http://somesite.com/theme/theme.html')
+
+Then, lets select something:
+
+    >>> from deliverance.selector import Selector
+    >>> def t_select(selection):
+    ...     selector = Selector.parse(selection)
+    ...     type, elements, attributes = selector(theme)
+    ...     if type == 'attributes':
+    ...         for element in elements:
+    ...             if not attributes:
+    ...                 attributes = element.attrib.keys()
+    ...             text = []
+    ...             for key in sorted(attributes):
+    ...                 text.append('%s="%s"' % (key, element.attrib[key]))
+    ...             print 'attributes:%s %s' % (element.tag, ' '.join(text))
+    ...         return
+    ...     if type == 'tag':
+    ...         for element in elements:
+    ...             tag = tostring(element).split('>')[0] + '>'
+    ...             print 'tag:%s' % tag
+    ...         return
+    ...     if type == 'elements':
+    ...         type = ''
+    ...     else:
+    ...         type += ':'
+    ...     for element in elements:
+    ...         print '%s%s' % (type, tostring(element).strip())
+    >>> t_select('link')
+    <link rel="Stylesheet" type="text/css" href="style.css">
+    >>> t_select('/html/head/title')
+    <title>This is a theme title</title>
+    >>> t_select('children:title')
+    children:<title>This is a theme title</title>
+    >>> t_select('attributes(class):#header')
+    attributes:div class="title-bar"
+    >>> t_select('#nothing')
+    >>> t_select('div')
+    <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+    <div class="topnav"></div>
+    <div id="content">
+        This content will be replaced.
+      </div>
+    <div id="footer">
+        Copyright (C) 2000 Some Corporation
+      </div>
+    >>> t_select('div#header')
+    <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+    >>> t_select("tag://div[@id='header']")
+    tag:<div id="header" class="title-bar">
+
+Now we'll select from some content:
+
+    >>> from lxml.etree import XML
+    >>> import copy
+    >>> from deliverance.rules import parse_action, remove_content_attribs
+    >>> from deliverance.log import SavingLogger
+    >>> def t_rule_head(rule, selector='//head', show_log=False):
+    ...     rule = XML(rule)
+    ...     rule = parse_action(rule, None)
+    ...     theme_copy = copy.deepcopy(theme)
+    ...     theme_copy.make_links_absolute()
+    ...     logger = SavingLogger(request=None, middleware=None)
+    ...     content_copy = copy.deepcopy(content)
+    ...     rule.apply(content_copy, theme_copy, None, logger)
+    ...     remove_content_attribs(theme_copy)
+    ...     el = theme_copy.xpath(selector)[0]
+    ...     if show_log:
+    ...         for level, rule, message in logger.messages:
+    ...             print 'log:', message
+    ...     print tostring(el)
+
+And the tests:
+
+    >>> content = fromstring('''\
+    ... <html>
+    ...  <head>
+    ...   <title>User: Bob</title>
+    ...   <link rel="Stylesheet" type="text/css" href="/users.css">
+    ...   <link rel="Stylesheet" type="text/css" href="/theme/style.css">
+    ...  </head>
+    ...  <body>
+    ...   <div id="some-stupid-app-content">blah blah blah</div>
+    ...   <h1 id="title">The user <b>Bob</b></h1>
+    ...   <div id="content">
+    ...     Some information about Bob.
+    ...   </div>
+    ...  </body>
+    ... </html>''',
+    ... base_url='http://somesite.com/users/bob/')
+    >>> t_rule_head('<append content="link" theme="children:head" />')
+    <head><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://somesite.com/theme/style.css"><style type="text/css">
+        @import "http://somesite.com/theme/style2.css";
+      </style><link rel="Stylesheet" type="text/css" href="/users.css"><link rel="Stylesheet" type="text/css" href="/theme/style.css"></head>
+
+Note that href has to be normalized for this to work (FIXME: remove-dups?):
+
+    >>> t_rule_head('<append content="link" theme="children:head" remove-dups="1" />')
+    <head><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://somesite.com/theme/style.css"><style type="text/css">
+        @import "http://somesite.com/theme/style2.css";
+      </style><link rel="Stylesheet" type="text/css" href="/users.css"><link rel="Stylesheet" type="text/css" href="/theme/style.css"></head>
+    >>> t_rule_head('<replace content="children:/html/head/title" theme="children:/html/head/title" />')
+    <head><title>User: Bob</title><link rel="Stylesheet" type="text/css" href="http://somesite.com/theme/style.css"><style type="text/css">
+        @import "http://somesite.com/theme/style2.css";
+      </style></head>
+    >>> t_rule_head('<drop theme="link, style" />')
+    <head><title>This is a theme title</title></head>
+    >>> t_rule_head('<drop theme="link || style" />')
+    <head><title>This is a theme title</title><style type="text/css">
+        @import "http://somesite.com/theme/style2.css";
+      </style></head>
