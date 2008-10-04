@@ -1,0 +1,21 @@
+{% extends "!layout.html" %}
+
+{% block extrahead %}
+{{ super() }}
+<link rel="stylesheet" type="text/css"
+ href="{{ pathto('_static/deliverance.css') }}">
+{% endblock %}
+
+{% block sidebarsearch %}
+
+<hr>
+
+<ul>
+<li><a href="http://trac.openplans.org/deliverance">Issue tracker</a></li>
+<li>Sponsored by
+  <a href="http://topp.openplans.org">The Open Planning Project</a></li>
+</ul>
+
+{{ super() }}
+
+{% endblock %}

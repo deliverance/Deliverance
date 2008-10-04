@@ -1,3 +1,6 @@
+About the Proxy
+===============
+
 Proxying can be setup inside the rules as well:
 
 .. code-block:: xml
