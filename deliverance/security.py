@@ -29,10 +29,12 @@ class SecurityContext(object):
     """
 
     def __init__(self, execute_pyref=False, display_logging=None,
-                 display_local_files=None, force_dev_auth=False):
+                 display_local_files=None, edit_local_files=None, 
+                 force_dev_auth=False):
         self._execute_pyref = execute_pyref
         self._display_logging = display_logging
         self._display_local_files = display_local_files
+        self._edit_local_files = edit_local_files
         self._force_dev_auth = force_dev_auth
     
     @classmethod
@@ -61,9 +63,8 @@ class SecurityContext(object):
         return self._execute_pyref
 
     def edit_local_files(self, environ):
-        if self._display_logging is not None:
-            return self._display_logging
-        ## FIXME: this is not a restrictive enough rule; should be like pyref:
+        if self._edit_local_files is not None:
+            return self._edit_local_files
         return self.is_developer_user(environ)
 
     def is_developer_user(self, environ):

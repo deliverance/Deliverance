@@ -368,6 +368,9 @@ You can't actually use quite all of these together.  Going over the individual s
 ``<display-local-files>``:
     The `developer debugging console`_ will, by default, display any local files.  If the person accessing that console generally has ssh or other access to the server this isn't a problem.  But if not you should turn this off.
 
+``<edit-local-files>``:
+    You can edit files through the `developer debugging console`_ unless you include ``<edit-local-files>false</edit-local-files>``.
+
 The ``<dev-*>`` tags define access to the `developer console`_.
 
 ``<dev-allow>``:

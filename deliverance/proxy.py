@@ -566,12 +566,14 @@ class ProxySettings(object):
     """
 
     def __init__(self, server_host, execute_pyref=True, display_local_files=True,
+                 edit_local_files=True,
                  dev_allow_ips=None, dev_deny_ips=None, dev_htpasswd=None, dev_users=None,
                  dev_expiration=0,
                  source_location=None):
         self.server_host = server_host
         self.execute_pyref = execute_pyref
         self.display_local_files = display_local_files
+        self.edit_local_files = edit_local_files
         self.dev_allow_ips = dev_allow_ips
         self.dev_deny_ips = dev_deny_ips
         self.dev_htpasswd = dev_htpasswd
@@ -596,6 +598,7 @@ class ProxySettings(object):
         ## FIXME: should these defaults be passed in:
         execute_pyref = True
         display_local_files = True
+        edit_local_files = True
         dev_allow_ips = []
         dev_deny_ips = []
         dev_htpasswd = None
@@ -621,6 +624,8 @@ class ProxySettings(object):
                     dev_expiration = int(dev_expiration)
             elif child.tag == 'display-local-files':
                 display_local_files = asbool(cls.substitute(child.text, environ))
+            elif child.tag == 'edit-local-files':
+                edit_local_files = asbool(cls.substitute(child.text, environ))
             elif child.tag == 'dev-user':
                 username = cls.substitute(child.get('username', ''), environ)
                 ## FIXME: allow hashed password?
@@ -648,6 +653,7 @@ class ProxySettings(object):
         ## FIXME: add a default allow_ips of 127.0.0.1?
         return cls(server_host, execute_pyref=execute_pyref, 
                    display_local_files=display_local_files,
+                   edit_local_files=edit_local_files,
                    dev_allow_ips=dev_allow_ips, dev_deny_ips=dev_deny_ips, 
                    dev_users=dev_users, dev_htpasswd=dev_htpasswd,
                    dev_expiration=dev_expiration,
@@ -701,7 +707,8 @@ class ProxySettings(object):
         else:
             password_checker = None
         app = SecurityContext.middleware(app, execute_pyref=self.execute_pyref,
-                                         display_local_files=self.display_local_files)
+                                         display_local_files=self.display_local_files,
+                                         edit_local_files=self.edit_local_files)
         if password_checker is None and not self.dev_htpasswd:
             ## FIXME: warn here?
             return app
