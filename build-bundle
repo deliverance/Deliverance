@@ -5,6 +5,17 @@ fail () {
     exit 1
 }
 
+if [ "$1" = "upload" ] ; then
+    shift
+    FILENAME="$1"
+    if [ -z "$FILENAME" ] ; then
+        echo "Usage: `basename $0` uplaod FILENAME"
+        exit 2
+    fi
+    cat $FILENAME | ssh flow.openplans.org "ssh acura.openplans.org \"cd /www/deliverance.openplans.org/dist/ ; cat > $FILENAME ; rm Deliverance-snapshot-latest.pybundle ; ln -s $FILENAME Deliverance-snapshot-latest.pybundle\""
+    exit
+fi
+
 REV=$(python -c 'import pyinstall; print pyinstall.get_svn_revision(".")')
 FILE="Deliverance-snapshot-r${REV}.pybundle"
 
@@ -20,7 +31,7 @@ echo
 pyinstall.py --bundle=$FILE --build=build-bundle-files/ --src=src-bundle-files/ \
   http://httplib2.googlecode.com/files/httplib2-0.4.0.tar.gz \
   -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
-  supervisord PasteScript
+  supervisor PasteScript \
   || fail 'Bundle failed'
 
 echo 'INSTALLING'
