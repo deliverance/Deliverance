@@ -1,0 +1,55 @@
+:mod:`deliverance.util` -- miscellaneous functions
+==================================================
+
+.. contents::
+
+Modules
+-------
+
+converters
+~~~~~~~~~~
+
+.. automodule:: deliverance.util.converters
+
+.. autofunction:: asbool
+.. autofunction:: html_quote
+
+filetourl
+~~~~~~~~~
+
+.. automodule:: deliverance.util.filetourl
+
+.. autofunction:: filename_to_url
+.. autofunction:: url_to_filename
+
+importstring
+~~~~~~~~~~~~
+
+.. automodule:: deliverance.util.importstring
+
+.. autofunction:: eval_import
+.. autofunction:: simple_import
+.. autofunction:: import_module
+.. autofunction:: try_import_module
+
+nesteddict
+~~~~~~~~~~
+
+.. automodule:: deliverance.util.nesteddict
+
+.. autoclass:: NestedDict
+
+uritemplate
+~~~~~~~~~~~
+
+.. automodule:: deliverance.util.uritemplate
+
+.. autofunction:: uri_template_substitute
+
+urlnormalize
+~~~~~~~~~~~~
+
+.. automodule:: deliverance.util.urlnormalize
+
+.. autofunction:: url_normalize
+

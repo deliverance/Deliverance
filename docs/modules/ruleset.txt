@@ -1,0 +1,16 @@
+:mod:`deliverance.ruleset` -- rule/action container
+===================================================
+
+.. automodule:: deliverance.ruleset
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: RuleSet
+
+Utility Functions
+-----------------
+
+.. autofunction:: parse_meta_headers

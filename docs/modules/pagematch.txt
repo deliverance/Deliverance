@@ -1,0 +1,13 @@
+:mod:`deliverance.pagematch` -- matching requests and responses
+===============================================================
+
+.. automodule:: deliverance.pagematch
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: Match
+.. autoclass:: AbstractMatch
+.. autofunction:: run_matches

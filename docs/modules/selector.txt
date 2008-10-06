@@ -1,0 +1,11 @@
+:mod:`deliverance.selector` -- selectors (XPath, CSS, etc)
+==========================================================
+
+.. automodule:: deliverance.selector
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: Selector

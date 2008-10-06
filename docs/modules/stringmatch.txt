@@ -1,0 +1,29 @@
+:mod:`deliverance.stringmatch` -- matcher for strings
+=====================================================
+
+.. automodule:: deliverance.stringmatch
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autofunction:: compile_matcher
+.. autofunction:: compile_header_matcher
+.. autoexception:: MatchSyntaxError
+
+Internal Classes
+----------------
+
+.. autoclass:: Matcher
+.. autoclass:: WildcardMatcher
+.. autoclass:: WildcardInsensitiveMatcher
+.. autoclass:: RegexMatcher
+.. autoclass:: PathMatcher
+.. autoclass:: ExactMatcher
+.. autoclass:: ExactInsensitiveMatcher
+.. autoclass:: ContainsMatcher
+.. autoclass:: ContainsInsensitiveMatcher
+.. autoclass:: BooleanMatcher
+.. autoclass:: HeaderMatcher
+.. autoclass:: HeaderWildcardMatcher

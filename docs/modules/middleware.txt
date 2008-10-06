@@ -1,0 +1,12 @@
+:mod:`deliverance.middleware` -- the theming middleware
+=======================================================
+
+.. automodule:: deliverance.middleware
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: DeliveranceMiddleware
+.. autoclass:: SubrequestRuleGetter

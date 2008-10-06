@@ -1,0 +1,22 @@
+:mod:`deliverance.rules` -- rules and actions
+=============================================
+
+.. automodule:: deliverance.rules
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: Rule
+.. autoclass:: RuleMatch
+.. autoclass:: Replace
+.. autoclass:: Append
+.. autoclass:: Prepend
+.. autoclass:: Drop
+
+Abstract Classes
+----------------
+
+.. autoclass:: AbstractAction
+.. autoclass:: TransformAction

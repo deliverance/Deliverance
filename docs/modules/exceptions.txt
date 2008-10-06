@@ -1,0 +1,18 @@
+:mod:`deliverance.exceptions` -- shared exception objects
+=========================================================
+
+.. automodule:: deliverance.exceptions
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoexception:: DeliveranceError
+.. autoexception:: DeliveranceSyntaxError
+.. autoexception:: AbortTheme
+
+Utilities
+---------
+
+.. autofunction:: add_exception_info

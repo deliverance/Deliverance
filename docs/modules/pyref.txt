@@ -1,0 +1,16 @@
+:mod:`deliverance.pyref` -- resolving ``pyref`` attributes
+==========================================================
+
+.. automodule:: deliverance.pyref
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: PyReference
+
+Utilities
+---------
+
+.. autoclass:: DefaultDict

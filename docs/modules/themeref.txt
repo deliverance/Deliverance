@@ -1,0 +1,11 @@
+:mod:`deliverance.themeref` -- ``<theme>`` elements
+===================================================
+
+.. automodule:: deliverance.themeref
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: Theme

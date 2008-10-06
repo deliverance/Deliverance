@@ -1,0 +1,17 @@
+:mod:`deliverance.proxy` -- objects to represent proxying
+=========================================================
+
+.. automodule:: deliverance.proxy
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: ProxySet
+.. autoclass:: Proxy
+.. autoclass:: ProxyMatch
+.. autoclass:: ProxyDest
+.. autoclass:: ProxyRequestModification
+.. autoclass:: ProxyResponseModification
+.. autoclass:: ProxySettings

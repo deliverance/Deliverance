@@ -1,0 +1,12 @@
+:mod:`deliverance.log` -- logging
+=================================
+
+.. automodule:: deliverance.log
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autoclass:: SavingLogger
+.. autoclass:: PrintingLogger

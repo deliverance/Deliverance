@@ -1,0 +1,13 @@
+:mod:`deliverance.proxycommand` -- the ``deliverance-proxy`` command
+====================================================================
+
+.. automodule:: deliverance.proxycommand
+
+.. contents::
+
+Module Contents
+---------------
+
+.. autofunction:: main
+.. autofunction:: run_command
+.. autoclass:: ReloadingApp
