@@ -21,8 +21,8 @@ from deliverance.util.converters import asbool
 -->
 
   <proxy path="/">
-    <dest href="http://{{sub_host}}/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/{site}/VirtualHostRoot" />
-{{if asbool(sub_rewrite_links):}}
+    <dest href="{{proxy_url}}/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/{site}/VirtualHostRoot" />
+{{if asbool(proxy_rewrite_links):}}
     <response rewrite-links="1" />
 {{endif}}
   </proxy>

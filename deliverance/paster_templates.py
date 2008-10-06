@@ -13,9 +13,9 @@ class DeliveranceTemplate(Template):
     vars = [
         var('host', 'The host/port to serve on',
             'localhost:8000'),
-        var('sub_host', 'The main host to connect to', 
-            default='localhost:8080'),
-        var('sub_rewrite_links', 'Rewrite links from sub_host?',
+        var('proxy_url', 'The main site to connect/proxy to', 
+            default='http://localhost:8080'),
+        var('proxy_rewrite_links', 'Rewrite links from sub_host?',
             default='n'),
         var('password', 'The password for the deliverance admin console'),
         var('theme_url', 'A URL to pull the initial theme from (optional)'),

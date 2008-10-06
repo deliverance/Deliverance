@@ -1,0 +1,83 @@
+Quickstart
+==========
+
+This document will show you how to get started playing around with Deliverance quickly.  This quickstart is written for a Linux, Mac, or BSD-using audience.  Sorry Windows users.
+
+Starting with virtualenv
+------------------------
+
+If you are familiar with `virtualenv <http://pypi.python.org/pypi/virtualenv>`_ and `easy_install <http://peak.telecommunity.com/DevCenter/EasyInstall>`_ you can skip this section.
+
+We'll be setting everything up in an isolated environment.  Nothing in this will effect anything on your system outside of the directories we set up in this tutorial -- so you can just delete the directory and forget about the whole thing if you don't like it.
+
+The first thing we'll do is get virtualenv and create an environment.  Grab `virtualenv.py <http://svn.colorstudy.com/virtualenv/trunk/virtualenv.py>`_, and run::
+
+    $ python virtualenv.py DelivTest
+
+This will create an environment in ``DelivTest/`` and install ``easy_install``.  There's also a new Python interpreter in ``DelivTest/bin/python`` -- anything in ``DelivTest/bin/`` will be tied to this environment.  It'll use libraries from the environment and install libraries into the environment.
+
+Note you can run ``source DelivTest/bin/activate`` to change ``$PATH`` so that everytime you run ``python``, ``easy_install``, etc., you'll be running it from the environment you've created.
+
+Installing the Software
+-----------------------
+
+We won't actually use ``easy_install`` much, we'll just install another installer::
+
+    $ DelivTest/bin/easy_install pyinstall
+
+And we'll use the installer to install Deliverance.  This has the benefit over ``easy_install`` of installing all the source at once and with versions of the software that are known to work with each other.  So, we'll install the Deliverance bundle::
+
+    $ DelivTest/bin/pyinstall.py http://deliverance.openplans.org/dist/Deliverance-snapshot-latest.pybundle
+
+To install lxml, you have to have ``libxml2`` installed, and the ``-dev`` packages for ``libxml2`` and Python itself.  On Ubuntu this is ``libxml2-dev``, ``libxslt1-dev``, and ``python2.5-dev``.
+
+This can take a long time to crunch.
+
+Creating a Configuration
+------------------------
+
+We have the software installed, but not the configuration to run it.  To create the configuration run::
+
+    $ DelivTest/bin/paster create -t deliverance DelivTest
+    Selected and implied templates:
+      deliverance#deliverance  Basic template for a deliverance-proxy setup
+
+    Variables:
+      egg:      TestEnv
+      package:  testenv
+      project:  TestEnv
+    Enter host (The host/port to serve on) ['localhost:8000']: 
+    Enter proxy_url (The main site to connect/proxy to) ['http://localhost:8080']: 
+    Enter proxy_rewrite_links (Rewrite links from sub_host?) ['n']: 
+    Enter password (The password for the deliverance admin console) ['']: test
+    Enter theme_url (A URL to pull the initial theme from (optional)) ['']: http://mysite.com
+    Creating template deliverance
+    ...
+
+It will ask you about some questions:
+
+``host``:
+    The host that Deliverance will serve from.  Note ``localhost`` (or 127.0.0.1) means that you can only connect from the machine itself.  If you want it to be externally visible use 0.0.0.0.
+``proxy_host``:
+    This is the location where all requests will go to.  ``http://localhost:8080`` is a common default for servers.  You can also give a remote host and a path, like ``http://mysite.com/blog``
+``proxy_rewrite_links``:
+    If you are proxying to a site that doesn't really expect you to be proxying to it, the links will probably be broken.  You can give Y here to turn on link rewriting.  It's not 100% perfect (e.g., links put into Javascript), but it can be good for experimenting.
+``password``:
+    The password to access the logging console.  The username is always ``admin``.  You can add more later too.
+``theme_url``:
+    If you want to base your theme on an existing page, you can give the URL of that page here.  It will fetch that page and all the CSS and images from that page, so you can locally edit them.  Otherwise an extremely simply theme will be setup.
+
+Once you've entered these values, it will set up a basic layout with a file ``etc/deliverance.xml`` for the configuration, and the theme in ``theme/theme.html``.
+
+You can start the server with::
+
+    $ ./bin/deliverance-proxy ./etc/deliverance.xml
+
+The site will be at ``http://localhost:8000`` and you can login at ``http://localhost:8000/.deliverance/login``
+
+Once you have logged in you can look at ``http://localhost:8000/?deliv_log`` to see a log of everything Deliverance is doing (at the bottom of the page).
+
+Editing the Rules
+-----------------
+
+Here's where the quickstart ends for now; you'll have to read the rest of the documentation to understand the rules.
