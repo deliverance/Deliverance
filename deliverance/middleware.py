@@ -16,8 +16,9 @@ from tempita import HTMLTemplate, html
 from lxml.etree import _Element
 from lxml.html import fromstring, document_fromstring, tostring, Element
 from deliverance.log import SavingLogger
-from deliverance.security import display_logging, display_local_files
+from deliverance.security import display_logging, display_local_files, edit_local_files
 from deliverance.util.filetourl import url_to_filename
+from deliverance.editor.editorapp import Editor
 
 __all__ = ['DeliveranceMiddleware', 'SubrequestRuleGetter']
 
@@ -173,6 +174,7 @@ class DeliveranceMiddleware(object):
         segment = req.path_info_peek()
         method = 'action_%s' % segment
         method = getattr(self, method, None)
+        req.path_info_pop()
         if not method:
             return exc.HTTPNotFound('There is no %r action' % segment)
         try:
@@ -214,6 +216,17 @@ class DeliveranceMiddleware(object):
         else:
             return exc.HTTPBadRequest(
                 "You must have a query variable source, browse, or selector")
+
+    def action_edit_rules(self, req, resource_fetcher):
+        if not edit_local_files(req.environ):
+            return exc.HTTPForbidden('Editing is forbidden')
+        rules = self.rule_getter(resource_fetcher, self.app, req)
+        file_url = rules.source_location
+        if not file_url.startswith('file:'):
+            return exc.HTTPForbidden('The rule location (%s) is not a local file' % file_url)
+        filename = url_to_filename(file_url)
+        app = Editor(filename=filename, force_syntax='delivxml', title='rule file %s' % os.path.basename(filename))
+        return app
 
     def view_source(self, req, resp):
         """

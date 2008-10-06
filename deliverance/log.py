@@ -9,7 +9,7 @@ messages to be strictly per-request.
 import logging
 from lxml.etree import tostring, _Element
 from tempita import HTMLTemplate, html_quote, html
-from deliverance.security import display_logging
+from deliverance.security import display_logging, edit_local_files
 
 NOTIFY = (logging.INFO + logging.WARN) / 2
 
@@ -77,6 +77,9 @@ class SavingLogger(object):
       | <a href="{{unthemed_url}}" target="_blank">unthemed content</a>
       | <a href="{{content_source}}" target="_blank">content source</a>
       | <a href="{{content_browse}}" target="_blank">browse content</a>
+      {{if edit_rules}}
+      | <a href="{{edit_rules}}" target="_blank">edit rules</a>
+      {{endif}}
     </div>
 
     {{if log.messages}}
@@ -115,12 +118,19 @@ class SavingLogger(object):
         """Formats this log object as HTML"""
         content_source = self.link_to(self.request.url, source=True)
         content_browse = self.link_to(self.request.url, browse=True)
+        if edit_local_files(self.request.environ):
+            ## FIXME: also test for the local-ness of the file
+            edit_rules = (self.request.environ['deliverance.base_url']
+                          + '/.deliverance/edit_rules')
+        else:
+            edit_rules = None
         return self.log_template.substitute(
             log=self, middleware=self.middleware, 
             unthemed_url=self._add_notheme(self.request.url),
             theme_url=self._add_notheme(self.theme_url),
             content_source=content_source,
             content_browse=content_browse,
+            edit_rules=edit_rules,
             **self.tags)
 
     def _add_notheme(self, url):

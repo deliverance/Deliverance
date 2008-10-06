@@ -60,6 +60,12 @@ class SecurityContext(object):
         """True if it is allowed to execute pyref statements"""
         return self._execute_pyref
 
+    def edit_local_files(self, environ):
+        if self._display_logging is not None:
+            return self._display_logging
+        ## FIXME: this is not a restrictive enough rule; should be like pyref:
+        return self.is_developer_user(environ)
+
     def is_developer_user(self, environ):
         """
         True if a developer user (with DevAuth) is logged in.
@@ -97,3 +103,4 @@ def make_getter(meth_name):
 display_logging = make_getter('display_logging')
 display_local_files = make_getter('display_local_files')
 execute_pyref = make_getter('execute_pyref')
+edit_local_files = make_getter('edit_local_files')
