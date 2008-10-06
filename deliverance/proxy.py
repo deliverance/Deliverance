@@ -614,7 +614,7 @@ class ProxySettings(object):
             elif child.tag == 'dev-deny':
                 dev_deny_ips.extend(cls.substitute(child.text, environ).split())
             elif child.tag == 'dev-htpasswd':
-                dev_htpasswd = cls.substitute(child.text, environ)
+                dev_htpasswd = os.path.join(os.path.dirname(url_to_filename(source_location)), cls.substitute(child.text, environ))
             elif child.tag == 'dev-expiration':
                 dev_expiration = cls.substitute(child.text, environ)
                 if dev_expiration:
@@ -642,11 +642,15 @@ class ProxySettings(object):
             raise DeliveranceSyntaxError(
                 "You can use <dev-htpasswd> or <dev-user>, but not both",
                 element=el)
+        if not dev_users and not dev_htpasswd:
+            ## FIXME: not sure this is the best way to warn
+            print 'Warning: no <dev-users> or <dev-htpasswd>; logging is inaccessible'
         ## FIXME: add a default allow_ips of 127.0.0.1?
         return cls(server_host, execute_pyref=execute_pyref, 
                    display_local_files=display_local_files,
                    dev_allow_ips=dev_allow_ips, dev_deny_ips=dev_deny_ips, 
-                   dev_users=dev_users, dev_expiration=dev_expiration,
+                   dev_users=dev_users, dev_htpasswd=dev_htpasswd,
+                   dev_expiration=dev_expiration,
                    source_location=source_location)
 
     @classmethod
@@ -698,6 +702,9 @@ class ProxySettings(object):
             password_checker = None
         app = SecurityContext.middleware(app, execute_pyref=self.execute_pyref,
                                          display_local_files=self.display_local_files)
+        if password_checker is None and not self.dev_htpasswd:
+            print 'disabled: %r and %r' % (self.dev_users, self.dev_htpasswd)
+            return app
         app = DevAuth(
             app,
             allow=convert_ip_mask(self.dev_allow_ips),

@@ -20,6 +20,7 @@ echo
 pyinstall.py --bundle=$FILE --build=build-bundle-files/ --src=src-bundle-files/ \
   http://httplib2.googlecode.com/files/httplib2-0.4.0.tar.gz \
   -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
+  supervisord PasteScript
   || fail 'Bundle failed'
 
 echo 'INSTALLING'

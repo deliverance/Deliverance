@@ -45,5 +45,9 @@ transformation.
       entry_points="""
       [console_scripts]
       deliverance-proxy = deliverance.proxycommand:main
+
+      [paste.paster_create_template]
+      deliverance = deliverance.paster_templates:DeliveranceTemplate
+      deliverance_plone = deliverance.paster_templates:PloneTemplate
       """,
       )
