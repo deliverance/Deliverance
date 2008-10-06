@@ -38,7 +38,7 @@ class RuleSet(object):
             classes = run_matches(self.matchers, req, resp, response_headers, log)
         except AbortTheme:
             return resp
-        if 'X-Deliverance-Page-Class' in resp.headers:
+        if 'X-Deliverance-Page-Class' in response_headers:
             classes.extend(resp.headers['X-Deliverance-Page-Class'].strip().split())
         if 'deliverance.page_classes' in req.environ:
             classes.extend(req.environ['deliverance.page_classes'])
