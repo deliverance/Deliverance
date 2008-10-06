@@ -8,8 +8,6 @@ from deliverance.util.converters import asbool, html_quote
 from deliverance.pyref import PyReference
 from deliverance.security import execute_pyref
 
-__all__ = ['MatchSyntaxError', 'Match']
-
 class AbstractMatch(object):
     """
     Represents the <match> tags.

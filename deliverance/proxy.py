@@ -703,7 +703,7 @@ class ProxySettings(object):
         app = SecurityContext.middleware(app, execute_pyref=self.execute_pyref,
                                          display_local_files=self.display_local_files)
         if password_checker is None and not self.dev_htpasswd:
-            print 'disabled: %r and %r' % (self.dev_users, self.dev_htpasswd)
+            ## FIXME: warn here?
             return app
         app = DevAuth(
             app,
