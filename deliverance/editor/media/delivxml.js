@@ -10,7 +10,7 @@ editAreaLoader.load_syntax["delivxml"] = {
 	,'KEYWORDS' : {
                 'values' : [
                         'ruleset', 
-                        'server-settings', 'server', 'execute-pyref', 'display-local-files',
+                        'server-settings', 'server', 'execute-pyref', 'display-local-files', 'edit-local-files',
                         'dev-allow', 'dev-deny', 'dev-htpasswd', 'dev-user', 'dev-expiration',
                         'proxy', 'dest', 'request', 'response',
                         'theme', 'rule', 'replace', 'append', 'prepend', 'drop'
@@ -20,7 +20,7 @@ editAreaLoader.load_syntax["delivxml"] = {
                         'manytheme', 'nocontent', 'manycontent', 'href', 'move', 
                         'suppress-standard', 'class',
                         'domain', 'path', 'header', 'rewrite-links', 'request-header',
-                        'response-header', 'environ']
+                        'response-header', 'environ', 'editable']
 	}
 	,'OPERATORS' :[
 	]

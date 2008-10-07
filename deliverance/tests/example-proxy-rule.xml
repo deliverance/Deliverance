@@ -7,7 +7,7 @@
     <dev-user username="guest" password="guest" />
   </server-settings>
 
-  <proxy path="/theme-files">
+  <proxy path="/theme-files" editable="1">
     <dest href="{here}/example-files/" />
   </proxy>
 

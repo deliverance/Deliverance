@@ -412,6 +412,8 @@ You can also match against things besides the path; anything in `request/respons
 
 You can also add `page classes`_ for the proxied request, by using ``<proxy class="page-class">``.
 
+You can use ``<proxy editable="1">`` to allow the files references by the proxy to be editable through the `developer debugging console`_.  If you do this you have to have a ``<dest>`` that references a ``file:///...`` URL.
+
 The proxy can contain several elements...
 
 proxy: ``<dest>``

@@ -30,12 +30,22 @@ class Editor(object):
             assert filename.startswith(self.base_dir)
         else:
             filename = self.filename
-        if req.method == 'POST':
-            resp = self.save_file(req, filename)
-        elif req.method == 'GET':
-            resp = self.edit_file(req, filename)
+        if req.method not in ('GET', 'POST'):
+            resp = exc.HTTPMethodNotAllowed('Bad method: %s' % req.method,
+                                            allow='GET,POST')
+        elif os.path.isdir(filename):
+            if req.method == 'POST':
+                resp = self.save_create(req, filename)
+            else:
+                if not req.path.endswith('/'):
+                    resp = exc.HTTPMovedPermanently(add_slash=True)
+                else:
+                    resp = self.view_dir(req, filename)
         else:
-            assert 0, 'bad method: %r' % req.method
+            if req.method == 'POST':
+                resp = self.save_file(req, filename)
+            elif req.method == 'GET':
+                resp = self.edit_file(req, filename)
         return resp(environ, start_response)
 
     def edit_url(self, req, filename):
@@ -103,3 +113,46 @@ class Editor(object):
 
     edit_template = HTMLTemplate.from_filename(
         os.path.join(os.path.dirname(__file__), 'editor_template.html'))
+
+    def save_create(self, req, dir):
+        file = req.POST['file']
+        filename = req.POST.get('filename') or file.filename
+        filename = filename.replace('\\', '/')
+        filename = os.path.basename(os.path.normpath(filename))
+        filename = os.path.join(dir, filename)
+        if os.path.exists(filename):
+            return exc.HTTPForbidden(
+                "The file %s already exists, you cannot upload over it" % filename)
+        f = open(filename, 'wb')
+        f.write(file.value)
+        f.close()
+        return exc.HTTPFound(
+            location=self.edit_url(req, filename))
+
+    skip_files = ['.svn', 'CVS', '.hg']
+
+    def view_dir(self, req, dir):
+        dir = os.path.normpath(dir)
+        show_parent = dir != self.base_dir
+        children = [os.path.join(dir, name) for name in os.listdir(dir)
+                    if name not in self.skip_files]
+        def edit_url(filename):
+            return self.edit_url(req, filename)
+        title = self.title or dir
+        body = self.view_dir_template.substitute(
+            req=req,
+            dir=dir,
+            show_parent=show_parent,
+            title=title,
+            basename=os.path.basename,
+            dirname=os.path.dirname,
+            isdir=os.path.isdir,
+            children=children,
+            edit_url=edit_url,
+            )
+        resp = Response(body=body)
+        resp.cache_expires()
+        return resp
+
+    view_dir_template = HTMLTemplate.from_filename(
+        os.path.join(os.path.dirname(__file__), 'view_dir_template.html'))

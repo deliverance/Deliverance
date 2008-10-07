@@ -1,0 +1,39 @@
+<html>
+<head>
+<title>Directory: {{title}}</title>
+<link rel="stylesheet" type="text/css"
+ href="{{req.application_url}}/.media/style.css">
+</head>
+
+<body>
+
+<h1>
+{{if show_parent}}
+<a href="{{edit_url(dirname(dir))}}">{{dirname(dir)}}</a> /{{basename(dir)}}/
+{{else}}
+{{dir}}/
+{{endif}}
+</h1>
+
+
+<table class="dir">
+  {{for loop, filename in looper(children):}}
+    <tr class="{{if loop.even}}even{{else}}odd{{endif}}">
+      <td>
+        <a href="{{edit_url(filename)}}">{{basename(filename)}}</a>{{if isdir(filename)}}/{{endif}}
+      </td>
+    </tr>
+  {{endfor}}
+</table>
+
+<fieldset>
+ <legend>Upload a new file</legend>
+<form action="{{edit_url(dir)}}" method="POST" enctype="multipart/form-data">
+Filename (optional):<br>
+<input type="text" name="filename" style="width: 50%"><br>
+<input type="file" name="file">
+<input type="submit" value="Upload">
+</form>
+</fieldset>
+
+</body> </html>

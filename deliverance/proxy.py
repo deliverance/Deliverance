@@ -24,10 +24,11 @@ from deliverance.ruleset import RuleSet
 from deliverance.log import SavingLogger
 from deliverance.util.uritemplate import uri_template_substitute
 from deliverance.util.nesteddict import NestedDict
-from deliverance.security import execute_pyref
+from deliverance.security import execute_pyref, edit_local_files
 from deliverance.pyref import PyReference
 from deliverance.util.filetourl import filename_to_url, url_to_filename
 from deliverance.util.urlnormalize import url_normalize
+from deliverance.editor.editorapp import Editor
 
 class ProxySet(object):
     """
@@ -64,9 +65,11 @@ class ProxySet(object):
         """
         request = Request(environ)
         log = environ['deliverance.log']
-        for proxy in self.proxies:
+        for index, proxy in enumerate(self.proxies):
             ## FIXME: obviously this is wonky:
             if proxy.match(request, None, None, log):
+                if proxy.editable:
+                    log.edit_url = request.application_url + '/.deliverance/proxy-editor/%s/' % (index+1)
                 try:
                     return proxy.forward_request(environ, start_response)
                 except AbortProxy, e:
@@ -92,7 +95,17 @@ class ProxySet(object):
         req = Request(environ)
         log = SavingLogger(req, self.deliverator)
         req.environ['deliverance.log'] = log
+        if req.path_info.startswith('/.deliverance/proxy-editor/'):
+            req.path_info_pop()
+            req.path_info_pop()
+            return self.proxy_editor(environ, start_response)
         return self.deliverator(environ, start_response)
+
+    def proxy_editor(self, environ, start_response):
+        req = Request(environ)
+        proxy = self.proxies[int(req.path_info_pop())-1]
+        return proxy.edit_app(environ, start_response)
+        
 
 class Proxy(object):
     """Represents one ``<proxy>`` element.
@@ -105,7 +118,7 @@ class Proxy(object):
     def __init__(self, match, dest,
                  request_modifications, response_modifications,
                  strip_script_name=True, keep_host=False,
-                 source_location=None, classes=None):
+                 source_location=None, classes=None, editable=False):
         self.match = match
         self.match.proxy = self
         self.dest = dest
@@ -115,6 +128,7 @@ class Proxy(object):
         self.response_modifications = response_modifications
         self.source_location = source_location
         self.classes = classes
+        self.editable = editable
 
     def log_description(self, log=None):
         """The debugging description for use in log display"""
@@ -129,6 +143,8 @@ class Proxy(object):
             parts.append('strip-script-name="0"')
         if self.keep_host:
             parts.append('keep-host="1"')
+        if self.editable:
+            parts.append('editable="1"')
         parts.append('&gt;<br>\n')
         parts.append('&nbsp;' + self.dest.log_description(log))
         parts.append('<br>\n')
@@ -157,6 +173,7 @@ class Proxy(object):
         response_modifications = []
         strip_script_name = True
         keep_host = False
+        editable = asbool(el.get('editable'))
         for child in el:
             if child.tag == 'dest':
                 if dest is not None:
@@ -183,10 +200,27 @@ class Proxy(object):
                 raise DeliveranceSyntaxError(
                     "Unknown tag in <proxy>: %s" % xml_tostring(child),
                     element=child, source_location=source_location)
+        if editable:
+            if not dest:
+                ## FIXME: should this always be a test?
+                raise DeliveranceSyntaxError("You must have a <dest> tag",
+                                             element=element, source_location=source_location)
+            try:
+                href = uri_template_substitute(
+                    dest.href, dict(here=posixpath.dirname(source_location)))
+            except KeyError:
+                raise DeliveranceSyntaxError(
+                    'You can only use <proxy editable="1"> if you have a <dest href="..."> that only contains {here} (you have %s)'
+                    % (dest.href))
+            if not href.startswith('file:'):
+                raise DeliveranceSyntaxError(
+                    'You can only use <proxy editable="1"> if you have a <dest href="file:///..."> (you have %s)'
+                    % (dest))
         classes = el.get('class', '').split() or None
         inst = cls(match, dest, request_modifications, response_modifications,
                    strip_script_name=strip_script_name, keep_host=keep_host,
-                   source_location=source_location, classes=classes)
+                   source_location=source_location, classes=classes,
+                   editable=editable)
         match.proxy = inst
         return inst
 
@@ -314,6 +348,25 @@ class Proxy(object):
             # I don't really need a copied request here, because FileApp is so simple:
             resp = request.get_response(app)
         return resp, orig_base, dest, proxied_url
+
+    def edit_app(self, environ, start_response):
+        try:
+            if not self.editable:
+                raise exc.HTTPForbidden('This proxy is not editable="1"')
+            if not edit_local_files(environ):
+                raise exc.HTTPForbidden('Editing is forbidden')
+            try:
+                dest_href = uri_template_substitute(
+                    self.dest.href, dict(here=posixpath.dirname(self.source_location)))
+            except KeyError:
+                raise exc.HTTPForbidden('Not a static location: %s' % dest.href)
+            if not dest_href.startswith('file:/'):
+                raise exc.HTTPForbidden('Not local: %s' % self.dest.href)
+            filename = url_to_filename(dest_href)
+            editor = Editor(base_dir=filename)
+            return editor(environ, start_response)
+        except exc.HTTPException, e:
+            return e(environ, start_response)
         
 class ProxyMatch(AbstractMatch):
     """Represents the request matching for <proxy> objects"""
