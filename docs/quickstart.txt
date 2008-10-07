@@ -80,4 +80,4 @@ Once you have logged in you can look at ``http://localhost:8000/?deliv_log`` to 
 Editing the Rules
 -----------------
 
-Here's where the quickstart ends for now; you'll have to read the rest of the documentation to understand the rules.
+Here's where the quickstart ends for now; you'll have to read the rest of the documentation to understand the rules, specifically the `rule and theme <configuration.html#rule-and-theme>`_ section.
