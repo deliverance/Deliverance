@@ -6,6 +6,7 @@ import posixpath
 import mimetypes
 import os
 import urllib
+import re
 from webob import Request, Response
 from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
@@ -208,11 +209,11 @@ class DeliveranceMiddleware(object):
         selector = req.GET.get('selector', '')
         subresp = resource_fetcher(url)
         if source:
-            return self.view_source(req, subresp)
+            return self.view_source(req, subresp, url)
         elif browse:
-            return self.view_browse(req, subresp)
+            return self.view_browse(req, subresp, url)
         elif selector:
-            return self.view_selection(req, subresp)
+            return self.view_selection(req, subresp, url)
         else:
             return exc.HTTPBadRequest(
                 "You must have a query variable source, browse, or selector")
@@ -228,7 +229,7 @@ class DeliveranceMiddleware(object):
         app = Editor(filename=filename, force_syntax='delivxml', title='rule file %s' % os.path.basename(filename))
         return app
 
-    def view_source(self, req, resp):
+    def view_source(self, req, resp, url):
         """
         View the highlighted source (from `action_view`).
         """
@@ -245,7 +246,7 @@ class DeliveranceMiddleware(object):
             HtmlFormatter(full=True, linenos=True, lineanchors='code'))
         return Response(text)
 
-    def view_browse(self, req, resp):
+    def view_browse(self, req, resp, url):
         """
         View the id/class browser (from `action_view`)
         """
@@ -286,14 +287,14 @@ class DeliveranceMiddleware(object):
             body = extra_body + body
         return Response(body)
 
-    def view_selection(self, req, resp):
+    def view_selection(self, req, resp, url):
         """
         View the highlighted selector (from `action_view`)
         """
         from deliverance.selector import Selector
         doc = document_fromstring(resp.body)
         el = Element('base')
-        el.set('href', posixpath.dirname(req.GET['url']) + '/')
+        el.set('href', posixpath.dirname(url) + '/')
         doc.head.insert(0, el)
         selector = Selector.parse(req.GET['selector'])
         dummy_type, elements, dummy_attributes = selector(doc)
@@ -337,13 +338,41 @@ class DeliveranceMiddleware(object):
         def format_tag(tag):
             """Highlights the lxml HTML tag"""
             return highlight(tostring(tag).split('>')[0]+'>')
+        def wrap_html(html, width=100):
+            if isinstance(html, _Element):
+                html = tostring(html)
+            lines = html.splitlines()
+            new_lines = []
+            def wrap_html_line(line):
+                if len(line) <= width:
+                    return [line]
+                match_trail = re.search(r'^[^<]*</.*?>', line, re.S)
+                if match_trail:
+                    result = [match_trail.group(0)]
+                    result.extend(wrap_html_line(line[match_trail.end():]))
+                    return result
+                match1 = re.search(r'^[^<]*<[^>]*>', line, re.S)
+                match2 = re.search(r'<[^>]*>[^<>]*$', line, re.S)
+                if not match1 or not match2:
+                    return [line]
+                result = [match1.group(0)]
+                result.extend(wrap_html_line(line[match1.end():match2.start()]))
+                result.append(match2.group(0))
+                return result
+            for line in lines:
+                new_lines.extend(wrap_html_line(line))
+            return '\n'.join(new_lines)
+        def mark_deliv_match(highlighted_text):
+            result = re.sub(r'(?:<[^/][^>]*>)*&lt;.*?DELIVERANCE-MATCH=.*?&gt;(?:</[^>]*>)*', lambda match: r'<b style="background-color: #ff8">%s</b>' % match.group(0), unicode(highlighted_text), re.S)
+            return html(result)
         text = template.substitute(
-            base_url=req.url,
+            base_url=url,
             els_in_head=els_in_head, doc=doc,
             elements=all_elements, selector=selector, 
-            format_tag=format_tag, highlight=highlight)
+            format_tag=format_tag, highlight=highlight, 
+            wrap_html=wrap_html, mark_deliv_match=mark_deliv_match)
         message = fromstring(
-            self._message_template.substitute(message=text, url=req.url))
+            self._message_template.substitute(message=text, url=url))
         if doc.body.text:
             message.tail = doc.body.text
             doc.body.text = ''
@@ -388,14 +417,14 @@ class DeliveranceMiddleware(object):
       <div style="border-top: 2px solid #000">
         <b>Elements matched in head.  Showing head:</b><br>
         <div style="margin: 1em; padding: 0.25em; background-color: #fff">
-        {{highlight(doc.head)}}
+        {{mark_deliv_match(highlight(wrap_html(doc.head)))}}
         </div>
       </div>
     {{endif}}
     ''', 'deliverance.middleware.DeliveranceMiddleware._found_template')
 
     _message_template = HTMLTemplate('''\
-    <div style="color: #000; background-color: #f90; border-bottom: 2px dotted #f00">
+    <div style="color: #000; background-color: #f90; border-bottom: 2px dotted #f00; padding: 1em">
     <span style="float: right; font-size: 65%"><button onclick="window.close()">close</button></span>
     Viewing <code><a style="text-decoration: none" href="{{url}}">{{url}}</a></code><br>
     {{message|html}}
