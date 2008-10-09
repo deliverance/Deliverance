@@ -9,7 +9,7 @@ import re
 import socket
 import os
 import string
-from webob import Request, Response
+from deliverance.util.proxyrequest import Request
 from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
 from tempita import html_quote
@@ -300,6 +300,7 @@ class Proxy(object):
             proxy_req.headers['X-Forwarded-Path'] = proxy_req.script_name
             proxy_req.script_name = ''
         proxied_url = url_normalize('%s://%s%s' % (scheme, netloc, proxy_req.path_qs))
+        proxy_req.accept_encoding = None
         try:
             resp = proxy_req.get_response(proxy_exact_request)
         except socket.error, e:
