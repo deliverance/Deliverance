@@ -30,7 +30,8 @@ echo
 ## FIXME: httplib2 still isn't being included
 ## httplib2 location is a temporary problem with a bad pypi entry
 pyinstall.py --bundle=$FILE --build=build-bundle-files/ --src=src-bundle-files/ \
-  http://httplib2.googlecode.com/files/httplib2-0.4.0.tar.gz \
+  -f http://httplib2.googlecode.com/files/httplib2-0.4.0.tar.gz#egg=httplib2-0.4.0 \
+  -e svn+http://httplib2.googlecode.com/svn/trunk/#egg=httplib2 \
   -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
   supervisor PasteScript \
   -e svn+http://svn.colorstudy.com/home/ianb/PageCollector/trunk#egg=PageCollector \
