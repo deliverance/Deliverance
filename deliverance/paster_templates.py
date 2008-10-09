@@ -34,6 +34,7 @@ class DeliveranceTemplate(Template):
 
     def get_content(self, url):
         """Gets the content and all embedded content (images, CSS, etc)"""
+        print 'Fetching theme at %s' % url
         page = parse(urllib2.urlopen(url)).getroot()
         page.make_links_absolute()
         files = []
@@ -41,6 +42,8 @@ class DeliveranceTemplate(Template):
             if not self._embedded_link(element):
                 continue
             filename, content = self.get_embedded(link)
+            if not filename:
+                continue
             files.append((filename, content))
             if attr is None:
                 old_value = element.text
@@ -62,7 +65,12 @@ class DeliveranceTemplate(Template):
         return False
 
     def get_embedded(self, url):
-        resp = urllib2.urlopen(url)
+        print '  fetching %s' % url
+        try:
+            resp = urllib2.urlopen(url)
+        except urllib2.HTTPError, e:
+            print 'Could not fetch %s: %s' % (url, e)
+            return None, None
         url = resp.geturl()
         content = resp.read()
         content_type = resp.info()['content-type']
@@ -71,7 +79,7 @@ class DeliveranceTemplate(Template):
         if not filename:
             filename = 'embedded'
         ext = mimetypes.guess_extension(content_type)
-        if ext == '.jpeg':
+        if ext == '.jpeg' or ext == 'jpe':
             ext = '.jpg'
         ext = ext or orig_ext
         return filename + ext, content
