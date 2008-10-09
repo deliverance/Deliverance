@@ -20,8 +20,19 @@ from deliverance.util.converters import asbool
   </proxy>
 -->
 
+  <!-- Editor access: -->
+  <proxy path="/editor">
+    <dest href="{{proxy_url}}/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/{{site_name}}/VirtualHostRoot/_vh_editor" />
+{{if asbool(proxy_rewrite_links):}}
+    <response rewrite-links="1" />
+{{endif}}
+  </proxy>
+  <!-- Don't theme the editor, and don't theme Kupu's empty page: -->
+  <match path="/editor" abort="1" />
+  <match path="wildcard:*/emptypage" abort="1" />
+
   <proxy path="/">
-    <dest href="{{proxy_url}}/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/{site}/VirtualHostRoot" />
+    <dest href="{{proxy_url}}/VirtualHostBase/{wsgi.url_scheme}/{HTTP_HOST}/{{site_name}}/VirtualHostRoot" />
 {{if asbool(proxy_rewrite_links):}}
     <response rewrite-links="1" />
 {{endif}}
@@ -45,8 +56,8 @@ from deliverance.util.converters import asbool
     <!-- You could move the title of the page into the body like this:
     <replace content="children:title" theme="children:#page-title" nocontent="ignore" move="0" />
     -->
-    <replace content="children:#content" theme="children:#content" />
-    <!-- You could movee dynamically-generated (or managed) navigation into the page with this:
+    <replace content="children:#content" theme="children:#content" nocontent="abort" />
+    <!-- You could move dynamically-generated (or managed) navigation into the page with this:
     <replace content="children:#menu" href="/theme-files/deliv-sidebar.html" theme="children:#sidebar" />
     -->
   </rule>
