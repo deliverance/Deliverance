@@ -79,6 +79,7 @@ class SavingLogger(object):
       | <a href="{{unthemed_url}}" target="_blank">unthemed content</a>
       | <a href="{{content_source}}" target="_blank">content source</a>
       | <a href="{{content_browse}}" target="_blank">browse content</a>
+        / <a href="{{theme_browse}}" target="_blank">theme</a>
       {{if log.edit_urls}}
       | <select onchange="if (this.value) {window.open(this.value, '_blank')}; this.selectedIndex=0;">
           <option value="">edit location</option>
@@ -128,6 +129,7 @@ class SavingLogger(object):
         """Formats this log object as HTML"""
         content_source = self.link_to(self.request.url, source=True)
         content_browse = self.link_to(self.request.url, browse=True)
+        theme_browse = self.link_to(self.theme_url, browse=True)
         if edit_local_files(self.request.environ):
             ## FIXME: also test for the local-ness of the file
             edit_rules = (self.request.environ['deliverance.base_url']
@@ -139,7 +141,7 @@ class SavingLogger(object):
             unthemed_url=self._add_notheme(self.request.url),
             theme_url=self._add_notheme(self.theme_url),
             content_source=content_source,
-            content_browse=content_browse,
+            content_browse=content_browse, theme_browse=theme_browse,
             edit_rules=edit_rules,
             **self.tags)
 

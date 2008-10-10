@@ -263,7 +263,7 @@ class DeliveranceMiddleware(object):
         </script>
         <style type="text/css">
           .deliverance-highlight {
-            border: 2px dotted #f00;
+            border: 5px dotted #f00;
           }
         </style>
         <base href="%s">
