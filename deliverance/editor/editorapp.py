@@ -4,6 +4,7 @@ from tempita import HTMLTemplate
 import os
 import urllib
 from paste.urlparser import StaticURLParser
+import mimetypes
 
 class Editor(object):
 
@@ -87,22 +88,27 @@ class Editor(object):
         '.xml': 'xml',
         }
 
+    def syntax_for_filename(self, filename):
+        if self.force_syntax:
+            return self.force_syntax
+        basename = os.path.basename(filename)
+        if basename in self.syntax_map:
+            return self.syntax_map[basename]
+        else:
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in self.syntax_map:
+                return self.syntax_map[ext]
+        mimetype, enc = mimetypes.guess_type(os.path.splitext(filename)[1])
+        if mimetype.startswith('application/') and mimetype.endswith('+xml'):
+            return 'xml'
+        return None
+
     def edit_file(self, req, filename):
         f = open(filename, 'rb')
         content = f.read()
         f.close()
         title = self.title or filename
-        syntax = None
-        if self.force_syntax:
-            syntax = self.force_syntax
-        else:
-            basename = os.path.basename(filename)
-            if basename in self.syntax_map:
-                syntax = self.syntax_map[basename]
-            else:
-                ext = os.path.splitext(filename)[1].lower()
-                if ext in self.syntax_map:
-                    syntax = self.syntax_map[ext]
+        syntax = self.syntax_for_filename(filename)
         body = self.edit_template.substitute(
             content=content, filename=filename, title=title, 
             req=req, edit_url=self.edit_url(req, filename),
@@ -115,8 +121,13 @@ class Editor(object):
         os.path.join(os.path.dirname(__file__), 'editor_template.html'))
 
     def save_create(self, req, dir):
-        file = req.POST['file']
-        filename = req.POST.get('filename') or file.filename
+        file = req.POST.get('file')
+        if file is None or file == '':
+            content = req.POST['content']
+            filename = req.POST['filename']
+        else:
+            content = file.value
+            filename = req.POST.get('filename') or file.filename
         filename = filename.replace('\\', '/')
         filename = os.path.basename(os.path.normpath(filename))
         filename = os.path.join(dir, filename)
@@ -124,7 +135,7 @@ class Editor(object):
             return exc.HTTPForbidden(
                 "The file %s already exists, you cannot upload over it" % filename)
         f = open(filename, 'wb')
-        f.write(file.value)
+        f.write(content)
         f.close()
         return exc.HTTPFound(
             location=self.edit_url(req, filename))

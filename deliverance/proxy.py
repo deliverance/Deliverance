@@ -66,10 +66,13 @@ class ProxySet(object):
         request = Request(environ)
         log = environ['deliverance.log']
         for index, proxy in enumerate(self.proxies):
+            if proxy.editable:
+                url = request.application_url + '/.deliverance/proxy-editor/%s/' % (index+1)
+                name = proxy.editable_name
+                if (url, name) not in log.edit_urls:
+                    log.edit_urls.append((url, name))
             ## FIXME: obviously this is wonky:
             if proxy.match(request, None, None, log):
-                if proxy.editable:
-                    log.edit_url = request.application_url + '/.deliverance/proxy-editor/%s/' % (index+1)
                 try:
                     return proxy.forward_request(environ, start_response)
                 except AbortProxy, e:
@@ -368,6 +371,14 @@ class Proxy(object):
             return editor(environ, start_response)
         except exc.HTTPException, e:
             return e(environ, start_response)
+
+    @property
+    def editable_name(self):
+        dest_href = self.dest.href
+        base = posixpath.basename(dest_href)
+        if not base:
+            base = posixpath.basename(posixpath.dirname(dest_href))
+        return base
         
 class ProxyMatch(AbstractMatch):
     """Represents the request matching for <proxy> objects"""

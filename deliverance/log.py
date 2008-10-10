@@ -25,8 +25,8 @@ class SavingLogger(object):
         self.request = request
         # This is writable:
         self.theme_url = None
-        # Also writable:
-        self.edit_url = None
+        # Also writable (list of (url, name))
+        self.edit_urls = []
 
     def message(self, level, el, msg, *args, **kw):
         """Add one message at the given log level"""
@@ -68,19 +68,24 @@ class SavingLogger(object):
         return resp
 
     log_template = HTMLTemplate('''\
-    <h1 style="border-top: 3px dotted #f00">Deliverance Information</h1>
+    <H1 style="border-top: 3px dotted #f00">Deliverance Information</h1>
 
     <div>
       {{if log.theme_url}}
-        <a href="{{theme_url}}" target="_blank">theme: {{theme_url}}</a>
+        <a href="{{theme_url}}" target="_blank">theme</a>
       {{else}}
         theme: no theme set
       {{endif}}
       | <a href="{{unthemed_url}}" target="_blank">unthemed content</a>
       | <a href="{{content_source}}" target="_blank">content source</a>
       | <a href="{{content_browse}}" target="_blank">browse content</a>
-      {{if log.edit_url}}
-      | <a href="{{log.edit_url}}" target="_blank">edit files</a>
+      {{if log.edit_urls}}
+      | <select onchange="if (this.value) {window.open(this.value, '_blank')}; this.selectedIndex=0;">
+          <option value="">edit location</option>
+        {{for url, name in log.edit_urls}}
+          <option value="{{url}}">{{name}}</option>
+        {{endfor}}
+        </select>
       {{endif}}
       {{if edit_rules}}
       | <a href="{{edit_rules}}" target="_blank">edit rules</a>
