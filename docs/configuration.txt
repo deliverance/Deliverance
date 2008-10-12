@@ -604,3 +604,17 @@ You must be logged in to view the developer console.  The login page is availabl
 
 After you log in you can add ``?deliv_log`` to any page URL to get a log at the bottom of the page.  The log describes in detail how the page was transformed, including information about how the proxy was chosen and any subrequests.  It also lets you browse the source involved, see what the selectors select in the content or theme, or get a list of interesting ids and classes in the content.
 
+Clientside Theming
+------------------
+
+There is an experimental feature that allows client-side theming using Javascript.  This serves the blank theme to the user, with content pulled in via XMLHttpRequests.  This means the user will get a response quickly, seeing the contentless theme page to start with (and so you should write the theme so that any slots contain text like "Loading...").  The individual chunks that are pulled in will be cachable on the client side.
+
+To enable this put this in your config::
+
+    <clientside />
+
+You may also put conditionals on it, like ``<clientside path="/slow-part" />``.  You can only use one theme in this case, as page classes are not matched before you send the theme.  Also any rules that use ``href="..."`` must be possible to apply out-of-order, as the XMLHttpRequest's may come in unexpected orders.  Using, for instance, ``<replace>`` and ``<append>`` on the same element is problematic in this case -- a better solution would be to clear out the theme target element and use ``<prepend>`` and ``<append>``.
+
+Deliverance will be careful about using this technique.  Only clients that are known to run Javascript will be sent these pages (this is tested by setting a cookie via Javascript, and then testing on subsequent requests if the cookie is set).  Also, pages won't be themed like this until it's known that the backend request yields HTML.  If these aren't true the normal server-side theming is used, which should be equivalent.
+
+This has only been tested on Firefox.

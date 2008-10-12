@@ -240,6 +240,23 @@ class Match(AbstractMatch):
         else:
             return 'class="%s"' % ' '.join(self.classes)
 
+class ClientsideMatch(AbstractMatch):
+    """
+    Represents <clientside>
+    """
+
+    element_name = 'clientside'
+
+    ## FIXME: only request matches are applicable
+    @classmethod
+    def parse_xml(cls, el, source_location):
+        matchargs = cls.parse_match_xml(el, source_location)
+        return cls(**matchargs)
+
+    def debug_description(self):
+        """Description for debugging messages"""
+        return ''
+
 def run_matches(matchers, request, resp, response_headers, log):
     """
     Runs all the match objects in matchers, returning the list of matched classes.

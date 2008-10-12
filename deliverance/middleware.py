@@ -6,7 +6,10 @@ import posixpath
 import mimetypes
 import os
 import urllib
+import urlparse
 import re
+import simplejson
+import datetime
 from webob import Request, Response
 from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
@@ -20,6 +23,7 @@ from deliverance.log import SavingLogger
 from deliverance.security import display_logging, display_local_files, edit_local_files
 from deliverance.util.filetourl import url_to_filename
 from deliverance.editor.editorapp import Editor
+from deliverance.rules import clientside_action
 
 __all__ = ['DeliveranceMiddleware', 'SubrequestRuleGetter']
 
@@ -35,6 +39,9 @@ class DeliveranceMiddleware(object):
         self.rule_getter = rule_getter
         self.log_factory = log_factory
         self.log_factory_kw = log_factory_kw
+        ## FIXME: clearly, this should not be a dictionary:
+        self.known_html = set()
+        self.known_titles = {}
 
     def log_description(self, log=None):
         """The description shown in the log for this context"""
@@ -62,14 +69,71 @@ class DeliveranceMiddleware(object):
             req.path_info_pop()
             resp = self.internal_app(req, resource_fetcher)
             return resp(environ, start_response)
+        rule_set = self.rule_getter(resource_fetcher, self.app, orig_req)
+        clientside = rule_set.check_clientside(req, log)
+        if clientside and req.url in self.known_html:
+            if req.cookies.get('jsEnabled'):
+                log.debug(self, 'Responding to %s with a clientside theme' % req.url)
+                return self.clientside_response(req, rule_set, resource_fetcher, log)(environ, start_response)
+            else:
+                log.debug(self, 'Not doing clientside theming because jsEnabled cookie not set')
         resp = req.get_response(self.app)
         ## FIXME: also XHTML?
         if resp.content_type != 'text/html':
+            ## FIXME: remove from known_html?
             return resp(environ, start_response)
-        rule_set = self.rule_getter(resource_fetcher, self.app, orig_req)
+        if clientside and req.url not in self.known_html:
+            log.debug(self, '%s would have been a clientside check; in future will be since we know it is HTML'
+                      % req.url)
+            self.known_titles[req.url] = self._get_title(resp.body)
+            self.known_html.add(req.url)
         resp = rule_set.apply_rules(req, resp, resource_fetcher, log)
+        if clientside:
+            resp.decode_content()
+            resp.body = self._substitute_jsenable(resp.body)
         resp = log.finish_request(req, resp)
         return resp(environ, start_response)
+
+    _title_re = re.compile(r'<title>(.*?)</title>', re.I|re.S)
+
+    def _get_title(self, body):
+        match = self._title_re.search(body)
+        if match:
+            return match.group(1)
+        else:
+            return None
+
+    _end_head_re = re.compile(r'</head>', re.I)
+    _jsenable_js = '''\
+<script type="text/javascript">
+document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
+</script>'''
+    _future_date = (datetime.datetime.now() + datetime.timedelta(days=10*365)).strftime('%a, %d-%b-%Y %H:%M:%S GMT')
+
+    def _substitute_jsenable(self, body):
+        match = self._end_head_re.search(body)
+        if not match:
+            return body
+        js = self._jsenable_js.replace('__DATE__', self._future_date)
+        return body[:match.start()] + js + body[match.start():]
+
+    def clientside_response(self, req, rule_set, resource_fetcher, log):
+        theme_href = rule_set.default_theme.resolve_href(req, None, log)
+        theme_doc = rule_set.get_theme(theme_href, resource_fetcher, log)
+        theme_doc.head.insert(0, fromstring('''\
+<script type="text/javascript">
+_deliverance_url = %r;
+%s
+</script>''' % (req.application_url, CLIENTSIDE_JAVASCRIPT)))
+        theme = tostring(theme_doc)
+        ## FIXME: cache this, use the actual subresponse to get proper last-modified, etc
+        title = self.known_titles.get(req.url)
+        if title:
+            theme = self._title_re.sub('<title>%s</title>' % title, theme)
+        resp = Response(theme, conditional_response=True)
+        if not resp.etag:
+            resp.md5_etag()
+        return resp
 
     def get_resource(self, url, orig_req, log):
         """
@@ -430,6 +494,44 @@ class DeliveranceMiddleware(object):
     {{message|html}}
     </div>''', 'deliverance.middleware.DeliveranceMiddleware._message_template')
 
+    def action_subreq(self, req, resource_fetcher):
+        log = req.environ['deliverance.log']
+        from deliverance.log import PrintingLogger
+        log = PrintingLogger(log.request, log.middleware)
+        req.environ['deliverance.log'] = log
+        url = req.GET['url']
+        subreq = req.copy_get()
+        base = req.environ['deliverance.base_url']
+        assert url.startswith(base), 'Expected url %r to start with %r' % (url, base)
+        rest = '/' + url[len(base):].lstrip('/')
+        if '?' in rest:
+            rest, qs = rest.split('?', 1)
+        else:
+            qs = ''
+        subreq.script_name = urlparse.urlsplit(base)[2]
+        subreq.path_info = rest
+        subreq.query_string = qs
+        resp = subreq.get_response(self.app)
+        if resp.status_int == 304:
+            return resp
+        if resp.status_int != 200:
+            assert 0, 'Failed response to request %s: %s' % (subreq.url, resp.status)
+        assert resp.content_type == 'text/html', (
+            'Unexpected content-type: %s (for url %s)' 
+            % (resp.content_type, subreq.url))
+        doc = fromstring(resp.body)
+        if req.GET.get('action'):
+            action = clientside_action(
+                req.GET['action'], content_selector=req.GET['content'],
+                theme_selector=req.GET['theme'])
+            actions = action.clientside_actions(doc, log)
+        else:
+            rule_set = self.rule_getter(resource_fetcher, self.app, req)
+            actions = rule_set.clientside_actions(subreq, resp, log)
+        resp.body = simplejson.dumps(actions)
+        resp.content_type = 'application/json'
+        return resp
+
 
 class SubrequestRuleGetter(object):
     """
@@ -462,3 +564,7 @@ class SubrequestRuleGetter(object):
         assert doc.tag == 'ruleset', (
             'Bad rule tag <%s> in document %s' % (doc.tag, url))
         return RuleSet.parse_xml(doc, url)
+
+fp = open(os.path.join(os.path.dirname(__file__), 'media', 'clientside.js'))
+CLIENTSIDE_JAVASCRIPT = fp.read()
+del fp

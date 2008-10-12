@@ -9,7 +9,7 @@ import re
 import socket
 import os
 import string
-from deliverance.util.proxyrequest import Request
+from deliverance.util.proxyrequest import Request, Response
 from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
 from tempita import html_quote
@@ -306,6 +306,11 @@ class Proxy(object):
         proxy_req.accept_encoding = None
         try:
             resp = proxy_req.get_response(proxy_exact_request)
+            if resp.status_int == 500:
+                print 'Request:'
+                print proxy_req
+                print 'Response:'
+                print resp
         except socket.error, e:
             ## FIXME: really wsgiproxy should handle this
             ## FIXME: which error?

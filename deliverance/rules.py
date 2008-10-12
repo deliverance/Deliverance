@@ -6,7 +6,8 @@ puts them together
 import copy
 import urlparse
 from lxml import etree
-from lxml.html import document_fromstring
+from lxml.html import document_fromstring, tostring
+from urllib import quote as url_quote
 from tempita import html
 from deliverance.exceptions import DeliveranceSyntaxError, AbortTheme
 from deliverance.util.converters import asbool, html_quote
@@ -72,6 +73,12 @@ class Rule(object):
             action.apply(content_doc, theme_doc, resource_fetcher, log)
         return theme_doc
 
+    def clientside_actions(self, content_doc, log):
+        actions = []
+        for action in self._actions:
+            actions.extend(action.clientside_actions(content_doc, log))
+        return actions
+
 class RuleMatch(AbstractMatch):
     """
     Represents match rules in the <rule> element
@@ -110,6 +117,13 @@ def parse_action(el, source_location):
     Class = _actions[el.tag]
     instance = Class.from_xml(el, source_location)
     return instance
+
+def clientside_action(action_name, content_selector, theme_selector):
+    """Create one Action instance based on a clientside web subrequest"""
+    ActionClass = _actions[action_name]
+    return ActionClass(
+        source_location='web', content=Selector.parse(content_selector),
+        theme=Selector.parse(theme_selector))
 
 class AbstractAction(object):
     """Abstract superclass for Actions (replace, etc)"""
@@ -242,8 +256,11 @@ class AbstractAction(object):
     # Set to true in subclasses if the move attribute means something:
     move_supported = True
 
+    def __unicode__(self):
+        return unicode(self.log_description(log=None))
+
     def __str__(self):
-        return self.log_description(log=None)
+        return unicode(self).encode('utf8')
 
     @classmethod
     def compile_selector(cls, el, attr, source_location):
@@ -408,15 +425,16 @@ class TransformAction(AbstractAction):
         self.source_location = source_location
         assert content is not None
         self.content = content
-        assert theme is not None
+        assert theme is not None or source_location == 'web'
         self.theme = theme
-        for content_type in self.content.selector_types():
-            for theme_type in self.theme.selector_types():
-                if (theme_type, content_type) not in self._compatible_types:
-                    raise DeliveranceSyntaxError(
-                        'Selector type %s (from content="%s") and type %s '
-                        '(from theme="%s") are not compatible'
-                        % (content_type, self.content, theme_type, self.theme))
+        if theme is not None:
+            for content_type in self.content.selector_types():
+                for theme_type in self.theme.selector_types():
+                    if (theme_type, content_type) not in self._compatible_types:
+                        raise DeliveranceSyntaxError(
+                            'Selector type %s (from content="%s") and type %s '
+                            '(from theme="%s") are not compatible'
+                            % (content_type, self.content, theme_type, self.theme))
         self.if_content = if_content
         self.content_href = content_href
         self.move = move
@@ -521,6 +539,52 @@ class TransformAction(AbstractAction):
         mark_content_els(content_els)
         self.apply_transformation(content_type, content_els, attributes, 
                                   theme_type, theme_el, log)
+
+    def clientside_actions(self, content_doc, log):
+        if self.content_href:
+            href = urlparse.urljoin(log.request.url, self.content_href)
+            url = '%s/.deliverance/subreq?url=%s&action=%s&content=%s&theme=%s' % (
+                log.request.application_url,
+                url_quote(href),
+                url_quote(self.name),
+                url_quote(str(self.content)),
+                url_quote(str(self.theme)))
+            return [{'mode': 'include',
+                     'callback': url}]
+        if not self.if_content_matches(content_doc, log):
+            return []
+        content_type, content_els, content_attributes = self.select_elements(
+            self.content, content_doc, theme=False)
+        if not content_els:
+            if self.nocontent == 'abort':
+                ## FIXME: uh oh
+                raise AbortTheme('No content matches content="%s"' % self.content)
+            else:
+                ## FIXME: log
+                return []
+        theme_type, theme_selector = str(self.theme).split(':', 1)
+        data = {'type': self.name,
+                'mode': theme_type,
+                'selector': theme_selector}
+        if content_type == 'attributes' or content_type == 'tag':
+            data['attributes'] = dict(content_els[0].attrib)
+        if content_type == 'tag':
+            data['tag'] = content_els[0].tag
+        elif content_type == 'children':
+            text = []
+            for el in content_els:
+                text.append(el.text)
+                for child in el:
+                    text.append(tostring(child))
+            data['content'] = ''.join(text)
+        elif content_type == 'elements':
+            text = []
+            for el in content_els:
+                ## FIXME: sloppy :(
+                el.tail = None
+                text.append(tostring(el))
+            data['content'] = ''.join(text)
+        return [data]
 
     def join_attributes(self, attr1, attr2):
         """
@@ -721,6 +785,9 @@ class Replace(TransformAction):
                 self, 'Changed the tag name of the theme element <%s> to the '
                 'name of the content element: %s',
                 old_tag, self.format_tag(content_els[0]))
+
+
+        
 
 _actions['replace'] = Replace
 
@@ -985,71 +1052,74 @@ class Drop(AbstractAction):
         for doc, selector, error, name in [
             (theme_doc, self.theme, self.notheme, 'theme'), 
             (content_doc, self.content, self.nocontent, 'content')]:
-            if selector is None:
-                continue
-            sel_type, els, attributes = self.select_elements(selector, doc, name=='theme')
-            if not els:
-                if error == 'abort':
-                    log.debug(
-                        self, 'aborting %s because no %s element matches rule %s="%s"', 
-                        name, name, name, selector)
-                    raise AbortTheme('No %s matches %s="%s"' % (name, name, selector))
-                elif error == 'ignore':
-                    log_meth = log.debug
-                else:
-                    log_meth = log.warn
-                log_meth(
-                    self, 'skipping rule because no %s matches rule %s="%s"', 
-                    name, name, selector)
-                return
-            if sel_type == 'elements':
-                for el in els:
-                    move_tail_upwards(el)
-                    el.getparent().remove(el)
+            self._apply_drop(doc, selector, error, name, log)
+
+    def _apply_drop(self, doc, selector, error, name, log):
+        if selector is None:
+            return
+        sel_type, els, attributes = self.select_elements(selector, doc, name=='theme')
+        if not els:
+            if error == 'abort':
                 log.debug(
-                    self, 'Dropping %s %s', name, self.format_tags(els))
-            elif sel_type == 'children':
-                for el in els:
-                    el[:] = []
-                    el.text = ''
-                log.debug(
-                    self, 'Dropping the children of %s %s', name, self.format_tags(els))
-            elif sel_type == 'attributes':
-                for el in els:
-                    attrib = el.attrib
-                    if attributes:
-                        for attr_name in attributes:
-                            if attr_name in attrib:
-                                del attrib[attr_name]
-                    else:
-                        attrib.clear()
+                    self, 'aborting %s because no %s element matches rule %s="%s"', 
+                    name, name, name, selector)
+                raise AbortTheme('No %s matches %s="%s"' % (name, name, selector))
+            elif error == 'ignore':
+                log_meth = log.debug
+            else:
+                log_meth = log.warn
+            log_meth(
+                self, 'skipping rule because no %s matches rule %s="%s"', 
+                name, name, selector)
+            return
+        if sel_type == 'elements':
+            for el in els:
+                move_tail_upwards(el)
+                el.getparent().remove(el)
+            log.debug(
+                self, 'Dropping %s %s', name, self.format_tags(els))
+        elif sel_type == 'children':
+            for el in els:
+                el[:] = []
+                el.text = ''
+            log.debug(
+                self, 'Dropping the children of %s %s', name, self.format_tags(els))
+        elif sel_type == 'attributes':
+            for el in els:
+                attrib = el.attrib
                 if attributes:
-                    log.debug(
-                        self, 'Dropping the %s from the %s %s',
-                        self.format_attribute_names(attributes), 
-                        name, self.format_tags(els))
+                    for attr_name in attributes:
+                        if attr_name in attrib:
+                            del attrib[attr_name]
                 else:
-                    log.debug(self, 'Dropping all the attributes of %s %s',
-                              name, self.format_tags(els))
-            elif sel_type == 'tag':
-                for el in els:
-                    children = list(el)
-                    if children:
-                        add_tail(children[-1], el.tail)
-                    else:
-                        add_text(el, el.tail)
-                    parent = el.getparent()
-                    pos = parent.index(el)
-                    if pos == 0:
-                        add_text(parent, el.text)
-                    else:
-                        add_tail(parent[pos-1], el.text)
-                    parent[pos:pos+1] = children
+                    attrib.clear()
+            if attributes:
                 log.debug(
-                    self, 'Dropping the tag (flattening the element) of %s %s',
+                    self, 'Dropping the %s from the %s %s',
+                    self.format_attribute_names(attributes), 
                     name, self.format_tags(els))
             else:
-                assert 0
+                log.debug(self, 'Dropping all the attributes of %s %s',
+                          name, self.format_tags(els))
+        elif sel_type == 'tag':
+            for el in els:
+                children = list(el)
+                if children:
+                    add_tail(children[-1], el.tail)
+                else:
+                    add_text(el, el.tail)
+                parent = el.getparent()
+                pos = parent.index(el)
+                if pos == 0:
+                    add_text(parent, el.text)
+                else:
+                    add_tail(parent[pos-1], el.text)
+                parent[pos:pos+1] = children
+            log.debug(
+                self, 'Dropping the tag (flattening the element) of %s %s',
+                name, self.format_tags(els))
+        else:
+            assert 0
 
     @classmethod
     def from_xml(cls, tag, source_location):
@@ -1060,6 +1130,10 @@ class Drop(AbstractAction):
         return cls(source_location, content, theme, if_content=if_content,
                    nocontent=tag.get('nocontent'),
                    notheme=tag.get('notheme'))
+
+    def clientside_actions(self, content_doc, log):
+        self._apply_drop(content_doc, self.content, self.nocontent, 'content', log)
+        return []
 
 _actions['drop'] = Drop
             

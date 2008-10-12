@@ -11,6 +11,8 @@
     <dest href="{here}/example-files/" />
   </proxy>
 
+  <clientside />
+
   <proxy path="/trac" class="default trac">
     <dest href="http://trac.openplans.org/deliverance" />
     <response rewrite-links="1" />
@@ -56,12 +58,12 @@
     <!-- There's just a few really bad styles in here, unfortunately: -->
     <drop content="link[href$='_static/default.css']" />
     <replace content="children:.body" theme="children:#theme-content" nocontent="abort" />
-    <append content=".sphinxsidebar" theme="children:#sidebar" />
+    <append content=".sphinxsidebar" theme="children:#extra-sidebar" />
   </rule>
 
   <rule>
     <replace content="children:title" theme="children:#page-title" nocontent="ignore" move="0" />
-    <replace content="children:#menu" href="/theme-files/deliv-sidebar.html" theme="children:#sidebar" />
+    <prepend content="children:#menu" href="/theme-files/deliv-sidebar.html" theme="children:#sidebar" />
   </rule>
 
 </ruleset>
