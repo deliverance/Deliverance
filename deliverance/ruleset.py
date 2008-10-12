@@ -191,11 +191,11 @@ standard_rule = Rule.parse_xml(XML('''\
   <!-- FIXME: maybe something like notheme="append:/html/head" -->
   <replace content="children:/html/head/title" 
            theme="children:/html/head/title" nocontent="ignore" />
-  <append content="elements:/html/head/link" 
+  <prepend content="elements:/html/head/link" 
           theme="children:/html/head" nocontent="ignore" />
-  <append content="elements:/html/head/script" 
+  <prepend content="elements:/html/head/script" 
           theme="children:/html/head" nocontent="ignore" />
-  <append content="elements:/html/head/style" 
+  <prepend content="elements:/html/head/style" 
           theme="children:/html/head" nocontent="ignore" />
   <!-- FIXME: Any handling for overlapping/identical elements? -->
 </rule>'''), 'deliverance.ruleset.standard_rule')
