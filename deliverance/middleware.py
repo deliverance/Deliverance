@@ -120,11 +120,11 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
     def clientside_response(self, req, rule_set, resource_fetcher, log):
         theme_href = rule_set.default_theme.resolve_href(req, None, log)
         theme_doc = rule_set.get_theme(theme_href, resource_fetcher, log)
+        js = CLIENTSIDE_JAVASCRIPT.replace('__DELIVERANCE_URL__', req.application_url)
         theme_doc.head.insert(0, fromstring('''\
 <script type="text/javascript">
-_deliverance_url = %r;
 %s
-</script>''' % (req.application_url, CLIENTSIDE_JAVASCRIPT)))
+</script>''' % js))
         theme = tostring(theme_doc)
         ## FIXME: cache this, use the actual subresponse to get proper last-modified, etc
         title = self.known_titles.get(req.url)

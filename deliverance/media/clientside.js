@@ -1,4 +1,14 @@
-function startAction(location) {
+if (typeof console == 'undefined') {
+    console = {log: function () {}};
+}
+
+if (typeof Deliverance == 'undefined') {
+    Deliverance = {};
+}
+
+Deliverance.deliveranceURL = '__DELIVERANCE_URL__';
+
+Deliverance.startAction = function (location) {
     var req = XMLHttpRequest();
     req.onreadystatechange = function () {
         if (req.readyState == 4) {
@@ -11,20 +21,20 @@ function startAction(location) {
             }
             var data = eval(req.responseText);
             for (var i=0; i<data.length; i++) {
-                processAction(data[i]);
+                Deliverance.processAction(data[i]);
             }
         }
     };
     req.open('GET', location, true);
     req.send(null);
-}
+};
 
-startAction(_deliverance_url + '/.deliverance/subreq?url=' + encodeURIComponent(location));
+Deliverance.startAction(Deliverance.deliveranceURL + '/.deliverance/subreq?url=' + encodeURIComponent(location));
 
-function processAction(action) {
+Deliverance.processAction = function (action) {
     console.log('action:', action['type'], action['mode'], action['selector']);
     if (action['type'] == 'replace') {
-        var el = selectElement(action['selector']);
+        var el = Deliverance.selectElement(action['selector']);
         if (action['mode'] == 'children') {
             el.innerHTML = action['content'];
         } else if (action['mode'] == 'element') {
@@ -47,7 +57,7 @@ function processAction(action) {
         }
     } else if (action['type'] == 'append' || action['type'] == 'prepend') {
         var append = action['type'] == 'append';
-        var el = selectElement(action['selector']);
+        var el = Deliverance.selectElement(action['selector']);
         if (action['mode'] == 'children') {
             if (append) {
                 el.innerHTML += action['content'];
@@ -80,13 +90,13 @@ function processAction(action) {
             }
         }
     } else if (action['mode'] == 'include') {
-        startAction(action['callback']);
+        Deliverance.startAction(action['callback']);
     } else {
         throw('Unknown action mode: '+action['mode']);
     }
 }
 
-function selectElement(selector) {
+Deliverance.selectElement = function (selector) {
     if (selector.charAt(0) == '#') {
         var el = document.getElementById(selector.substr(1));
         if (el === null) {
