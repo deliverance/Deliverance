@@ -233,12 +233,12 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
         """
         Handles all internal (``/.deliverance``) requests.
         """
-        if not display_logging(req):
-            return exc.HTTPForbidden(
-                "Logging is not enabled for you")
         segment = req.path_info_peek()
         method = 'action_%s' % segment
         method = getattr(self, method, None)
+        if not display_logging(req) and not getattr(method, 'exposed', False):
+            return exc.HTTPForbidden(
+                "Logging is not enabled for you")
         req.path_info_pop()
         if not method:
             return exc.HTTPNotFound('There is no %r action' % segment)
@@ -532,6 +532,7 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
         resp.content_type = 'application/json'
         return resp
 
+    action_subreq.exposed = True
 
 class SubrequestRuleGetter(object):
     """
