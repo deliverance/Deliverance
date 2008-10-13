@@ -1,0 +1,61 @@
+Client-side Theming
+===================
+
+Deliverance implements a feature that allows theming to be applied in the browser, instead of applying theming on the server.
+
+This feature is intended to be equivalent to server-side theme application, and for clients without Javascript or in several other situations the server-themed response will be served.
+
+How Client-side Theming Works
+-----------------------------
+
+When doing client-side theming, all requests are responded to with the same document: a plain theme with no substitutions.  This can be served very quickly, and cached aggressively.  It doesn't contain anything dynamic, regardless of how dynamic your underlying application is.
+
+The theme also has some Javascript added to it, which immediately starts an XMLHttpRequest to load up the original content.  This is requested from a special URL (``/.deliverance/subreq?url=location.href``).  Deliverance processes this by creating a subrequest to the original URL, through the proxy.  Then Deliverance chops up the response it gets and sends back a list of commands to the browser, formatted in JSON.  These commands tell the Javascript where to put different chunks of content in the theme document.  Also for rules that use, e.g., ``<append href="/sidebar" ... />`` it will tell the browser to do another subrequest to fetch this other content.
+
+These JSON responses use the same caching headers as the underlying subrequest, as they vary exactly as the underlying subrequest would vary.  Also conditional requests (requests the browser makes with ``If-Modified-Since`` or ``If-Matches``) can result in subrequests that result in ``304 Not Modified`` -- also these Not Modified responses are returned to the browser, as it means the browser cache of these JSON is also correct.
+
+Because the unadorned theme is initially served without modification, it is important that the theme looks reasonable in this state.  Typically the body of the theme should have the text "Loading..." or some spinner to indicate that the page has not finished loading.
+
+Page titles are a special case because not all browsers allow them to be set, and it can be nice if the title doesn't switch out.  Deliverance remembers what the title was the last time the page was requested and does this one modification.  It's possible that dynamic titles won't be updated (though Deliverance will still try to update the title dynamically as well).
+
+Advantages of Client-side Theming
+---------------------------------
+
+Client-side theming has some advantages over server-side theming.  (If it didn't, there'd be no reason to have such a thing as client-side theming.)
+
+There are two notable advantages.  The first is that the request can respond very quickly, giving the reader a new page as fast as possible.  While this page doesn't actually contain the content the reader is expecting to see, it gives very quick feedback that they clicked the link and are on the way to their destination.
+
+The second advantage is caching, which can improve overall performance.  Pieces of content can be cached on the server to improve performance (with a product like Squid or Varnish).  But this caching doesn't reduce the actual amount of content that has to be sent to the browser -- if there is just one part of the page that is fully dynamic, the entire page will be uncacheable, and a 304 Not Modified response won't be possible.
+
+When the page is split up into distinct subrequests, real caching can happen in the browser even when portions of the page are dynamic.  Just as the base theme is highly static, many components that are loaded may be static.  Some may be static for the user (e.g., the login widget), but aren't shared with any other users -- here a browser cache is perfect.  In other cases the request can quickly finish with a 304 Not Modified response.
+
+Probably further performance could be improved by detecting resource references that can be safely cached in Deliverance (for instance, a ``<script src="...">`` that is always present for some URLs).  Doing speculative browser requests of included content (not the primary content) could also be implemented.  Lastly, Deliverance itself could prerequest the content when the original request comes in, in preparation for the browser request for that content.
+
+When Client-side Theming Is Applied
+-----------------------------------
+
+There are some tests Deliverance makes before applying client-side theming.
+
+The first test: will this request result in an HTML response?  If the request was made to retrieve an image, returning the theme will not work at all.  So the first time a request for a URL comes through it is never themed -- only when the URL has resulted in text/html will it be themed in later requests.  (This information is currently stored in-memory, so any time ``deliverance-proxy`` is restarted it will forget this information.)
+
+The second test: does the client support Javascript?  The first time a client appears there is no way to determine this.  So Deliverance sends a small amount of Javascript that sets a ``jsEnabled`` cookie.  If later requests that have this cookie set, then it is assumed the client supports Javascript.
+
+Additionally, you can make you own restrictions.  The ``<clientside />`` tag supports `string matching <configuration.html#string-matching>`_, in particular of the path.  You cannot match anything on the content response, as the response has not been generated at the time Deliverance decides to apply client-side theming.
+
+Constraints When Using Client-side Theming
+------------------------------------------
+
+There are several constraints of client-side theming over server-side theming, some of the implementation, some of the model.
+
+1. It will always use the globally set ``<theme>`` -- themes that are specified in a ``<rule>`` element will not be used.  This is because it doesn't calculate page classes when it serves up the theme (it does calculate page classes when it gets the second request for the real content).
+
+2. Some rules may be out of order.  Specifically ``href`` rules result in another XMLHttpRequest, and no attempt is (currently) made to keep the responses in order.  Also, some DOM operations are a bit lazy, which could result in peculiarities.  It is best to use ``<append>`` and ``<prepend>`` and avoid ``<replace>`` unless it is the only operation that will operate on a particular theme element.
+
+3. You cannot drop things from the theme (``<drop>`` on the content does work).
+
+4. ``if-content`` doesn't work (but probably could for most things, maybe even theme drops).
+
+5. There is a limited number of theme selectors supported: ``#id`` XPath like ``/head/html/title``.  Nothing else is supported right now.  All content selectors work.
+
+6. All the content is injected with ``.innerHTML``, which doesn't always work as well as if the document was setup that way originally.  This is probably most significantly a problem for ``<script>`` tags (which are largely untested).
+
