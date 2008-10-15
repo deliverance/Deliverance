@@ -30,17 +30,36 @@ parser.add_option(
     help='Use an interactive debugger (note: security hole when done publically; '
     'if interface is not explicitly given it will be set to 127.0.0.1)')
 parser.add_option(
+    '--profile',
+    action='store_true',
+    dest='profile',
+    help='Use repoze.profile for profiling requests; go to /.deliverance/profile '
+    'to see the results')
+parser.add_option(
     '--debug-headers',
     action='count',
     dest='debug_headers',
     help='Show (in the console) all the incoming and outgoing headers; '
     'use twice for bodies')
+    
 
 def run_command(rule_filename, debug=False, interactive_debugger=False, 
-                debug_headers=False):
+                debug_headers=False, profile=False):
     """Actually runs the command from the parsed arguments"""
     settings = ProxySettings.parse_file(rule_filename)
     app = ReloadingApp(rule_filename, settings)
+    if profile:
+        try:
+            from repoze.profile.profiler import AccumulatingProfileMiddleware
+        except ImportError:
+            print 'Error: you must manually install repoze.profiler to use --profile'
+            sys.exit(1)
+        app = AccumulatingProfileMiddleware(
+            app,
+            log_filename='/tmp/deliverance-proxy-profiling.log',
+            discard_first_request=True,
+            flush_at_shutdown=True,
+            path='/.deliverance/profile')
     if interactive_debugger:
         from weberror.evalexception import EvalException
         app = EvalException(app, debug=True)
@@ -51,6 +70,8 @@ def run_command(rule_filename, debug=False, interactive_debugger=False,
         from wsgifilter.proxyapp import DebugHeaders
         app = DebugHeaders(app, show_body=debug_headers > 1)
     print 'To see logging, visit %s/.deliverance/login' % settings.base_url
+    if profile:
+        print 'To see profiling information visit %s/.deliverance/profile' % settings.base_url
     serve(app, host=settings.host, port=settings.port)
 
 class ReloadingApp(object):
@@ -93,7 +114,8 @@ def main(args=None):
     rule_filename = args[0]
     run_command(rule_filename,
                 interactive_debugger=options.interactive_debugger,
-                debug=options.debug, debug_headers=options.debug_headers)
+                debug=options.debug, debug_headers=options.debug_headers,
+                profile=options.profile)
 
 if __name__ == '__main__':
     main()
