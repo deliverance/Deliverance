@@ -8,6 +8,8 @@ About Macs
 
 I don't intend to scare people off, but *if you have the option* you will encounter the least problems on an up-to-date Linux system or BSD.  The one tricky part with installing Deliverance on a Mac is the installation of `lxml <http://codespeak.net/lxml/>`_ -- due to peculiarities of how linking on the Mac works, sometimes the version of libxml2 (the underlying library) that you link to will be incorrect.  This can cause segfaults that will usually be immediately apparent, though reportedly on some newer versions of Mac OS X the server will mostly appear to be stable but may segfault -- running the lxml tests will however cause a segfault.  However it ends up working, the segfaults you may see on a Mac are not indicative of the stability of Deliverance on a production Linux or BSD server.
 
+There is a successful report of using `MacPorts <http://www.macports.org/>`_, with the following ports installed: libxml2, py25-libxml2, and libxslt.
+
 Starting with virtualenv
 ------------------------
 
