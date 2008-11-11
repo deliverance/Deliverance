@@ -289,8 +289,7 @@ class DeliveranceMiddleware(object):
 
         status, headers, body = intercept_output(environ, self.app,
                                                  self.should_intercept,
-                                                 start_response)            
-
+                                                 start_response)
 
         if status is None: 
             # should_intercept says this isn't HTML, we're done
@@ -313,7 +312,7 @@ class DeliveranceMiddleware(object):
             # send it back for rebuild 
             return (status, headers, body)
             
-        # got 304 Not Modified for content, check other resources 
+        # got 304 Not Modified for content, check other resources
         rules = etree.XML(self.rule(environ)[0])
         resources = self.get_resource_uris(rules, environ)        
         if self.any_modified(environ, resources, etag_map): 
