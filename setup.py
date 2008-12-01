@@ -40,7 +40,6 @@ transformation.
         "WSGIFilter",
         "chardet",
         "simplejson",
-        "CSSUtils",
         ],
       dependency_links=[
         "https://svn.openplans.org/svn/DevAuth/trunk#egg=DevAuth-dev",
