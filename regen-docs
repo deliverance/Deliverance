@@ -2,11 +2,12 @@
 
 if [ "$1" = "publish" ] ; then
     PUBLISH=1
+    OPS="-D live_site=1"
     shift;
 fi
 
 mkdir -p docs/_static docs/_build
-sphinx-build "$@" -E -b html docs/ docs/_build || exit 1
+sphinx-build $OPS "$@" -E -b html docs/ docs/_build || exit 1
 if [ "$PUBLISH" = "1" ] ; then
   cd docs/_build
   echo "Uploading files..."

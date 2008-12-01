@@ -16,7 +16,10 @@ if [ "$1" = "upload" ] ; then
     exit
 fi
 
-REV=$(python -c 'import pyinstall; print pyinstall.get_svn_revision(".")')
+mkdir -p download-cache
+export PIP_DOWNLOAD_CACHE="`pwd`/download-cache"
+
+REV=$(python -c 'import pip; print pip.get_svn_revision(".")')
 FILE="Deliverance-snapshot-r${REV}.pybundle"
 
 if [ -e "$FILE" ] ; then
@@ -29,9 +32,10 @@ echo
 
 ## FIXME: httplib2 still isn't being included
 ## httplib2 location is a temporary problem with a bad pypi entry
-pyinstall.py --bundle=$FILE --build=build-bundle-files/ --src=src-bundle-files/ \
+pip bundle $FILE --build=build-bundle-files/ --src=src-bundle-files/ \
+  ./lxml-2.2alpha1-staticbuild.tar.gz \
   -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
-  supervisor PasteScript \
+  supervisor PasteScript nose \
   http://svn.colorstudy.com/home/ianb/PageCollector/trunk#egg=PageCollector \
   || fail 'Bundle failed'
 
@@ -39,11 +43,12 @@ echo 'INSTALLING'
 echo
 
 rm -rf TEST
-pyinstall.py -E TEST $FILE \
+virtualenv --no-site-packages TEST
+pip install -E TEST $FILE \
   || fail 'Install failed'
 
-cd TEST/src/deliverance
+cd TEST/bin
+cd ../src/deliverance
 chmod +x test
-./test \
+NOSE=../../bin/nosetests ./test \
   || fail 'Tests failed'
-
