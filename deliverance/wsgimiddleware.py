@@ -658,6 +658,5 @@ def fixup_meta_content_type(headers, body):
     if not match:
         match = _html_re.search(body)
         if not match:
-            # Doesn't look like html
-            return body
+            return http_equiv + body
     return body[:match.end()] + http_equiv + body[match.end():]
