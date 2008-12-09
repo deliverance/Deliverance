@@ -84,10 +84,7 @@ Once you have logged in you can look at ``http://localhost:8000/?deliv_log`` to 
 Using Buildout
 --------------
 
-Gaël Pasgrimaud wrote up `instructions on installing Deliverance using
-buildout and pip
-<http://www.gawel.org/weblog/en/2008/12/combine-zc.buildout-an-pip-benefits>`_.
-The basic recipe looks like::
+Gaël Pasgrimaud wrote up `instructions on installing Deliverance using buildout and pip <http://www.gawel.org/weblog/en/2008/12/combine-zc.buildout-an-pip-benefits>`_.  The basic recipe looks like::
 
     [buildout]
     # the cache dir is used by buildout & pip
@@ -108,8 +105,7 @@ The basic recipe looks like::
         Paste
         pyquery
 
-This uses his `gp.recipe.pip
-<http://pypi.python.org/pypi/gp.recipe.pip>`_ buildout recipe.
+This uses his `gp.recipe.pip <http://pypi.python.org/pypi/gp.recipe.pip>`_ buildout recipe.
 
 Editing the Rules
 -----------------
