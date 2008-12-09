@@ -81,7 +81,38 @@ The site will be at ``http://localhost:8000`` and you can login at ``http://loca
 
 Once you have logged in you can look at ``http://localhost:8000/?deliv_log`` to see a log of everything Deliverance is doing (at the bottom of the page).
 
+Using Buildout
+--------------
+
+Gaël Pasgrimaud wrote up `instructions on installing Deliverance using
+buildout and pip
+<http://www.gawel.org/weblog/en/2008/12/combine-zc.buildout-an-pip-benefits>`_.
+The basic recipe looks like::
+
+    [buildout]
+    # the cache dir is used by buildout & pip
+    download-cache = download
+    parts = eggs
+
+    [eggs]
+    recipe = gp.recipe.pip
+
+    # eggs installed by pip (also add the Deliverance bundle)
+    install =
+        Cython
+        --install-option=--static-deps lxml==2.2alpha1
+        http://deliverance.openplans.org/dist/Deliverance-snapshot-latest.pybundle
+
+    # eggs installed by zc.recipe.egg
+    eggs =
+        Paste
+        pyquery
+
+This uses his `gp.recipe.pip
+<http://pypi.python.org/pypi/gp.recipe.pip>`_ buildout recipe.
+
 Editing the Rules
 -----------------
 
 Here's where the quickstart ends for now; you'll have to read the rest of the documentation to understand the rules, specifically the `rule and theme <configuration.html#rule-and-theme>`_ section.
+
