@@ -287,9 +287,6 @@ class DeliveranceMiddleware(object):
                     del environ['HTTP_IF_NONE_MATCH']
 
 
-        data = environ['wsgi.input'].read()
-        print 'data:', repr(data)
-        environ['wsgi.input'] = StringIO(data)
         status, headers, body = intercept_output(environ, self.app,
                                                  self.should_intercept,
                                                  start_response)
