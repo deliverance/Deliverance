@@ -388,6 +388,9 @@ The ``<dev-*>`` tags define access to the `developer console`_.
 ``<dev-expiration>``:
     The time, in minutes, that a session can last.  You have to re-login after this amount of time.  This defaults to 0, meaning no expiration.
 
+``<dev-secret-file>``:
+    The location where the server-side secret should be kept.  This file will be created on its own, as well as the directory that contains it, but Deliverance needs permission to write here.
+
 .. comment: FIXME: what's the default IP restriction?
 .. comment: FIXME: say something about variable substitution.
 

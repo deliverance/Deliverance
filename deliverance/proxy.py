@@ -9,6 +9,7 @@ import re
 import socket
 import os
 import string
+import tempfile
 from deliverance.util.proxyrequest import Request, Response
 from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
@@ -638,7 +639,7 @@ class ProxySettings(object):
     def __init__(self, server_host, execute_pyref=True, display_local_files=True,
                  edit_local_files=True,
                  dev_allow_ips=None, dev_deny_ips=None, dev_htpasswd=None, dev_users=None,
-                 dev_expiration=0,
+                 dev_expiration=0, dev_secret_file='/tmp/deliverance/devauth.txt',
                  source_location=None):
         self.server_host = server_host
         self.execute_pyref = execute_pyref
@@ -649,6 +650,7 @@ class ProxySettings(object):
         self.dev_htpasswd = dev_htpasswd
         self.dev_expiration = dev_expiration
         self.dev_users = dev_users
+        self.dev_secret_file = dev_secret_file
         self.source_location = source_location
 
     @classmethod
@@ -674,6 +676,7 @@ class ProxySettings(object):
         dev_htpasswd = None
         dev_expiration = 0
         dev_users = {}
+        dev_secret_file = os.path.join(tempfile.gettempdir(), 'deliverance', 'devauth.txt')
         for child in el:
             if child.tag is Comment:
                 continue
@@ -709,6 +712,8 @@ class ProxySettings(object):
                         '<dev-user username="%s"> appears more than once' % username,
                         element=el)
                 dev_users[username] = password
+            elif child.tag == 'dev-secret-file':
+                dev_secret_file = cls.substitute(child.text, environ)
             else:
                 raise DeliveranceSyntaxError(
                     'Unknown element in <server-settings>: <%s>' % child.tag,
@@ -789,7 +794,8 @@ class ProxySettings(object):
             password_file=self.dev_htpasswd,
             password_checker=password_checker,
             expiration=self.dev_expiration,
-            login_mountpoint='/.deliverance')
+            login_mountpoint='/.deliverance',
+            secret_file=self.dev_secret_file)
         return app
 
     def check_password(self, username, password):
