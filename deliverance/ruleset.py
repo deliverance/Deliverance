@@ -82,7 +82,7 @@ class RuleSet(object):
             return resp
         remove_content_attribs(theme_doc)
         ## FIXME: handle caching?
-        resp.body = tostring(theme_doc)
+        resp.body = tostring(theme_doc.getroottree())
         return resp
 
     def check_clientside(self, req, log):
