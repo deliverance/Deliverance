@@ -70,6 +70,7 @@ def run_command(rule_filename, debug=False, interactive_debugger=False,
         from wsgifilter.proxyapp import DebugHeaders
         app = DebugHeaders(app, show_body=debug_headers > 1)
     print 'To see logging, visit %s/.deliverance/login' % settings.base_url
+    print '    after login go to %s/?deliv_log' % settings.base_url
     if profile:
         print 'To see profiling information visit %s/.deliverance/profile' % settings.base_url
     serve(app, host=settings.host, port=settings.port)
