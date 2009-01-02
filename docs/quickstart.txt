@@ -37,6 +37,35 @@ And we'll use the ``pip`` installer to install Deliverance.  This has the benefi
 
 This can take a long time to crunch.  On a Mac you must have the developer tools installed.
 
+If Normal Installation Fails: buildout
+--------------------------------------
+
+For some people on some machines, you may find that the normal installation fails.  Or you might just like buildout.  If you do, here's an example of a ``buildout.cfg`` file for building Deliverance (from Martin Aspeli)::
+
+  [buildout]
+  parts = 
+      lxml
+      server
+  develop = 
+      src/Deliverance
+  versions = versions
+
+  [versions]
+  lxml = 2.1.2
+
+  [lxml]
+  recipe = z3c.recipe.staticlxml
+  egg = lxml == 2.1.2
+  force = false
+
+  [server]
+  recipe = zc.recipe.egg
+  eggs =
+      lxml
+      PasteScript
+      Deliverance
+  interpreter = py
+
 Creating a Configuration
 ------------------------
 
