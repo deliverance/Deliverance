@@ -96,7 +96,10 @@ class Selector(object):
         if rest_expr.startswith('/'):
             selector = XPath(rest_expr)
         else:
-            selector = CSSSelector(rest_expr)
+            try:
+                selector = CSSSelector(rest_expr)
+            except AssertionError, e:
+                raise DeliveranceSyntaxError('Bad CSS selector: "%s" (%s)' % (expr, e))
         return (type, selector, expr, attributes)
 
     def __call__(self, doc):
