@@ -411,6 +411,11 @@ class DeliveranceMiddleware(object):
 
         body = fixup_meta_content_type(headers, body)
 
+        ct = header_value(headers, 'content-type') or ''
+        match = re.search('charset=([^ ]+)', ct)
+        if match:
+            encoding = match.group(1)
+            body = body.decode(encoding, 'replace')
         environ[DELIVERANCE_CACHE][uri] = (status, headers, body)
 
         return body
