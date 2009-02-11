@@ -54,8 +54,8 @@ class SecurityContext(object):
 
     def display_local_files(self, environ):
         """True if it is allowed to display local files to developers"""
-        if self._display_logging is not None:
-            return self._display_logging
+        if self._display_local_files is not None:
+            return self._display_local_files
         return self.is_developer_user(environ)
 
     def execute_pyref(self, environ):

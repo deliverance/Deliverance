@@ -19,7 +19,7 @@ fi
 mkdir -p download-cache
 export PIP_DOWNLOAD_CACHE="`pwd`/download-cache"
 
-REV=$(python -c 'import pip; print pip.get_svn_revision(".")')
+REV=$(python -c 'import pip; print pip.Subversion().get_revision(".")')
 FILE="Deliverance-snapshot-r${REV}.pybundle"
 
 if [ -e "$FILE" ] ; then
@@ -33,6 +33,7 @@ echo
 ## FIXME: httplib2 still isn't being included
 ## httplib2 location is a temporary problem with a bad pypi entry
 pip bundle $FILE --build=build-bundle-files/ --src=src-bundle-files/ \
+  http://httplib2.googlecode.com/files/httplib2-0.4.0.zip \
   ./lxml-2.2alpha1-staticbuild.tar.gz \
   -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
   supervisor PasteScript nose \
