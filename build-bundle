@@ -38,6 +38,7 @@ pip bundle $FILE --build=build-bundle-files/ --src=src-bundle-files/ \
   -e svn+http://codespeak.net/svn/z3/deliverance/trunk#egg=Deliverance \
   supervisor PasteScript nose \
   http://svn.colorstudy.com/home/ianb/PageCollector/trunk#egg=PageCollector \
+  Dozer \
   || fail 'Bundle failed'
 
 echo 'INSTALLING'

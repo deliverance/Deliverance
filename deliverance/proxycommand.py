@@ -33,8 +33,13 @@ parser.add_option(
     '--profile',
     action='store_true',
     dest='profile',
-    help='Use repoze.profile for profiling requests; go to /.deliverance/profile '
+    help='Use repoze.profile for profiling requests; go to /_dozer/index '
     'to see the results')
+parser.add_option(
+    '--memory-profile',
+    action='store_true',
+    dest='memory_profile',
+    help='Use a memory profiler; go to /.deliverance/memory-profile to see results')
 parser.add_option(
     '--debug-headers',
     action='count',
@@ -44,7 +49,7 @@ parser.add_option(
     
 
 def run_command(rule_filename, debug=False, interactive_debugger=False, 
-                debug_headers=False, profile=False):
+                debug_headers=False, profile=False, memory_profile=False):
     """Actually runs the command from the parsed arguments"""
     settings = ProxySettings.parse_file(rule_filename)
     app = ReloadingApp(rule_filename, settings)
@@ -60,6 +65,13 @@ def run_command(rule_filename, debug=False, interactive_debugger=False,
             discard_first_request=True,
             flush_at_shutdown=True,
             path='/.deliverance/profile')
+    if memory_profile:
+        try:
+            from dozer import Dozer
+        except ImportError:
+            print 'Error: you must manually install Dozer to use --memory-profile'
+            sys.exit(1)
+        app = Dozer(app)
     if interactive_debugger:
         from weberror.evalexception import EvalException
         app = EvalException(app, debug=True)
@@ -116,7 +128,8 @@ def main(args=None):
     run_command(rule_filename,
                 interactive_debugger=options.interactive_debugger,
                 debug=options.debug, debug_headers=options.debug_headers,
-                profile=options.profile)
+                profile=options.profile,
+                memory_profile=options.memory_profile)
 
 if __name__ == '__main__':
     main()
