@@ -764,7 +764,7 @@ class Replace(TransformAction):
                     self.format_attribute_names(attributes), 
                     self.format_tag(content_els[0]), self.format_tag(theme_el), log_text)
             else:
-                theme_el.attrib.update(content_els[0].attrib)
+                theme_el.attrib.update(dict(content_els[0].attrib))
                 if self.move:
                     content_els[0].attrib.clear()
                     log_text += ' and removed all attributes from the content'

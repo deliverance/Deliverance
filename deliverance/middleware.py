@@ -541,15 +541,22 @@ class SubrequestRuleGetter(object):
     the given url.
     """
 
+    _response = None
+    
     def __init__(self, url):
         self.url = url
+        
     def __call__(self, get_resource, app, orig_req):
         from deliverance.ruleset import RuleSet
         from lxml.etree import XML, XMLSyntaxError
         import urlparse
         url = urlparse.urljoin(orig_req.url, self.url)
         doc_resp = get_resource(url)
-        if doc_resp.status_int != 200:
+        if doc_resp.status_int == 304 and self._response is not None:
+            doc_resp = self._response
+        elif doc_resp.status_int == 200:
+            self._response = doc_resp
+        else:
             ## FIXME: better error
             assert 0, "Bad response: %r" % doc_resp
         ## FIXME: better content-type detection
