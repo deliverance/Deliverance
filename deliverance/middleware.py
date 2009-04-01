@@ -17,13 +17,14 @@ from pygments import highlight as pygments_highlight
 from pygments.lexers import XmlLexer, HtmlLexer
 from pygments.formatters import HtmlFormatter
 from tempita import HTMLTemplate, html
-from lxml.etree import _Element
+from lxml.etree import _Element, parse, XMLSyntaxError
 from lxml.html import fromstring, document_fromstring, tostring, Element
 from deliverance.log import SavingLogger
 from deliverance.security import display_logging, display_local_files, edit_local_files
 from deliverance.util.filetourl import url_to_filename
 from deliverance.editor.editorapp import Editor
 from deliverance.rules import clientside_action
+from deliverance.ruleset import RuleSet
 
 __all__ = ['DeliveranceMiddleware', 'SubrequestRuleGetter']
 
@@ -547,8 +548,7 @@ class SubrequestRuleGetter(object):
         self.url = url
         
     def __call__(self, get_resource, app, orig_req):
-        from deliverance.ruleset import RuleSet
-        from lxml.etree import XML, XMLSyntaxError
+        from lxml.etree import XML
         import urlparse
         url = urlparse.urljoin(orig_req.url, self.url)
         doc_resp = get_resource(url)
@@ -585,10 +585,10 @@ class FileRuleGetter(object):
         except XMLSyntaxError, e:
             raise Exception('Invalid syntax in %s: %s' % (filename, e))
         assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, url))
+            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
         assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, url))
-        self.ruleset = RuleSet.parse_xml(doc, url)
+            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
+        self.ruleset = RuleSet.parse_xml(doc, filename)
 
     def __call__(self, get_resource, app, orig_req):
         return self.ruleset
@@ -607,7 +607,7 @@ def make_deliverance_middleware(app, global_conf, rule_uri=None, rule_filename=N
         rule_getter = SubrequestRuleGetter(rule_uri)
     else:
         rule_getter = FileRuleGetter(rule_filename)
-    app = middleware.DeliveranceMiddleware(app, rule_getter)
+    app = DeliveranceMiddleware(app, rule_getter)
     from paste.deploy.converters import asbool
     if debug is None:
         debug = asbool(global_conf.get('debug', False))
