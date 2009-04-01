@@ -573,6 +573,46 @@ class SubrequestRuleGetter(object):
             'Bad rule tag <%s> in document %s' % (doc.tag, url))
         return RuleSet.parse_xml(doc, url)
 
+class FileRuleGetter(object):
+    """
+    An implementation of `rule_getter` for `DeliveranceMiddleware`.
+    This reads the rules from a file, and always returns the rules read from there.
+    """
+
+    def __init__(self, filename):
+        try:
+            doc = parse(filename, base_url='file://'+os.path.abspath(filename)).getroot()
+        except XMLSyntaxError, e:
+            raise Exception('Invalid syntax in %s: %s' % (filename, e))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, url))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, url))
+        self.ruleset = RuleSet.parse_xml(doc, url)
+
+    def __call__(self, get_resource, app, orig_req):
+        return self.ruleset
+
 fp = open(os.path.join(os.path.dirname(__file__), 'media', 'clientside.js'))
 CLIENTSIDE_JAVASCRIPT = fp.read()
 del fp
+
+def make_deliverance_middleware(app, global_conf, rule_uri=None, rule_filename=None,
+                                debug=None):
+    assert not rule_uri or not rule_filename, (
+        "You cannot give both rule_uri and rule_filename settings to Deliverance middleware")
+    assert rule_uri or rule_filename, (
+        "You must give one of rule_uri or rule_filename")
+    if rule_uri:
+        rule_getter = SubrequestRuleGetter(rule_uri)
+    else:
+        rule_getter = FileRuleGetter(rule_filename)
+    app = middleware.DeliveranceMiddleware(app, rule_getter)
+    from paste.deploy.converters import asbool
+    if debug is None:
+        debug = asbool(global_conf.get('debug', False))
+    else:
+        debug = asbool(debug)
+    from deliverance import security
+    return security.SecurityContext.middleware(app,
+        display_local_files=debug, display_logging=debug)

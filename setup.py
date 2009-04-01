@@ -51,5 +51,8 @@ transformation.
       [paste.paster_create_template]
       deliverance = deliverance.paster_templates:DeliveranceTemplate
       deliverance_plone = deliverance.paster_templates:PloneTemplate
+
+      [paste.filter_app_factory]
+      main = deliverance.middleware:make_deliverance_middleware
       """,
       )
