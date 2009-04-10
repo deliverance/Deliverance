@@ -118,6 +118,7 @@ First the blog, fairly simple:
     <div id="footer">a footer that will be ignored</div>
     </body></html>
     Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
     <html><head><link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed"><title>A blog post</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
         @import "http://localhost/style2.css";
       </style></head><body>
@@ -146,6 +147,7 @@ Now the about page, with its breakout style:
     <div id="footer">a footer that will be ignored</div>
     </body></html>
     Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
     <html><head><title>About this site</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
         @import "http://localhost/style2.css";
       </style></head><body>
