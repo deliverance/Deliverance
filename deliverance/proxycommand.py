@@ -119,7 +119,7 @@ def main(args=None):
     """Runs the command from ``sys.argv``"""
     if args is None:
         args = sys.argv[1:]
-    options, args = parser.parse_args()
+    options, args = parser.parse_args(args)
     if not args:
         parser.error('You must provide a rule file')
     if len(args) > 1:
