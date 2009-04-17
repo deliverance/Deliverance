@@ -260,6 +260,9 @@ class Proxy(object):
             existing_classes = request.environ.setdefault('deliverance.page_classes', [])
             existing_classes.extend(self.classes)
         response, orig_base, proxied_base, proxied_url = self.proxy_to_dest(request, dest)
+        if isinstance(response, exc.HTTPException):
+            # For instance 'xxx' -> 'xxx/' redirect for trailing slashes.
+            return response(environ, start_response)
         for modifier in self.response_modifications:
             response = modifier.modify_response(request, response, orig_base, 
                                                 proxied_base, proxied_url, log)
