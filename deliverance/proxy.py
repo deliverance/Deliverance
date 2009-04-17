@@ -338,7 +338,6 @@ class Proxy(object):
         filename = url_to_filename(dest)
         rest = posixpath.normpath(request.path_info)
         proxied_url = dest.lstrip('/') + '/' + urllib.quote(rest.lstrip('/'))
-        ## FIXME: handle /->/index.html
         filename = filename.rstrip('/') + '/' + rest.lstrip('/')
         if os.path.isdir(filename):
             if not request.path.endswith('/'):
@@ -351,6 +350,7 @@ class Proxy(object):
             for base in ['index.html', 'index.htm']:
                 if os.path.exists(os.path.join(filename, base)):
                     filename = os.path.join(filename, base)
+                    proxied_url = '/'.join([proxied_url, base])
                     break
             else:
                 resp = exc.HTTPNotFound("There was no index.html file in the directory")
