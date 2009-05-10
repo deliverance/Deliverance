@@ -591,7 +591,7 @@ class ProxyResponseModification(object):
                 if not link.startswith(proxied_base):
                     # External link, so we don't rewrite it
                     return link
-                new = orig_base + link[len(proxied_base):]
+                new = orig_base + link[len(proxied_base):].lstrip('/')
                 return new
             if response.content_type != 'text/html':
                 log.debug(
