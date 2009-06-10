@@ -204,7 +204,9 @@ which removes all ``<font>`` tags, but doesn't remove any actual text content.
 ``if-content``
 ++++++++++++++
 
-All the actions can take an attribute ``if-content="selector"``.  This selector is attempted on the content, and if it doesn't match anything then the action is skipped.
+*All* the actions can take an attribute ``if-content="selector"``.  This selector is attempted on the content, and if it doesn't match anything then the action is skipped.
+
+Also you can use ``not:`` like ``if-content="not:.container"``.
 
 Zero or multiple matches and error handling
 +++++++++++++++++++++++++++++++++++++++++++

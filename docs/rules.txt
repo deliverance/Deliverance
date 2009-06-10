@@ -48,7 +48,7 @@ These are optional:
 
   ``href``: a place to find the "content" for this rule.  You can use this to include external content.
 
-  ``if-content``: a selector; if the selector matches anything then the rule will be run.  If not the rule will be skipped.  No types (elements:, etc) are allowed for this, but you may prefix "not " before the selector.  You may also use "&&", which binds looser than ||.
+  ``if-content``: a selector; if the selector matches anything then the rule will be run.  If not the rule will be skipped.  No types (elements:, etc) are allowed for this, but you may prefix "not " before the selector.
 
   ``notheme``: one of "ignore", "abort", "warn", where the default is "warn".  This is the error action if the theme selector doesn't match anything.
 
