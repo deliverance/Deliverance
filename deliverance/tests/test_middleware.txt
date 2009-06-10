@@ -49,14 +49,15 @@ The rule file:
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
-    ...     <drop theme="#copyright" if-content="#cc" />
-    ...     <drop theme="tag:#copyright" />
     ...   </rule>
     ...   <rule class="breakout">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content-wrapper" nocontent="abort" />
     ...   </rule>
     ...   <rule class="blog">
+    ...     <drop theme="#copyright" if-content="#cc" />
+    ...     <drop theme="tag:#copyright" notheme="ignore" />
+    ...     <drop content="#cc" nocontent="ignore" />
     ...     <replace content="children:#content" theme="children:#content" nocontent="abort" />
     ...   </rule>
     ... </ruleset>''', content_type="application/xml")
@@ -109,7 +110,7 @@ Now lets look at some plain content and its deliverated equivalent
 
 First the blog, fairly simple:
 
-    >>> compare_request('/blog/index.html') #doctest +UDIFF
+    >>> compare_request('/blog/index.html') # doctest: +REPORT_UDIFF
     Original content:
     <html><head><title>A blog post</title>
     <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
@@ -119,6 +120,7 @@ First the blog, fairly simple:
     <div id="content">the blog post <b>with some style</b></div>
     some more junk
     <div id="footer">a footer that will be ignored</div>
+    <div id="cc">Creative Commons License</div>
     </body></html>
     Themed content:
     <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
@@ -135,7 +137,7 @@ First the blog, fairly simple:
       </div>
     <BLANKLINE>
       <div id="footer">
-        Copyright (C) 2000 Some Corporation
+         2000 Some Corporation
       </div>
     <BLANKLINE>
      </body></html>
