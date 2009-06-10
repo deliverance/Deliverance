@@ -30,7 +30,7 @@ A theme:
     ...   </div>
     ... 
     ...   <div id="footer">
-    ...     Copyright (C) 2000 Some Corporation
+    ...     <span id="copyright">Copyright (C)</span> 2000 Some Corporation
     ...   </div>
     ... 
     ...  </body>
@@ -49,6 +49,8 @@ The rule file:
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
+    ...     <drop theme="#copyright" if-content="#cc" />
+    ...     <drop theme="tag:#copyright" />
     ...   </rule>
     ...   <rule class="breakout">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
@@ -70,6 +72,7 @@ Some pages:
     ... <div id="content">the blog post <b>with some style</b></div>
     ... some more junk
     ... <div id="footer">a footer that will be ignored</div>
+    ... <div id="cc">Creative Commons License</div>
     ... </body></html>
     ... ''')
     >>> app['/about.html'] = Response('''\
@@ -106,7 +109,7 @@ Now lets look at some plain content and its deliverated equivalent
 
 First the blog, fairly simple:
 
-    >>> compare_request('/blog/index.html')
+    >>> compare_request('/blog/index.html') #doctest +UDIFF
     Original content:
     <html><head><title>A blog post</title>
     <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
