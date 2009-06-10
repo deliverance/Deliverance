@@ -458,7 +458,7 @@ class TransformAction(AbstractAction):
         """
         content = cls.compile_selector(tag, 'content', source_location)
         theme = cls.compile_selector(tag, 'theme', source_location)
-        if_content = cls.compile_selector(tag, 'if_content', source_location, invertable=True)
+        if_content = cls.compile_selector(tag, 'if-content', source_location, invertable=True)
         content_href = tag.get('href')
         move = asbool(tag.get('move', '1'))
         return cls(source_location, content, theme, if_content=if_content,
@@ -1134,7 +1134,7 @@ class Drop(AbstractAction):
         """Parses and instantiates the class from an element"""
         content = cls.compile_selector(tag, 'content', source_location)
         theme = cls.compile_selector(tag, 'theme', source_location)
-        if_content = cls.compile_selector(tag, 'if_content', source_location)
+        if_content = cls.compile_selector(tag, 'if-content', source_location)
         return cls(source_location, content, theme, if_content=if_content,
                    nocontent=tag.get('nocontent'),
                    notheme=tag.get('notheme'))
