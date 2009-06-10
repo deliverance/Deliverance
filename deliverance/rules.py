@@ -263,15 +263,23 @@ class AbstractAction(object):
         return unicode(self).encode('utf8')
 
     @classmethod
-    def compile_selector(cls, el, attr, source_location):
+    def compile_selector(cls, el, attr, source_location, invertable=False):
         """
         Compiles a single selector taken from the given attribute of
         an element.
         """
+        inverted = False
         value = el.get(attr)
         if value is None:
             return None
-        return Selector.parse(value)
+        inverted = False
+        if invertable and value.strip().startswith('not:'):
+            inverted = True
+            value = value.strip()[4:]
+        result = Selector.parse(value)
+        if invertable:
+            result.inverted = inverted
+        return result
     
     def prepare_content_children(self, els):
         """
@@ -450,7 +458,7 @@ class TransformAction(AbstractAction):
         """
         content = cls.compile_selector(tag, 'content', source_location)
         theme = cls.compile_selector(tag, 'theme', source_location)
-        if_content = cls.compile_selector(tag, 'if_content', source_location)
+        if_content = cls.compile_selector(tag, 'if_content', source_location, invertable=True)
         content_href = tag.get('href')
         move = asbool(tag.get('move', '1'))
         return cls(source_location, content, theme, if_content=if_content,
