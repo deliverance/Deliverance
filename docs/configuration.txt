@@ -175,7 +175,7 @@ You can't use ``tag:`` with these actions.
 ``<drop>``
 ++++++++++
 
-The ``<drop>`` action is used to remove problematic elements from a theme or content.  You can also use it with `if-content`_ for other kinds of conditions.  Since this action doesn't move elements around you don't need to provide both ``content`` and ``theme`` attributes; either will do.
+The ``<drop>`` action is used to remove problematic elements from a theme or content.  Also like any rule you can use ``<drop>`` with `if-content`_ to make the drop conditional conditions.  Since this action doesn't move elements around you don't need to provide both ``content`` and ``theme`` attributes; either will do.
 
 A common example is removing a stylesheet which introduces conflicts:
 
