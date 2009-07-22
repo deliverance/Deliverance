@@ -265,19 +265,26 @@ class Proxy(object):
                                                 proxied_base, proxied_url, log)
         return response(environ, start_response)
 
-    def proxy_to_dest(self, request, dest):
-        """Do the actual proxying, without applying any transformations"""
-        # Not using request.copy because I don't want to copy wsgi.input:
-        orig_base = url_normalize(request.application_url)
+    def construct_proxy_request(self, request, dest):
+        """ 
+        returns a new Request object constructed by copying `request`
+        and replacing its url with the url passed in as `dest`
+
+        @raises TypeError if `dest` is a file:// url; this can be
+        caught by the caller and handled accordingly
+        """
+
         dest = url_normalize(dest)
-        proxy_req = Request(request.environ.copy())
         scheme, netloc, path, query, fragment = urlparse.urlsplit(dest)
         path = urllib.unquote(path)
+        
         assert not fragment, (
             "Unexpected fragment: %r" % fragment)
-        if scheme == 'file':
-            return self.proxy_to_file(request, dest)
-        proxy_req.path_info = path + request.path_info
+
+        proxy_req = Request(request.environ.copy())
+
+        proxy_req.path_info = path
+
         proxy_req.server_name = netloc.split(':', 1)[0]
         if ':' in netloc:
             proxy_req.server_port = netloc.split(':', 1)[1]
@@ -285,25 +292,46 @@ class Proxy(object):
             proxy_req.server_port = '80'
         elif scheme == 'https':
             proxy_req.server_port = '443'
+        elif scheme == 'file':
+            raise TypeError ## FIXME: is TypeError too general?
         else:
             assert 0, "bad scheme: %r (from %r)" % (scheme, dest)
         if not self.keep_host:
             proxy_req.host = netloc
-        if query:
-            if proxy_req.query_string:
-                proxy_req.query_string += '&'
-            ## FIXME: add query before or after existing query?
-            proxy_req.query_string += query
+
+        proxy_req.query_string = query
+        proxy_req.scheme = scheme
+
         proxy_req.headers['X-Forwarded-For'] = request.remote_addr
         proxy_req.headers['X-Forwarded-Scheme'] = request.scheme
         proxy_req.headers['X-Forwarded-Server'] = request.host
-        proxy_req.scheme = scheme
+
         ## FIXME: something with path? proxy_req.headers['X-Forwarded-Path']
         ## (now we are only doing it with strip_script_name)
         if self.strip_script_name:
             proxy_req.headers['X-Forwarded-Path'] = proxy_req.script_name
             proxy_req.script_name = ''
-        proxied_url = url_normalize('%s://%s%s' % (scheme, netloc, proxy_req.path_qs))
+
+        return proxy_req
+
+    def proxy_to_dest(self, request, dest):
+        """Do the actual proxying, without applying any transformations"""
+        # Not using request.copy because I don't want to copy wsgi.input:
+
+        try:
+            proxy_req = self.construct_proxy_request(request, dest)
+        except TypeError:
+            return self.proxy_to_file(request, dest)
+
+        proxy_req.path_info += request.path_info
+
+        if proxy_req.query_string:
+            if request.query_string:
+                request.query_string += '&'
+            ## FIXME: add query before or after existing query?
+            proxy_req.query_string = request.query_string + \
+                proxy_req.query_string
+
         proxy_req.accept_encoding = None
         try:
             resp = proxy_req.get_response(proxy_exact_request)
@@ -323,6 +351,11 @@ class Proxy(object):
             resp = exc.HTTPServiceUnavailable(
                 'Could not proxy the request to %s:%s : %s' 
                 % (proxy_req.server_name, proxy_req.server_port, error))
+
+        orig_base = url_normalize(request.application_url)
+        proxied_url = url_normalize('%s://%s%s' % (proxy_req.scheme, 
+                                                   proxy_req.host,
+                                                   proxy_req.path_qs))
         return resp, orig_base, dest, proxied_url
 
     def proxy_to_file(self, request, dest):
