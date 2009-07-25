@@ -325,7 +325,7 @@ class Proxy(object):
 
         proxy_req.path_info += request.path_info
 
-        # XXX TODO: this logic could be refactored for clarity
+        ## FIXME: this logic could be refactored for clarity
         if proxy_req.query_string:
             if request.query_string:
                 request.query_string += '&'
