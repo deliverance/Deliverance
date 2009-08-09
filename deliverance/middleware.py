@@ -560,7 +560,7 @@ class SubrequestRuleGetter(object):
             ## FIXME: better error
             assert 0, "Bad response: %r" % doc_resp
         ## FIXME: better content-type detection
-        if doc_resp.content_type != 'application/xml':
+        if doc_resp.content_type not in ('application/xml', 'text/xml',):
             ## FIXME: better error
             assert 0, "Bad response content-type: %s (from response %r)" % (
                 doc_resp.content_type, doc_resp)
