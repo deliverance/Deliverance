@@ -62,6 +62,8 @@ rule
 
 The ``<rule>`` element defines a set of transformations.  It also supports `page classes`_ and `request/response matching`_, which you can read about in those sections.  Also, as mentioned above, you can include a ``<theme>`` element.  But the most important thing is the transformation actions.
 
+Deliverance has a built-in set of default actions to take care of things like copying the document title and any ``script``, ``link`` and ``style`` attributes over. These rules can be suppressed by adding an ``suppress-standard='true'`` attribute on the ``<rule>`` element.
+
 The transformation actions are applied in order.  The starting point for the transformation is the *theme* document, and the actions copy elements from the content into the theme.
 
 There are four actions:
