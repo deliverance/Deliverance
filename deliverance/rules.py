@@ -183,7 +183,7 @@ class AbstractAction(object):
         elif value == 'abort':
             value = ('abort', None)
         else:
-            assert 0, "Unexpected value: %r" % value
+            assert 0, "Unexpected value: %r" % repr(value)
         return value
 
     def format_error(self, attr, value):
