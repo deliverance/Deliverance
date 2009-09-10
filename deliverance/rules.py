@@ -176,7 +176,7 @@ class AbstractAction(object):
             value = ('ignore', 'first')
         elif value == 'last':
             value = ('ignore', 'last')
-        if value == 'ignore':
+        elif value == 'ignore':
             value = ('ignore', 'first')
         elif value == 'warn':
             value = ('warn', 'first')
