@@ -357,10 +357,12 @@ class Proxy(object):
                 'Could not proxy the request to %s:%s : %s' 
                 % (proxy_req.server_name, proxy_req.server_port, error))
 
+        dest = url_normalize(dest)
         orig_base = url_normalize(request.application_url)
         proxied_url = url_normalize('%s://%s%s' % (proxy_req.scheme, 
                                                    proxy_req.host,
                                                    proxy_req.path_qs))
+        
         return resp, orig_base, dest, proxied_url
 
     def proxy_to_file(self, request, dest):
