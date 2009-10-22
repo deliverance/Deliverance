@@ -83,6 +83,13 @@ class DeliveranceMiddleware(object):
         if resp.content_type != 'text/html':
             ## FIXME: remove from known_html?
             return resp(environ, start_response)
+        
+        # XXX: Not clear why such responses would have a content type, but
+        # they sometimes do (from Zope/Plone, at least) and that then breaks
+        # when trying to apply a theme.
+        if resp.status_int in (301, 302, 304):
+            return resp(environ, start_response)
+            
         if clientside and req.url not in self.known_html:
             log.debug(self, '%s would have been a clientside check; in future will be since we know it is HTML'
                       % req.url)
