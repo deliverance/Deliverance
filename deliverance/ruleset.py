@@ -8,6 +8,7 @@ from deliverance.exceptions import AbortTheme, DeliveranceSyntaxError
 from deliverance.pagematch import run_matches, Match, ClientsideMatch
 from deliverance.rules import Rule, remove_content_attribs
 from deliverance.themeref import Theme
+from urlparse import urljoin
 
 class RuleSet(object):
     """
@@ -108,8 +109,17 @@ class RuleSet(object):
             raise AbortTheme(
                 "The resource %s returned an error: %s" % (url, resp.status))
         doc = self.parse_document(resp.body, url)
-        doc.make_links_absolute()
+        self.make_links_absolute(doc)
         return doc
+
+    def make_links_absolute(self, doc):
+        base_url = doc.base_url
+        def link_repl_preserve_internal(href):
+            if href[0] == '#':
+                return href
+            else:
+                return urljoin(base_url, href)
+        doc.rewrite_links(link_repl_preserve_internal)
 
     def parse_document(self, s, url):
         """

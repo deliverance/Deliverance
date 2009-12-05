@@ -24,9 +24,11 @@ A theme:
     ...     <div class="topnav"></div>
     ...   </div>
     ...   <div id="content-wrapper">
+    ...     <a name="top"></a>
     ...     <div id="content">
     ...       This content will be replaced.
     ...     </div>
+    ...     <a href="#top">Back to top</a>
     ...   </div>
     ... 
     ...   <div id="footer">
@@ -133,7 +135,9 @@ First the blog, fairly simple:
         <div class="topnav"></div>
       </div>
       <div id="content-wrapper">
+        <a name="top"></a>
         <div id="content">the blog post <b>with some style</b></div>
+        <a href="#top">Back to top</a>
       </div>
     <BLANKLINE>
       <div id="footer">

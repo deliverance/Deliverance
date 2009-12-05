@@ -4,6 +4,9 @@ News
 svn trunk
 ---------
 
+* Correctly handle in-document links in the theme. Patch from Michael Dunstan. This
+  fixes #19.
+
 * Added :class:`deliverance.middleware:FileRuleGetter`
 
 * Added `Paste Deploy <http://pythonpaste.org/deploy/>`_ entry point
