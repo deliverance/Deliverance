@@ -20,7 +20,7 @@ transformation.
       ],
       keywords='wsgi theming html',
       author='Ian Bicking, The Open Planning Project, and the Deliverance development community',
-      author_email='deliverance-discuss@lists.openplans.org',
+      author_email='deliverance-devel@lists.coactivate.org',
       url='http://deliverance.openplans.org/',
       license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
