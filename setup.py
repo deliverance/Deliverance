@@ -3,9 +3,9 @@ import sys, os
 
 version = '0.3c1'
 
-setup(name='deliverance',
+setup(name='Deliverance',
       version=version,
-      description="",
+      description="Deliverance transforms HTML to theme pages",
       long_description="""\
 Deliverance does transformations of HTML to 'theme' pages, similar in
 function to XSLT but using a simpler XML-based language to express the
