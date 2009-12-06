@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.3'
+version = '0.3c1'
 
 setup(name='deliverance',
       version=version,
@@ -19,7 +19,7 @@ transformation.
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware",
       ],
       keywords='wsgi theming html',
-      author='Ian Bicking, The Open Planning Project',
+      author='Ian Bicking, The Open Planning Project, and the Deliverance development community',
       author_email='deliverance-discuss@lists.openplans.org',
       url='http://deliverance.openplans.org/',
       license='MIT',
