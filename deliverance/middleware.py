@@ -591,8 +591,7 @@ class RuleGetter(object):
         
         else:
             rules = self.rules
-            rules_base_url = 'file://' + \
-                    os.path.abspath(self.rule_filename)).getroot()
+            rules_base_url = 'file://' + os.path.abspath(self.rule_filename).getroot()
 
         try:
             doc = parse(rules, rules_base_url)
@@ -610,7 +609,7 @@ def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
                                 rule_uri=None, rule_filename=None):
 
     # FIXME: rule_uri and rule_filename should be marked as depreached 
-    assert not rule not rule_uri or not rule_filename, (
+    assert not rule or not rule_uri or not rule_filename, (
         "You cannot give rule, rule_uri and rule_filename settings to Deliverance middleware")
     assert rule or rule_uri or rule_filename, (
         "You must give one of rule or rule_uri or rule_filename")
