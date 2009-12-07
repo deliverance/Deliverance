@@ -555,56 +555,83 @@ class RuleGetter(object):
     This reads the rules from a file, and always returns the rules read from there.
     """
    
-    rule = None
-    ruleset = None
+    
+    ruleset = None          # ruleset that will be returned by __call__
+
+    _last_changed = None    # only for filename: stores last modification date of file 
+    _rule_xml     = None    # stores last xml that was sent to get_ruleset method
+
 
     def __init__(self, rule, debug=False):
         self.rule = rule
-        if debug:
-            self.ruleset = self.get_ruleset()
+        self.debug = debug
+        if not debug:
+            self.ruleset = self.get_ruleset_byfilename()
 
     def __call__(self, get_resource, app, orig_req):
         if not self.ruleset:
-            self.ruleset = self.get_ruleset()
+            if self.rule[:7] == 'http://' or \
+               self.rule[:8] == 'https://':
+                rule_base_url = self.rule
+                self.ruleset = self.get_ruleset_byurl(
+                        get_resource(rule_base_url), rule_base_url)
+
+            else:
+                self.ruleset = self.get_ruleset_byfilename()
+                if not self.ruleset:
+                    import urlparse
+                    rule_base_url = urlparse.urljoin(orig_req.url, self.rule)
+                    self.ruleset = self.get_ruleset_byresponse(
+                            get_resource(rule_base_url), rule_base_url)
+
         return self.ruleset
 
-    def get_ruleset(self):
-        if self.rule[:7] == 'http://' or \
-           self.rule[:8] == 'https://':
-            import urlparse
-            url = urlparse.urljoin(orig_req.url, self.rule)
-            doc_resp = get_resource(url)
-            if doc_resp.status_int == 304 and self._response is not None:
-                doc_resp = self._response
-            elif doc_resp.status_int == 200:
-                self._response = doc_resp
-            else:
-                ## FIXME: better error
-                assert 0, "Bad response: %r" % doc_resp
-            ## FIXME: better content-type detection
-            if doc_resp.content_type not in ('application/xml', 'text/xml',):
-                ## FIXME: better error
-                assert 0, "Bad response content-type: %s (from response %r)" % (
-                    doc_resp.content_type, doc_resp)
-            rule = doc_resp.body
-            rule_base_url = url
-        
-        else:
-            f = open(self.rule)
-            rule = f.read()
-            f.close()
-            rule_base_url = 'file://' + os.path.abspath(self.rule)
+    def get_ruleset_byfilename(self):
+        if not os.path.exists(self.rule):
+            return None
 
+        last_changed = os.path.getmtime(self.rule)
+        if self._last_changed != last_changed:
+            try:
+                f = open(self.rule)
+                self._rule_xml = f.read()
+                self._last_changed == last_changed
+            finally:
+                f.close()
+
+        rule_base_url = 'file://' + os.path.abspath(self.rule)
+        return self.get_ruleset(self._rule_xml, rule_base_url)
+
+    def get_ruleset_byresponse(self, response, base_url):
+        
+        ## FIXME: better content-type detection
+        if response.content_type not in ('application/xml', 'text/xml'):
+            ## FIXME: better error
+            assert 0, "Bad response content-type: %s (from response %r)" % (
+                response.content_type, response)
+
+        if response.status_int == 304 and \
+           self._rule_xml is not None and \
+           not self.debug:
+            pass
+
+        elif response.status_int == 200:
+            self._rule_xml = response.body
+
+        else:
+            ## FIXME: better error
+            assert 0, "Bad response: %r" % response
+
+        return self.get_ruleset(self._rule_xml, base_url)
+
+    def get_ruleset(self, rule_xml, rule_base_url):
         from lxml.etree import XML
         try:
-            doc = XML(rule, base_url=rule_base_url)
+            doc = XML(rule_xml, base_url=rule_base_url)
         except XMLSyntaxError, e:
-            raise Exception('Invalid syntax in %s: %s' % (filename, e))
-            assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
+            raise Exception('Invalid syntax in %s: %s' % (rule_base_url, e))
         assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
-
+            'Bad rule tag <%s> in document %s' % (doc.tag, rule_base_url))
         return RuleSet.parse_xml(doc, rule_base_url)
 
 

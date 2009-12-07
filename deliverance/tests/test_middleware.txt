@@ -38,9 +38,9 @@ A theme:
     ...  </body>
     ... </html>''')
 
-The rule file:
+The rule xml:
 
-    >>> app['/rules.xml'] = Response('''\
+    >>> rule_xml = '''\
     ... <ruleset>
     ...   <match path="/blog" class="blog" />
     ...   <match path="exact:/about.html" class="breakout" />
@@ -62,7 +62,23 @@ The rule file:
     ...     <drop content="#cc" nocontent="ignore" />
     ...     <replace content="children:#content" theme="children:#content" nocontent="abort" />
     ...   </rule>
-    ... </ruleset>''', content_type="application/xml")
+    ... </ruleset>'''
+
+rule file through URI
+
+    >>> app['/mytheme/rules.xml'] = Response(rule_xml, content_type="application/xml")
+
+rule file through URL
+
+    >>> app['http://example.com/mytheme/rules.xml'] = Response(rule_xml, content_type="application/xml")
+
+rule file through FILENAME
+
+    >>> import tempfile
+    >>> rule_filename_pos, rule_filename = tempfile.mkstemp()
+    >>> f = open(rule_filename, 'w+')
+    >>> f.write(rule_xml)
+    >>> f.close()
 
 Some pages:
 
@@ -93,26 +109,31 @@ Some pages:
 
 Now to deliverate:
 
-    >>> from deliverance.middleware import DeliveranceMiddleware, SubrequestRuleGetter
+    >>> from deliverance.middleware import DeliveranceMiddleware, RuleGetter
     >>> from deliverance.log import PrintingLogger
     >>> import logging
-    >>> deliv = DeliveranceMiddleware(app, SubrequestRuleGetter('/rules.xml'),
+    >>> deliv_uri = DeliveranceMiddleware(app, RuleGetter('/mytheme/rules.xml'),
+    ...                               PrintingLogger,
+    ...                               log_factory_kw=dict(print_level=logging.WARNING))
+    >>> deliv_url = DeliveranceMiddleware(app, RuleGetter('/mytheme/rules.xml'),
+    ...                               PrintingLogger,
+    ...                               log_factory_kw=dict(print_level=logging.WARNING))
+    >>> deliv_filename = DeliveranceMiddleware(app, RuleGetter(rule_filename),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
 
 Now lets look at some plain content and its deliverated equivalent
 
-    >>> def compare_request(path):
+    >>> def compare_request(path, deliv):
     ...     resp = Request.blank(path).get_response(app)
-    ...     print 'Original content:'
-    ...     print resp.body.strip()
+    ...     result = 'Original content:\n'+resp.body.strip()
     ...     resp = Request.blank(path).get_response(deliv)
-    ...     print 'Themed content:'
-    ...     print resp.body.strip()
+    ...     result += '\nThemed content:\n'+resp.body.strip()
+    ...     return result
 
 First the blog, fairly simple:
 
-    >>> compare_request('/blog/index.html') # doctest: +REPORT_UDIFF
+    >>> print compare_request('/blog/index.html', deliv_uri) # doctest: +REPORT_UDIFF
     Original content:
     <html><head><title>A blog post</title>
     <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
@@ -146,9 +167,14 @@ First the blog, fairly simple:
     <BLANKLINE>
      </body></html>
 
+Should be the same in all 3 cases
+
+    >>> compare_request('/blog/index.html', deliv_uri) == compare_request('/blog/index.html', deliv_url) == compare_request('/blog/index.html', deliv_filename)
+    True
+
 Now the about page, with its breakout style:
 
-    >>> compare_request('/about.html') # doctest: +REPORT_UDIFF
+    >>> print compare_request('/about.html', deliv_url) # doctest: +REPORT_UDIFF
     Original content:
     <html><title>About this site</title></html>
     <body>
@@ -175,12 +201,12 @@ Now the about page, with its breakout style:
 
 Now the magic response, which shouldn't get themed at all:
 
-    >>> compare_request('/magic')
+    >>> print compare_request('/magic', deliv_filename)
     Original content:
     <html><head></head><body>A simple page</body></html>
     Themed content:
     <html><head></head><body>A simple page</body></html>
-    >>> compare_request('/magic2')
+    >>> print compare_request('/magic2', deliv_uri)
     Original content:
     <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
     Themed content:
