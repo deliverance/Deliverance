@@ -542,84 +542,88 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
 
     action_subreq.exposed = True
 
-class SubrequestRuleGetter(object):
-    """
-    An implementation of `rule_getter` for `DeliveranceMiddleware`.
-    This retrieves and instantiates the rules using a subrequest with
-    the given url.
-    """
-
-    _response = None
-    
-    def __init__(self, url):
-        self.url = url
-        
-    def __call__(self, get_resource, app, orig_req):
-        from lxml.etree import XML
-        import urlparse
-        url = urlparse.urljoin(orig_req.url, self.url)
-        doc_resp = get_resource(url)
-        if doc_resp.status_int == 304 and self._response is not None:
-            doc_resp = self._response
-        elif doc_resp.status_int == 200:
-            self._response = doc_resp
-        else:
-            ## FIXME: better error
-            assert 0, "Bad response: %r" % doc_resp
-        ## FIXME: better content-type detection
-        if doc_resp.content_type not in ('application/xml', 'text/xml',):
-            ## FIXME: better error
-            assert 0, "Bad response content-type: %s (from response %r)" % (
-                doc_resp.content_type, doc_resp)
-        doc_text = doc_resp.body
-        try:
-            doc = XML(doc_text, base_url=url)
-        except XMLSyntaxError, e:
-            raise Exception('Invalid syntax in %s: %s' % (url, e))
-        assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, url))
-        return RuleSet.parse_xml(doc, url)
-
-class FileRuleGetter(object):
-    """
-    An implementation of `rule_getter` for `DeliveranceMiddleware`.
-    This reads the rules from a file, and always returns the rules read from there.
-    """
-
-    def __init__(self, filename):
-        try:
-            doc = parse(filename, base_url='file://'+os.path.abspath(filename)).getroot()
-        except XMLSyntaxError, e:
-            raise Exception('Invalid syntax in %s: %s' % (filename, e))
-        assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
-        assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
-        self.ruleset = RuleSet.parse_xml(doc, filename)
-
-    def __call__(self, get_resource, app, orig_req):
-        return self.ruleset
-
 fp = open(os.path.join(os.path.dirname(__file__), 'media', 'clientside.js'))
 CLIENTSIDE_JAVASCRIPT = fp.read()
 del fp
 
-def make_deliverance_middleware(app, global_conf, rule_uri=None, rule_filename=None,
-                                debug=None):
-    assert not rule_uri or not rule_filename, (
-        "You cannot give both rule_uri and rule_filename settings to Deliverance middleware")
-    assert rule_uri or rule_filename, (
-        "You must give one of rule_uri or rule_filename")
-    if rule_uri:
-        rule_getter = SubrequestRuleGetter(rule_uri)
-    else:
-        rule_getter = FileRuleGetter(rule_filename)
-    app = DeliveranceMiddleware(app, rule_getter)
+
+class RuleGetter(object):
+    """
+    An implementation of `rule_getter` for `DeliveranceMiddleware`.
+    This retrieves and instantiates the rules using a subrequest with
+    the given url.
+    This reads the rules from a file, and always returns the rules read from there.
+    """
+   
+    rules = None
+    ruleset = None
+
+    def __init__(self, rules, debug=False):
+        self.rules = rules
+        if debug:
+            self.ruleset = self.resolve_rule()
+
+    def __call__(self, get_resource, app, orig_req):
+        if not self.ruleset:
+            self.ruleset = self.get_ruleset()
+        return self.ruleset
+
+    def get_ruleset(self):
+        if self.rule[:7] == 'http://' or \
+           self.rule[:8] == 'https://':
+            import urlparse
+            url = urlparse.urljoin(orig_req.url, self.rule)
+            doc_resp = get_resource(url)
+            if doc_resp.status_int == 304 and self._response is not None:
+                doc_resp = self._response
+            elif doc_resp.status_int == 200:
+                self._response = doc_resp
+            else:
+                ## FIXME: better error
+                assert 0, "Bad response: %r" % doc_resp
+            ## FIXME: better content-type detection
+            if doc_resp.content_type not in ('application/xml', 'text/xml',):
+                ## FIXME: better error
+                assert 0, "Bad response content-type: %s (from response %r)" % (
+                    doc_resp.content_type, doc_resp)
+            rules = doc_resp.body
+            rules_base_url = url
+        
+        else:
+            rules = self.rules
+            rules_base_url = 'file://' + \
+                    os.path.abspath(self.rule_filename)).getroot()
+
+        try:
+            doc = parse(rules, rules_base_url)
+        except XMLSyntaxError, e:
+            raise Exception('Invalid syntax in %s: %s' % (filename, e))
+            assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
+
+        return RuleSet.parse_xml(doc, rules_base_url)
+
+
+def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
+                                rule_uri=None, rule_filename=None):
+
+    # FIXME: rule_uri and rule_filename should be marked as depreached 
+    assert not rule not rule_uri or not rule_filename, (
+        "You cannot give rule, rule_uri and rule_filename settings to Deliverance middleware")
+    assert rule or rule_uri or rule_filename, (
+        "You must give one of rule or rule_uri or rule_filename")
+
     from paste.deploy.converters import asbool
     if debug is None:
         debug = asbool(global_conf.get('debug', False))
     else:
         debug = asbool(debug)
+
+    rule_getter = RuleGetter(rule_uri, debug)
+    app = DeliveranceMiddleware(app, rule_getter)
+    
     from deliverance import security
     return security.SecurityContext.middleware(app,
         display_local_files=debug, display_logging=debug)
