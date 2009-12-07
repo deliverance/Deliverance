@@ -555,13 +555,13 @@ class RuleGetter(object):
     This reads the rules from a file, and always returns the rules read from there.
     """
    
-    rules = None
+    rule = None
     ruleset = None
 
-    def __init__(self, rules, debug=False):
-        self.rules = rules
+    def __init__(self, rule, debug=False):
+        self.rule = rule
         if debug:
-            self.ruleset = self.resolve_rule()
+            self.ruleset = self.get_ruleset()
 
     def __call__(self, get_resource, app, orig_req):
         if not self.ruleset:
@@ -586,15 +586,18 @@ class RuleGetter(object):
                 ## FIXME: better error
                 assert 0, "Bad response content-type: %s (from response %r)" % (
                     doc_resp.content_type, doc_resp)
-            rules = doc_resp.body
-            rules_base_url = url
+            rule = doc_resp.body
+            rule_base_url = url
         
         else:
-            rules = self.rules
-            rules_base_url = 'file://' + os.path.abspath(self.rule_filename).getroot()
+            f = open(self.rule)
+            rule = f.read()
+            f.close()
+            rule_base_url = 'file://' + os.path.abspath(self.rule)
 
+        from lxml.etree import XML
         try:
-            doc = parse(rules, rules_base_url)
+            doc = XML(rule, base_url=rule_base_url)
         except XMLSyntaxError, e:
             raise Exception('Invalid syntax in %s: %s' % (filename, e))
             assert doc.tag == 'ruleset', (
@@ -602,7 +605,7 @@ class RuleGetter(object):
         assert doc.tag == 'ruleset', (
             'Bad rule tag <%s> in document %s' % (doc.tag, filename))
 
-        return RuleSet.parse_xml(doc, rules_base_url)
+        return RuleSet.parse_xml(doc, rule_base_url)
 
 
 def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
@@ -619,8 +622,14 @@ def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
         debug = asbool(global_conf.get('debug', False))
     else:
         debug = asbool(debug)
+    
+    if rule_filename:
+        rule_getter = RuleGetter(rule_filename, debug)
+    elif rule_uri:
+        rule_getter = RuleGetter(rule_uri, debug)
+    else:
+        rule_getter = RuleGetter(rule, debug)
 
-    rule_getter = RuleGetter(rule_uri, debug)
     app = DeliveranceMiddleware(app, rule_getter)
     
     from deliverance import security
