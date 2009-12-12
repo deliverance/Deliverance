@@ -1,3 +1,7 @@
+.coverage
+.installed.cfg
 bin/
-lib/
+develop-eggs/
+eggs/
 include/
+lib/

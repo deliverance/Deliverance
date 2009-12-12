@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.3c1'
+version = '0.3c2'
 
 setup(name='Deliverance',
       version=version,
@@ -37,6 +37,7 @@ transformation.
         "WebError",
         "DevAuth",
         "Paste",
+        "PasteScript",
         "WSGIFilter",
         "chardet",
         "simplejson",
