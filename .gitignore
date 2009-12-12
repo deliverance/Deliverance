@@ -2,6 +2,7 @@
 .installed.cfg
 bin/
 develop-eggs/
+docs/
 eggs/
 include/
 lib/
