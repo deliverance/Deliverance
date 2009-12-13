@@ -60,7 +60,7 @@ class ProxySet(object):
         tree = parse(filename, base_url=file_url)
         el = tree.getroot()
         tree.xinclude()
-        return cls.parse_xml(el, file_url, traverse=True)
+        return cls.parse_xml(el, file_url)
 
     def proxy_app(self, environ, start_response):
         """Implements the proxy, finding the matching `Proxy` object and
