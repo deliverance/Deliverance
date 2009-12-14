@@ -6,8 +6,8 @@ svn trunk
 
 * Add a monkeypatch for Paste to work around a long unsolved robustness bug.
 
-* Correctly handle in-document links in the theme. Patch from Michael Dunstan. This
-  fixes #19.
+* Correctly handle in-document links in the theme. Patch from Michael Dunstan.
+  This fixes #19 and #31.
 
 * Added :class:`deliverance.middleware:FileRuleGetter`
 

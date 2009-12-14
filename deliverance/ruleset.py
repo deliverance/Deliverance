@@ -115,7 +115,7 @@ class RuleSet(object):
     def make_links_absolute(self, doc):
         base_url = doc.base_url
         def link_repl_preserve_internal(href):
-            if href[0] == '#':
+            if href == '' or href[0] == '#':
                 return href
             else:
                 return urljoin(base_url, href)
