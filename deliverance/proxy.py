@@ -411,7 +411,7 @@ class Proxy(object):
                 dest_href = uri_template_substitute(
                     self.dest.href, dict(here=posixpath.dirname(self.source_location)))
             except KeyError:
-                raise exc.HTTPForbidden('Not a static location: %s' % dest.href)
+                raise exc.HTTPForbidden('Not a static location: %s' % self.dest.href)
             if not dest_href.startswith('file:/'):
                 raise exc.HTTPForbidden('Not local: %s' % self.dest.href)
             filename = url_to_filename(dest_href)
@@ -774,7 +774,8 @@ class ProxySettings(object):
                    dev_allow_ips=dev_allow_ips, dev_deny_ips=dev_deny_ips, 
                    dev_users=dev_users, dev_htpasswd=dev_htpasswd,
                    dev_expiration=dev_expiration,
-                   source_location=source_location)
+                   source_location=source_location,
+                   dev_secret_file=dev_secret_file)
 
     @classmethod
     def parse_file(cls, filename):

@@ -41,8 +41,10 @@ class RuleSet(object):
         except AbortTheme:
             return resp
         if 'X-Deliverance-Page-Class' in response_headers:
+            log.debug(self, "Found page class %s in headers", response_headers['X-Deliverance-Page-Class'].strip())
             classes.extend(response_headers['X-Deliverance-Page-Class'].strip().split())
         if 'deliverance.page_classes' in req.environ:
+            log.debug(self, "Found page class in WSGI environ: %s", ' '.join(req.environ["deliverance.page_classes"]))
             classes.extend(req.environ['deliverance.page_classes'])
         if not classes:
             classes = ['default']

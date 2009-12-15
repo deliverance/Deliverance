@@ -17,7 +17,7 @@ from pygments import highlight as pygments_highlight
 from pygments.lexers import XmlLexer, HtmlLexer
 from pygments.formatters import HtmlFormatter
 from tempita import HTMLTemplate, html
-from lxml.etree import _Element, parse, XMLSyntaxError
+from lxml.etree import _Element, XMLSyntaxError
 from lxml.html import fromstring, document_fromstring, tostring, Element
 from deliverance.log import SavingLogger
 from deliverance.security import display_logging, display_local_files, edit_local_files
@@ -26,7 +26,7 @@ from deliverance.editor.editorapp import Editor
 from deliverance.rules import clientside_action
 from deliverance.ruleset import RuleSet
 
-__all__ = ['DeliveranceMiddleware', 'SubrequestRuleGetter']
+__all__ = ['DeliveranceMiddleware', 'RuleGetter', 'make_deliverance_middleware' ]
 
 class DeliveranceMiddleware(object):
     """

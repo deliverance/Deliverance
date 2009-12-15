@@ -2,7 +2,6 @@
 from webob import Request, Response, exc
 from tempita import HTMLTemplate
 import os
-import urllib
 from paste.urlparser import StaticURLParser
 import mimetypes
 
