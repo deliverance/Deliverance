@@ -210,7 +210,7 @@ class Proxy(object):
             if not dest:
                 ## FIXME: should this always be a test?
                 raise DeliveranceSyntaxError("You must have a <dest> tag",
-                                             element=element, source_location=source_location)
+                                             element=el, source_location=source_location)
             try:
                 href = uri_template_substitute(
                     dest.href, dict(here=posixpath.dirname(source_location)))
