@@ -68,10 +68,6 @@ rule file through URI
 
     >>> app['/mytheme/rules.xml'] = Response(rule_xml, content_type="application/xml")
 
-rule file through URL
-
-    >>> app['http://example.com/mytheme/rules.xml'] = Response(rule_xml, content_type="application/xml")
-
 rule file through FILENAME
 
     >>> import tempfile
@@ -115,7 +111,7 @@ Now to deliverate:
     >>> deliv_uri = DeliveranceMiddleware(app, RuleGetter('/mytheme/rules.xml'),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
-    >>> deliv_url = DeliveranceMiddleware(app, RuleGetter('/mytheme/rules.xml'),
+    >>> deliv_url = DeliveranceMiddleware(app, RuleGetter('http://localhost/mytheme/rules.xml'),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
     >>> deliv_filename = DeliveranceMiddleware(app, RuleGetter(rule_filename),

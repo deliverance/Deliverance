@@ -573,7 +573,7 @@ class RuleGetter(object):
             if self.rule[:7] == 'http://' or \
                self.rule[:8] == 'https://':
                 rule_base_url = self.rule
-                self.ruleset = self.get_ruleset_byurl(
+                self.ruleset = self.get_ruleset_byresponse(
                         get_resource(rule_base_url), rule_base_url)
 
             else:
