@@ -645,7 +645,8 @@ def FileRuleGetter(rule, get_response, app, orig_req):
 
 
 def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
-                                rule_uri=None, rule_filename=None):
+                                rule_uri=None, rule_filename=None,
+                                execute_pyref=False, force_dev_auth=False):
 
     # FIXME: rule_uri and rule_filename should be marked as depreached 
     assert not rule or not rule_uri or not rule_filename, (
@@ -668,5 +669,8 @@ def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
     
 
     app = DeliveranceMiddleware(app, rule_getter)
-    return security.SecurityContext.middleware(app,
-        display_local_files=debug, display_logging=debug)
+    return security.SecurityContext.middleware(
+        app,
+        display_local_files=debug, display_logging=debug,
+        execute_pyref=execute_pyref, force_dev_auth=force_dev_auth,
+        )
