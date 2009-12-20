@@ -26,7 +26,10 @@ from deliverance.editor.editorapp import Editor
 from deliverance.rules import clientside_action
 from deliverance.ruleset import RuleSet
 
-__all__ = ['DeliveranceMiddleware', 'RuleGetter', 'make_deliverance_middleware' ]
+
+__all__ = ['DeliveranceMiddleware', 'RulesetGetter', 'SubrequestRuleGetter',
+           'FileRuleGetter', 'make_deliverance_middleware' ]
+
 
 class DeliveranceMiddleware(object):
     """
@@ -547,92 +550,98 @@ CLIENTSIDE_JAVASCRIPT = fp.read()
 del fp
 
 
-class RuleGetter(object):
+
+
+from paste.deploy.converters import asbool
+from lxml.etree import XML
+from deliverance import security
+
+
+class RulesetGetter(object):
     """
-    An implementation of `rule_getter` for `DeliveranceMiddleware`.
-    This retrieves and instantiates the rules using a subrequest with
-    the given url.
-    This reads the rules from a file, and always returns the rules read from there.
     """
    
-    
-    ruleset = None          # ruleset that will be returned by __call__
+    _ruleset = None
+    _xml_url = None
+    _xml = None
 
-    _last_changed = None    # only for filename: stores last modification date of file 
-    _rule_xml     = None    # stores last xml that was sent to get_ruleset method
-
-
-    def __init__(self, rule, debug=False):
+    def __init__(self, rule, debug=False, rulegetter=None):
         self.rule = rule
         self.debug = debug
-        if not debug:
-            self.ruleset = self.get_ruleset_byfilename()
+        self.rulegetter = rulegetter
 
-    def __call__(self, get_resource, app, orig_req):
-        if not self.ruleset:
-            if self.rule[:7] == 'http://' or \
-               self.rule[:8] == 'https://':
-                rule_base_url = self.rule
-                self.ruleset = self.get_ruleset_byresponse(
-                        get_resource(rule_base_url), rule_base_url)
+    def __call__(self, get_response, app, orig_req):
 
-            else:
-                self.ruleset = self.get_ruleset_byfilename()
-                if not self.ruleset:
-                    import urlparse
-                    rule_base_url = urlparse.urljoin(orig_req.url, self.rule)
-                    self.ruleset = self.get_ruleset_byresponse(
-                            get_resource(rule_base_url), rule_base_url)
+        if (self.debug and \
+           self._xml is not None) or \
+           self._xml is None:
+            
+            if self.rulegetter is None:
+                if self.rule[:7] == 'file://':
+                    self.rulegetter = FileRuleGetter
+                
+                # FIXME: deal with relative files as well
+               
+                else:
+                    self.rulegetter = SubrequestRuleGetter
+            
+            self._xml, self._xml_url = self.rulegetter(
+                    self.rule, get_response, app, orig_req)
+            
+
+        if (self.debug and \
+           self._ruleset is not None) or \
+           self._ruleset is None:
+            try:
+                doc = XML(self._xml, base_url=self._xml_url)
+            except XMLSyntaxError, e:
+                raise Exception('Invalid syntax in %s: %s' % (self._xml_url, e))
+
+            assert doc.tag == 'ruleset', (
+                'Bad rule tag <%s> in document %s' % (doc.tag, self._xml_url))
+
+            self.ruleset = RuleSet.parse_xml(doc, self._xml_url)
 
         return self.ruleset
 
-    def get_ruleset_byfilename(self):
-        if not os.path.exists(self.rule):
-            return None
 
-        last_changed = os.path.getmtime(self.rule)
-        if self._last_changed != last_changed:
-            try:
-                f = open(self.rule)
-                self._rule_xml = f.read()
-                self._last_changed == last_changed
-            finally:
-                f.close()
+def SubrequestRuleGetter(rule, get_response, app, orig_req):
+    if not rule[:7] == 'http://' or \
+       not rule[:8] == 'https://':
+        rule = urlparse.urljoin(orig_req.url, rule)
 
-        rule_base_url = 'file://' + os.path.abspath(self.rule)
-        return self.get_ruleset(self._rule_xml, rule_base_url)
+    response = get_response(rule)
 
-    def get_ruleset_byresponse(self, response, base_url):
+    ## FIXME: better content-type detection
+    if response.content_type not in ('application/xml', 'text/xml'):
+        ## FIXME: better error
+        assert 0, "Bad response content-type: %s (from response %r)" % (
+            response.content_type, response)
+
+    if response.status_int in [200, 304]:
+        _xml = response.body
+    else:
+        ## FIXME: better error
+        assert 0, "Bad response: %r" % response
+
+    return _xml, rule
+
+
+def FileRuleGetter(rule, get_response, app, orig_req):
+    if rule[:7] != 'file://':
+        rule = 'file://'+rule
         
-        ## FIXME: better content-type detection
-        if response.content_type not in ('application/xml', 'text/xml'):
-            ## FIXME: better error
-            assert 0, "Bad response content-type: %s (from response %r)" % (
-                response.content_type, response)
+    assert os.path.exists(rule[7:]), "Rule file does not exists: "+rule
 
-        if response.status_int == 304 and \
-           self._rule_xml is not None and \
-           not self.debug:
-            pass
+    # FIXME
+    try:
+        f = open(rule[7:])
+        _xml = f.read()
+    finally:
+        f.close()
 
-        elif response.status_int == 200:
-            self._rule_xml = response.body
+    return _xml, rule
 
-        else:
-            ## FIXME: better error
-            assert 0, "Bad response: %r" % response
-
-        return self.get_ruleset(self._rule_xml, base_url)
-
-    def get_ruleset(self, rule_xml, rule_base_url):
-        from lxml.etree import XML
-        try:
-            doc = XML(rule_xml, base_url=rule_base_url)
-        except XMLSyntaxError, e:
-            raise Exception('Invalid syntax in %s: %s' % (rule_base_url, e))
-        assert doc.tag == 'ruleset', (
-            'Bad rule tag <%s> in document %s' % (doc.tag, rule_base_url))
-        return RuleSet.parse_xml(doc, rule_base_url)
 
 
 def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
@@ -644,21 +653,20 @@ def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
     assert rule or rule_uri or rule_filename, (
         "You must give one of rule or rule_uri or rule_filename")
 
-    from paste.deploy.converters import asbool
-    if debug is None:
-        debug = asbool(global_conf.get('debug', False))
-    else:
-        debug = asbool(debug)
+
+    debug = debug is None and \
+                asbool(global_conf.get('debug', False)) or \
+                asbool(debug)
     
+
     if rule_filename:
-        rule_getter = RuleGetter(rule_filename, debug)
+        rule_getter = RulesetGetter(rule_filename, debug, FileRuleGetter)
     elif rule_uri:
-        rule_getter = RuleGetter(rule_uri, debug)
+        rule_getter = RulesetGetter(rule_uri, debug, SubrequestRuleGetter)
     else:
-        rule_getter = RuleGetter(rule, debug)
+        rule_getter = RulesetGetter(rule, debug)
+    
 
     app = DeliveranceMiddleware(app, rule_getter)
-    
-    from deliverance import security
     return security.SecurityContext.middleware(app,
         display_local_files=debug, display_logging=debug)

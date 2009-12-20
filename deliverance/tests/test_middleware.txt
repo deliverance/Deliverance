@@ -105,16 +105,16 @@ Some pages:
 
 Now to deliverate:
 
-    >>> from deliverance.middleware import DeliveranceMiddleware, RuleGetter
+    >>> from deliverance.middleware import DeliveranceMiddleware, RulesetGetter
     >>> from deliverance.log import PrintingLogger
     >>> import logging
-    >>> deliv_uri = DeliveranceMiddleware(app, RuleGetter('/mytheme/rules.xml'),
+    >>> deliv_uri = DeliveranceMiddleware(app, RulesetGetter('/mytheme/rules.xml'),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
-    >>> deliv_url = DeliveranceMiddleware(app, RuleGetter('http://localhost/mytheme/rules.xml'),
+    >>> deliv_url = DeliveranceMiddleware(app, RulesetGetter('http://localhost/mytheme/rules.xml'),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
-    >>> deliv_filename = DeliveranceMiddleware(app, RuleGetter(rule_filename),
+    >>> deliv_filename = DeliveranceMiddleware(app, RulesetGetter('file://'+rule_filename),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
 
@@ -129,6 +129,7 @@ Now lets look at some plain content and its deliverated equivalent
 
 First the blog, fairly simple:
 
+    >>> import pdb; pdb.set_trace()
     >>> print compare_request('/blog/index.html', deliv_uri) # doctest: +REPORT_UDIFF
     Original content:
     <html><head><title>A blog post</title>
