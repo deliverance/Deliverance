@@ -646,7 +646,7 @@ def FileRuleGetter(rule, get_response, app, orig_req):
 
 def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
                                 rule_uri=None, rule_filename=None,
-                                execute_pyref=False):
+                                execute_pyref=None):
 
     # FIXME: rule_uri and rule_filename should be marked as depreached 
     assert not rule or not rule_uri or not rule_filename, (
@@ -659,6 +659,7 @@ def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
                 asbool(global_conf.get('debug', False)) or \
                 asbool(debug)
     
+    execute_pyref = asbool(execute_pyref)
 
     if rule_filename:
         rule_getter = RulesetGetter(rule_filename, debug, FileRuleGetter)
