@@ -606,7 +606,7 @@ class TransformAction(AbstractAction):
             return attr2
         ## FIXME: is a join really the right method?
         attr = set(attr1)
-        attr |= attr2
+        attr |= set(attr2)
         return list(attr)
 
     def apply_transformation(self, content_type, content_els, attributes, 
