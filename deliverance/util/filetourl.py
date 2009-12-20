@@ -13,7 +13,7 @@ def filename_to_url(filename):
     Convert a path to a file: URL.  The path will be made absolute.
     """
     filename = os.path.normcase(os.path.abspath(filename))
-    url = urllib.quote(filename)
+    url = filename
     if drive_re.match(url):
         url = url[0] + '|' + url[2:]
     url = url.replace(os.path.sep, '/')
