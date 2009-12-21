@@ -127,6 +127,14 @@ Now lets look at some plain content and its deliverated equivalent
     ...     result += '\nThemed content:\n' + themed_res.body.strip()
     ...     return result
 
+Somehow compare_request is failing with WebOb 0.7.1 when it's called twice after
+the DeliveranceMiddleware has gotten involved. The third line here currently fails
+with an AssertionError about an incorrect Content-Length:
+
+    >>> null = compare_request('/blog/index.html', app)
+    >>> null = compare_request('/blog/index.html', deliv_uri)
+    >>> null = compare_request('/blog/index.html', app)
+
 First the blog, fairly simple:
 
     >>> print compare_request('/blog/index.html', deliv_uri) # doctest: +REPORT_UDIFF
