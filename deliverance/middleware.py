@@ -103,6 +103,7 @@ class DeliveranceMiddleware(object):
             resp.decode_content()
             resp.body = self._substitute_jsenable(resp.body)
         resp = log.finish_request(req, resp)
+
         return resp(environ, start_response)
 
     _title_re = re.compile(r'<title>(.*?)</title>', re.I|re.S)
@@ -674,3 +675,8 @@ def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
         app,
         display_local_files=debug, display_logging=debug,
         execute_pyref=execute_pyref)
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testfile('tests/test_middleware.txt')
+
