@@ -121,6 +121,11 @@ Now to deliverate:
 Now lets look at some plain content and its deliverated equivalent
 
     >>> def compare_request(path, deliv):
+    ...     # work around a possible bug in WebOb where content-length 
+    ...     # was getting stuck with a previous value. i don't think it
+    ...     # has any relevance outside of test setups.
+    ...     app[path].body = app[path].body
+    ...
     ...     raw_res = Request.blank(path).get_response(app)
     ...     result = 'Original content:\n' + raw_res.body.strip()
     ...     themed_res = Request.blank(path).get_response(deliv)
