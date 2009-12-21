@@ -121,15 +121,14 @@ Now to deliverate:
 Now lets look at some plain content and its deliverated equivalent
 
     >>> def compare_request(path, deliv):
-    ...     resp = Request.blank(path).get_response(app)
-    ...     result = 'Original content:\n'+resp.body.strip()
-    ...     resp = Request.blank(path).get_response(deliv)
-    ...     result += '\nThemed content:\n'+resp.body.strip()
+    ...     raw_res = Request.blank(path).get_response(app)
+    ...     result = 'Original content:\n' + raw_res.body.strip()
+    ...     themed_res = Request.blank(path).get_response(deliv)
+    ...     result += '\nThemed content:\n' + themed_res.body.strip()
     ...     return result
 
 First the blog, fairly simple:
 
-    >>> import pdb; pdb.set_trace()
     >>> print compare_request('/blog/index.html', deliv_uri) # doctest: +REPORT_UDIFF
     Original content:
     <html><head><title>A blog post</title>
@@ -166,7 +165,10 @@ First the blog, fairly simple:
 
 Should be the same in all 3 cases
 
-    >>> compare_request('/blog/index.html', deliv_uri) == compare_request('/blog/index.html', deliv_url) == compare_request('/blog/index.html', deliv_filename)
+    >>> first = compare_request('/blog/index.html', deliv_uri)
+    >>> second = compare_request('/blog/index.html', deliv_url)
+    >>> third = compare_request('/blog/index.html', deliv_filename)
+    >>> first == second == third
     True
 
 Now the about page, with its breakout style:
