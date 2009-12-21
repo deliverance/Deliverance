@@ -224,8 +224,7 @@ Now the magic response, which shouldn't get themed at all:
     Themed content:
     <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
 
-
-Hopefully Deliverance won't blow up if the content response is empty:
+Deliverance should not blow up if the content response is empty:
 
     >>> app['/empty'] = Response('')
     >>> print compare_request('/empty', deliv_uri)
@@ -234,3 +233,30 @@ Hopefully Deliverance won't blow up if the content response is empty:
     Themed content:
     <BLANKLINE>
 
+And Deliverance ought to correctly preserve HTML entities, but it seems it doesn't:
+
+    >>> app['/html'] = Response("One … two")
+    >>> print compare_request('/html', deliv_uri) # doctest: +REPORT_UDIFF
+    Original content:
+    One … two
+    Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+    <html><head><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+        @import "http://localhost/style2.css";
+      </style></head><body>
+    <BLANKLINE>
+      <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+      <div id="content-wrapper">
+        <a name="top"></a>
+        <div id="content"><p>One … two</p></div>
+        <a href="#top">Back to top</a>
+      </div>
+    <BLANKLINE>
+      <div id="footer">
+        <span id="copyright">Copyright (C)</span> 2000 Some Corporation
+      </div>
+    <BLANKLINE>
+     </body></html>
