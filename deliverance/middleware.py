@@ -93,6 +93,9 @@ class DeliveranceMiddleware(object):
         if resp.status_int in (301, 302, 304):
             return resp(environ, start_response)
             
+        if resp.content_length == 0:
+            return resp(environ, start_response)
+
         if clientside and req.url not in self.known_html:
             log.debug(self, '%s would have been a clientside check; in future will be since we know it is HTML'
                       % req.url)

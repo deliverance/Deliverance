@@ -225,3 +225,12 @@ Now the magic response, which shouldn't get themed at all:
     <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
 
 
+Hopefully Deliverance won't blow up if the content response is empty:
+
+    >>> app['/empty'] = Response('')
+    >>> print compare_request('/empty', deliv_uri)
+    Original content:
+    <BLANKLINE>
+    Themed content:
+    <BLANKLINE>
+
