@@ -632,6 +632,7 @@ def SubrequestRuleGetter(rule, get_response, app, orig_req):
     return _xml, rule
 
 
+# FIXME: make class out of getters
 def FileRuleGetter(rule, get_response, app, orig_req):
     if rule[:7] != 'file://':
         rule = 'file://'+rule
