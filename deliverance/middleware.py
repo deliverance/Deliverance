@@ -609,6 +609,7 @@ class RulesetGetter(object):
         return self.ruleset
 
 
+# FIXME: make class out of getters
 def SubrequestRuleGetter(rule, get_response, app, orig_req):
     if not rule[:7] == 'http://' or \
        not rule[:8] == 'https://':
