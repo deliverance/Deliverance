@@ -87,13 +87,19 @@ class RuleSet(object):
         remove_content_attribs(theme_doc)
         ## FIXME: handle caching?
 
-        tree = theme_doc.getroottree()
         content_tree = content_doc.getroottree()
 
         if "XHTML" in content_tree.docinfo.doctype:
             method = "xml"
         else:
             method = "html"
+
+        ## FIXME: this seems like a terrible way to preserve the content's DOCTYPE
+        if resp.body.strip().startswith("<!DOCTYPE"):
+            theme_str = tostring(theme_doc)
+            theme_str = content_tree.docinfo.doctype + theme_str
+            theme_doc = document_fromstring(theme_str)
+        tree = theme_doc.getroottree()
 
         resp.body = tostring(tree, method=method)
         return resp
