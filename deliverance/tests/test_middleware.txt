@@ -64,11 +64,11 @@ The rule xml:
     ...   </rule>
     ... </ruleset>'''
 
-rule file through URI
+Rule files can be published and fetched with a subrequest:
 
     >>> app['/mytheme/rules.xml'] = Response(rule_xml, content_type="application/xml")
 
-rule file through FILENAME
+Rule files can also be read directly from the filesystem. Here's one:
 
     >>> import tempfile
     >>> rule_filename_pos, rule_filename = tempfile.mkstemp()
@@ -76,7 +76,7 @@ rule file through FILENAME
     >>> f.write(rule_xml)
     >>> f.close()
 
-Some pages:
+Now let's set up some pages for Deliverance to work with:
 
     >>> app['/blog/index.html'] = Response('''\
     ... <html><head><title>A blog post</title>
@@ -103,22 +103,21 @@ Some pages:
     >>> app['/magic2'] = Response('''\
     ... <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>''')
 
-Now to deliverate:
+We'll set up one DeliveranceMiddleware using the published rules, and
+another using the rule file:
 
-    >>> from deliverance.middleware import DeliveranceMiddleware, RulesetGetter
+    >>> from deliverance.middleware import DeliveranceMiddleware, FileRuleGetter, SubrequestRuleGetter
     >>> from deliverance.log import PrintingLogger
     >>> import logging
-    >>> deliv_uri = DeliveranceMiddleware(app, RulesetGetter('/mytheme/rules.xml'),
-    ...                               PrintingLogger,
-    ...                               log_factory_kw=dict(print_level=logging.WARNING))
-    >>> deliv_url = DeliveranceMiddleware(app, RulesetGetter('http://localhost/mytheme/rules.xml'),
-    ...                               PrintingLogger,
-    ...                               log_factory_kw=dict(print_level=logging.WARNING))
-    >>> deliv_filename = DeliveranceMiddleware(app, RulesetGetter('file://'+rule_filename),
+    >>> deliv_filename = DeliveranceMiddleware(app, FileRuleGetter(rule_filename),
+    ...                                     PrintingLogger,
+    ...                                     log_factory_kw=dict(print_level=logging.WARNING))
+    >>> deliv_url = DeliveranceMiddleware(app, SubrequestRuleGetter('http://localhost/mytheme/rules.xml'),
     ...                               PrintingLogger,
     ...                               log_factory_kw=dict(print_level=logging.WARNING))
 
-Now lets look at some plain content and its deliverated equivalent
+Now let's look at some plain content and its deliverated equivalent. Here's
+a helper function to make the content easy to compare:
 
     >>> def compare_request(path, deliv):
     ...     # work around WebOb bug fixed here:
@@ -131,17 +130,9 @@ Now lets look at some plain content and its deliverated equivalent
     ...     result += '\nThemed content:\n' + themed_res.body.strip()
     ...     return result
 
-Somehow compare_request is failing with WebOb 0.7.1 when it's called twice after
-the DeliveranceMiddleware has gotten involved. The third line here currently fails
-with an AssertionError about an incorrect Content-Length:
+First we'll look at the blog, fairly simple:
 
-    >>> null = compare_request('/blog/index.html', app)
-    >>> null = compare_request('/blog/index.html', deliv_uri)
-    >>> null = compare_request('/blog/index.html', app)
-
-First the blog, fairly simple:
-
-    >>> print compare_request('/blog/index.html', deliv_uri) # doctest: +REPORT_UDIFF
+    >>> print compare_request('/blog/index.html', deliv_filename) # doctest: +REPORT_UDIFF
     Original content:
     <html><head><title>A blog post</title>
     <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
@@ -175,12 +166,11 @@ First the blog, fairly simple:
     <BLANKLINE>
      </body></html>
 
-Should be the same in all 3 cases
+Should be the same in both cases:
 
-    >>> first = compare_request('/blog/index.html', deliv_uri)
+    >>> first = compare_request('/blog/index.html', deliv_filename)
     >>> second = compare_request('/blog/index.html', deliv_url)
-    >>> third = compare_request('/blog/index.html', deliv_filename)
-    >>> first == second == third
+    >>> first == second
     True
 
 Now the about page, with its breakout style:
@@ -217,7 +207,7 @@ Now the magic response, which shouldn't get themed at all:
     <html><head></head><body>A simple page</body></html>
     Themed content:
     <html><head></head><body>A simple page</body></html>
-    >>> print compare_request('/magic2', deliv_uri)
+    >>> print compare_request('/magic2', deliv_url)
     Original content:
     <html><head><meta http-equiv="x-no-deliverate" content="1" /></head><body>something</body></html>
     Themed content:
@@ -226,7 +216,7 @@ Now the magic response, which shouldn't get themed at all:
 Deliverance should not blow up if the content response is empty:
 
     >>> app['/empty'] = Response('')
-    >>> print compare_request('/empty', deliv_uri)
+    >>> print compare_request('/empty', deliv_filename)
     Original content:
     <BLANKLINE>
     Themed content:
@@ -235,7 +225,7 @@ Deliverance should not blow up if the content response is empty:
 Let's also make sure Deliverance correctly preserves HTML entities:
 
     >>> app['/html'] = Response("One &hellip; two")
-    >>> print compare_request('/html', deliv_uri) # doctest: +REPORT_UDIFF
+    >>> print compare_request('/html', deliv_filename) # doctest: +REPORT_UDIFF
     Original content:
     One &hellip; two
     Themed content:
@@ -257,5 +247,152 @@ Let's also make sure Deliverance correctly preserves HTML entities:
       <div id="footer">
         <span id="copyright">Copyright (C)</span> 2000 Some Corporation
       </div>
+    <BLANKLINE>
+     </body></html>
+
+When you are using a rule file from the filesystem, it will not be re-read
+on every request by default. So if we change the rules on the filesystem
+and make a request through the existing DeliveranceMiddleware, there will be
+no change.
+
+Here we'll remove the theming rules for the blog:
+
+    >>> new_rule_xml = '''\
+    ... <ruleset>
+    ...   <match path="exact:/about.html" class="breakout" />
+    ...   <match request-header="X-No-Deliverate: boolean:true" abort="1" />
+    ...   <match response-header="X-No-Deliverate: boolean:true" abort="1" />
+    ...   <match environ="wsgi.url_scheme: https" class="via-https" />
+    ...   <theme href="/theme.html" />
+    ...   <rule class="default">
+    ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
+    ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
+    ...   </rule>
+    ...   <rule class="breakout">
+    ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
+    ...     <replace content="children:body" theme="children:#content-wrapper" nocontent="abort" />
+    ...   </rule>
+    ... </ruleset>'''
+    >>> f = open(rule_filename, 'w+')
+    >>> f.write(new_rule_xml)
+    >>> f.close()
+
+    >>> print compare_request('/blog/index.html', deliv_filename) # doctest: +REPORT_UDIFF
+    Original content:
+    <html><head><title>A blog post</title>
+    <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
+    </head>
+    <body>
+    Some junk
+    <div id="content">the blog post <b>with some style</b></div>
+    some more junk
+    <div id="footer">a footer that will be ignored</div>
+    <div id="cc">Creative Commons License</div>
+    </body></html>
+    Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+    <html><head><link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed"><title>A blog post</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+        @import "http://localhost/style2.css";
+      </style></head><body>
+    <BLANKLINE>
+      <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+      <div id="content-wrapper">
+        <a name="top"></a>
+        <div id="content">the blog post <b>with some style</b></div>
+        <a href="#top">Back to top</a>
+      </div>
+    <BLANKLINE>
+      <div id="footer">
+         2000 Some Corporation
+      </div>
+    <BLANKLINE>
+     </body></html>
+
+However, if we set always_reload=True in the FileRuleGetter, the rules
+will be re-read from the file on every request:
+
+    >>> f = open(rule_filename, 'w+')
+    >>> f.write(rule_xml)
+    >>> f.close()
+    >>> deliv_filename = DeliveranceMiddleware(app,
+    ...                                     FileRuleGetter(rule_filename, always_reload=True),
+    ...                                     PrintingLogger,
+    ...                                     log_factory_kw=dict(print_level=logging.WARNING))
+
+    >>> print compare_request('/blog/index.html', deliv_filename) # doctest: +REPORT_UDIFF
+    Original content:
+    <html><head><title>A blog post</title>
+    <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
+    </head>
+    <body>
+    Some junk
+    <div id="content">the blog post <b>with some style</b></div>
+    some more junk
+    <div id="footer">a footer that will be ignored</div>
+    <div id="cc">Creative Commons License</div>
+    </body></html>
+    Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+    <html><head><link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed"><title>A blog post</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+        @import "http://localhost/style2.css";
+      </style></head><body>
+    <BLANKLINE>
+      <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+      <div id="content-wrapper">
+        <a name="top"></a>
+        <div id="content">the blog post <b>with some style</b></div>
+        <a href="#top">Back to top</a>
+      </div>
+    <BLANKLINE>
+      <div id="footer">
+         2000 Some Corporation
+      </div>
+    <BLANKLINE>
+     </body></html>
+
+    >>> f = open(rule_filename, 'w+')
+    >>> f.write(new_rule_xml)
+    >>> f.close()
+
+    >>> print compare_request('/blog/index.html', deliv_filename) # doctest: +REPORT_UDIFF
+    Original content:
+    <html><head><title>A blog post</title>
+    <link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed" />
+    </head>
+    <body>
+    Some junk
+    <div id="content">the blog post <b>with some style</b></div>
+    some more junk
+    <div id="footer">a footer that will be ignored</div>
+    <div id="cc">Creative Commons License</div>
+    </body></html>
+    Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+    <html><head><link href="rss.xml" rel="alternate" type="application/rss+xml" title="RSS Feed"><title>A blog post</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+        @import "http://localhost/style2.css";
+      </style></head><body>
+    <BLANKLINE>
+      <div id="header" class="title-bar">
+        <h1 id="title">This is the theme title</h1>
+        <div class="topnav"></div>
+      </div>
+      <div id="content-wrapper">
+        <a name="top"></a>
+        <div id="content">
+    Some junk
+    <div id="content">the blog post <b>with some style</b></div>
+    some more junk
+    <div id="cc">Creative Commons License</div>
+    </div>
+        <a href="#top">Back to top</a>
+      </div>
+    <BLANKLINE>
+      <div id="footer">a footer that will be ignored</div>
     <BLANKLINE>
      </body></html>

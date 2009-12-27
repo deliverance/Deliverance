@@ -553,129 +553,105 @@ fp = open(os.path.join(os.path.dirname(__file__), 'media', 'clientside.js'))
 CLIENTSIDE_JAVASCRIPT = fp.read()
 del fp
 
-
-
-
-from paste.deploy.converters import asbool
 from lxml.etree import XML
-from deliverance import security
+import urlparse
 
-
-class RulesetGetter(object):
+class SubrequestRuleGetter(object):
     """
+    An implementation of `rule_getter` for `DeliveranceMiddleware`.
+    This retrieves and instantiates the rules using a subrequest with
+    the given url.
     """
-   
-    _ruleset = None
-    _xml_url = None
-    _xml = None
 
-    def __init__(self, rule, debug=False, rulegetter=None):
-        self.rule = rule
-        self.debug = debug
-        self.rulegetter = rulegetter
+    _response = None
+    
+    def __init__(self, url):
+        self.url = url
+        
+    def __call__(self, get_resource, app, orig_req):
+        url = urlparse.urljoin(orig_req.url, self.url)
+        doc_resp = get_resource(url)
+        if doc_resp.status_int == 304 and self._response is not None:
+            doc_resp = self._response
+        elif doc_resp.status_int == 200:
+            self._response = doc_resp
+        else:
+            ## FIXME: better error
+            assert 0, "Bad response: %r" % doc_resp
+        ## FIXME: better content-type detection
+        if doc_resp.content_type not in ('application/xml', 'text/xml',):
+            ## FIXME: better error
+            assert 0, "Bad response content-type: %s (from response %r)" % (
+                doc_resp.content_type, doc_resp)
+        doc_text = doc_resp.body
+        try:
+            doc = XML(doc_text, base_url=url)
+        except XMLSyntaxError, e:
+            raise Exception('Invalid syntax in %s: %s' % (url, e))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, url))
+        return RuleSet.parse_xml(doc, url)
 
-    def __call__(self, get_response, app, orig_req):
+from lxml.etree import parse
+class FileRuleGetter(object):
+    """
+    An implementation of `rule_getter` for `DeliveranceMiddleware`.
+    This reads the rules from a file.
 
-        if (self.debug and \
-           self._xml is not None) or \
-           self._xml is None:
-            
-            if self.rulegetter is None:
-                if self.rule[:7] == 'file://':
-                    self.rulegetter = FileRuleGetter
-                
-                # FIXME: deal with relative files as well
-               
-                else:
-                    self.rulegetter = SubrequestRuleGetter
-            
-            self._xml, self._xml_url = self.rulegetter(
-                    self.rule, get_response, app, orig_req)
-            
+    If always_reload=True, the file will be re-read on every request.
+    """
 
-        if (self.debug and \
-           self._ruleset is not None) or \
-           self._ruleset is None:
-            try:
-                doc = XML(self._xml, base_url=self._xml_url)
-            except XMLSyntaxError, e:
-                raise Exception('Invalid syntax in %s: %s' % (self._xml_url, e))
+    def load_rules(self):
+        filename = self.filename
 
-            assert doc.tag == 'ruleset', (
-                'Bad rule tag <%s> in document %s' % (doc.tag, self._xml_url))
+        try:
+            doc = parse(filename, base_url='file://'+os.path.abspath(filename)).getroot()
+        except XMLSyntaxError, e:
+            raise Exception('Invalid syntax in %s: %s' % (filename, e))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
+        assert doc.tag == 'ruleset', (
+            'Bad rule tag <%s> in document %s' % (doc.tag, filename))
+        self.ruleset = RuleSet.parse_xml(doc, filename)
+        
+    def __init__(self, filename, always_reload=False):
+        self.filename = filename
+        self.always_reload = always_reload
+        self.load_rules()
 
-            self.ruleset = RuleSet.parse_xml(doc, self._xml_url)
-
+    def __call__(self, get_resource, app, orig_req):
+        if self.always_reload:
+            self.load_rules()
         return self.ruleset
 
+from deliverance import security
+from paste.deploy.converters import asbool
 
-# FIXME: make class out of getters
-def SubrequestRuleGetter(rule, get_response, app, orig_req):
-    if not rule[:7] == 'http://' or \
-       not rule[:8] == 'https://':
-        rule = urlparse.urljoin(orig_req.url, rule)
-
-    response = get_response(rule)
-
-    ## FIXME: better content-type detection
-    if response.content_type not in ('application/xml', 'text/xml'):
-        ## FIXME: better error
-        assert 0, "Bad response content-type: %s (from response %r)" % (
-            response.content_type, response)
-
-    if response.status_int in [200, 304]:
-        _xml = response.body
-    else:
-        ## FIXME: better error
-        assert 0, "Bad response: %r" % response
-
-    return _xml, rule
-
-
-# FIXME: make class out of getters
-def FileRuleGetter(rule, get_response, app, orig_req):
-    if rule[:7] != 'file://':
-        rule = 'file://'+rule
-        
-    assert os.path.exists(rule[7:]), "Rule file does not exists: "+rule
-
-    # FIXME
-    try:
-        f = open(rule[7:])
-        _xml = f.read()
-    finally:
-        f.close()
-
-    return _xml, rule
-
-
-
-def make_deliverance_middleware(app, global_conf, rule=None, debug=None,
+def make_deliverance_middleware(app, global_conf,
                                 rule_uri=None, rule_filename=None,
+                                debug=None,
                                 execute_pyref=None):
 
-    # FIXME: rule_uri and rule_filename should be marked as depreached 
-    assert not rule or not rule_uri or not rule_filename, (
-        "You cannot give rule, rule_uri and rule_filename settings to Deliverance middleware")
-    assert rule or rule_uri or rule_filename, (
-        "You must give one of rule or rule_uri or rule_filename")
+    assert sum([bool(x) for x in [rule_uri, rule_filename]]) == 1, (
+        "You must give one, and only one, of rule_uri or rule_filename")
 
-
-    debug = debug is None and \
-                asbool(global_conf.get('debug', False)) or \
-                asbool(debug)
+    if debug is None:
+        debug = asbool(global_conf.get('debug', False))
+    else:
+        debug = asbool(debug)
+    
+    if rule_filename:
+        rule_getter = FileRuleGetter(rule_filename, always_reload=debug)
+    elif rule_uri.startswith('file://'):
+        rule_uri = rule_uri[len('file://'):]
+        rule_getter = FileRuleGetter(rule_uri, always_reload=debug)
+    else:
+        rule_getter = SubrequestRuleGetter(rule_uri)
     
     execute_pyref = asbool(execute_pyref)
 
-    if rule_filename:
-        rule_getter = RulesetGetter(rule_filename, debug, FileRuleGetter)
-    elif rule_uri:
-        rule_getter = RulesetGetter(rule_uri, debug, SubrequestRuleGetter)
-    else:
-        rule_getter = RulesetGetter(rule, debug)
-    
-
     app = DeliveranceMiddleware(app, rule_getter)
+
     return security.SecurityContext.middleware(
         app,
         display_local_files=debug, display_logging=debug,
