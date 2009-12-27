@@ -1,0 +1,11 @@
+This document is a changelog "since the last release on PyPI"
+
+ * FileRuleGetter now reloads the rules file on every request if it's initialized with always_reload=True
+   In the Paste Deploy .ini file, debug=true will accomplish this
+
+ * If the content document declares an XHTML doctype, then the output will be valid XML. The doctype itself
+   isn't preserved though (this is bug #28)
+
+ * rule_uri can now be a file:// URI
+
+And .. some other stuff? I need to look this up and remember.
