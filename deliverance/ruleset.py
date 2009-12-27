@@ -68,6 +68,7 @@ class RuleSet(object):
             theme_href = theme.resolve_href(req, resp, log)
             theme_doc = self.get_theme(theme_href, resource_fetcher, log)
             content_doc = self.parse_document(resp.body, req.url)
+
             run_standard = True
             for rule in rules:
                 if rule.match is not None:
@@ -85,7 +86,16 @@ class RuleSet(object):
             return resp
         remove_content_attribs(theme_doc)
         ## FIXME: handle caching?
-        resp.body = tostring(theme_doc.getroottree())
+
+        tree = theme_doc.getroottree()
+        content_tree = content_doc.getroottree()
+
+        if "XHTML" in content_tree.docinfo.doctype:
+            method = "xml"
+        else:
+            method = "html"
+
+        resp.body = tostring(tree, method=method)
         return resp
 
     def check_clientside(self, req, log):
