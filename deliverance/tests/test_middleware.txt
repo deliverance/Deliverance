@@ -451,11 +451,13 @@ Currently the self-closing tags are being preserved but the DOCTYPE is not:
     <BLANKLINE>
      </body></html>
 
-In the above example note also that meta tags seem to be getting dropped
-even though we have a rule to preserve them -- I think that's because of
-the following lxml.html behavior, which confuses me:
+In the above example note also that meta Content-Type tags are dropped
+even though we have a rule to preserve them -- I think that's related
+to the following lxml.html behavior:
 
    >>> from lxml.html import tostring, fromstring
    >>> x="""<html><head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"></meta></head></html>"""
    >>> tostring(fromstring(x))
    '<html><head></head></html>'
+   >>> tostring(fromstring(x), include_meta_content_type=True)
+   '<html><head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"></head></html>'
