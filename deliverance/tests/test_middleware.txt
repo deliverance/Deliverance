@@ -48,9 +48,10 @@ The rule xml:
     ...   <match response-header="X-No-Deliverate: boolean:true" abort="1" />
     ...   <match environ="wsgi.url_scheme: https" class="via-https" />
     ...   <theme href="/theme.html" />
-    ...   <rule>
+    ...   <match path="exact:/magic" class="magic" />
+    ...   <rule class="magic">
     ...     <prepend content="elements:/html/head/meta"
-    ...              theme="children:/html/head" nocontent="ignore" />
+    ...              theme="children:/html/head"/>
     ...   </rule>
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
@@ -409,6 +410,7 @@ preserved rather than being rewritten as unclosed tags. Let's see:
     ... "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     ... <html><head>
     ... <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    ... <meta http-equiv="refresh" content="5" />
     ... </head><body> 
     ... <img src="foo.png" /> 
     ... A simple page</body></html>"""
@@ -438,7 +440,7 @@ Now let's see what happens when Deliverance is done with it:
         <div class="topnav"></div>
       </div>
       <div id="content-wrapper">
-        <a name="top"></a>
+        <a name="top" id="top"></a>
         <div id="content"> 
     <img src="foo.png" /> 
     A simple page</div>
@@ -451,8 +453,8 @@ Now let's see what happens when Deliverance is done with it:
     <BLANKLINE>
      </body></html>
 
-It worked. (There's a new id="top" attribute on the <a name="top"> tag;
-is that required for XHTML?) 
+It worked. There's a new id="top" attribute on the <a name="top"> tag;
+it's required for XHTML: http://www.w3.org/TR/xhtml1/#h-4.10
 
 In the above example note also that meta Content-Type tags are dropped
 even though we have a rule to preserve them -- I think that's related
