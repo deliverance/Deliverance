@@ -11,4 +11,5 @@ This document is a changelog "since the last release on PyPI"
 
  * rule_uri can now be a file:// URI
 
-And .. some other stuff? I need to look this up and remember.
+ * You can now set execute_pyref=true in Paste Deploy .ini file to allow pyrefs in the rules when
+   using the Deliverance middleware directly. 
