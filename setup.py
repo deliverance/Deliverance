@@ -11,6 +11,7 @@ function to XSLT but using a simpler XML-based language to express the
 transformation.
 
 New in this release:
+
 %s
 """ % open('changes_on_trunk.txt').read(),
       classifiers=[
