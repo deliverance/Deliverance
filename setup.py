@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.3c2'
+version = '0.3c3'
 
 setup(name='Deliverance',
       version=version,
