@@ -1,27 +1,25 @@
-This document is a changelog "since the last release on PyPI"
+* FileRuleGetter now reloads the rules file on every request if Deliverance is initialized
+  with debug=true.
 
- * FileRuleGetter now reloads the rules file on every request if Deliverance is initialized
-   with debug=true.
+* If the content document declares an XHTML doctype, then the output will be valid XML. (#28)
 
- * If the content document declares an XHTML doctype, then the output will be valid XML. (#28)
+* If the content document declares any doctype, that doctype will be preserved in the output.
+  Otherwise, the theme's doctype will be used if present. If neither document has a doctype,
+  the default is HTML 4.0 Transitional. (#28)
 
- * If the content document declares any doctype, that doctype will be preserved in the output.
-   Otherwise, the theme's doctype will be used if present. If neither document has a doctype,
-   the default is HTML 4.0 Transitional. (#28)
+* rule_uri can now be a file:// URI
 
- * rule_uri can now be a file:// URI
+* You can now set execute_pyref=true in Paste Deploy .ini file to allow pyrefs in the rules when
+  using the Deliverance middleware directly. 
 
- * You can now set execute_pyref=true in Paste Deploy .ini file to allow pyrefs in the rules when
-   using the Deliverance middleware directly. 
+* Fixed "join_attributes tries to join on list and set which is not valid" (#18)
 
- * Fixed "join_attributes tries to join on list and set which is not valid" (#18)
+* Fixed util.filetourl breakage on Windows. (#13)
 
- * Fixed util.filetourl breakage on Windows. (#13)
+* Added XInclude support in rules file.
 
- * Added XInclude support in rules file.
+* Empty links in the theme like <a href=""> both work now; in the last release Deliverance would
+  throw an error when trying to parse these. (#31)
 
- * Empty links in the theme like <a href=""> both work now; in the last release Deliverance would
-   throw an error when trying to parse these. (#31)
-
- * When fetching the content document, responses with Content-Length:0 will be passed through to
-   the client. Previously these would cause an error. (#25)
+* When fetching the content document, responses with Content-Length:0 will be passed through to
+  the client. Previously these would cause an error. (#25)
