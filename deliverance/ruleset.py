@@ -60,10 +60,11 @@ class RuleSet(object):
                         theme = rule.theme
         if theme is None:
             theme = self.default_theme
-            ## FIXME: error if not theme still
+
         if theme is None:
             log.error(self, "No theme has been defined for the request")
             return resp
+
         try:
             theme_href = theme.resolve_href(req, resp, log)
             theme_doc = self.get_theme(theme_href, resource_fetcher, log)
@@ -120,7 +121,7 @@ class RuleSet(object):
         log.theme_url = url
         ## FIXME: should do caching
         ## FIXME: check response status
-        resp = resource_fetcher(url)
+        resp = resource_fetcher(url, retry_inner_if_not_200=True)
         if resp.status_int != 200:
             log.fatal(
                 self, "The resource %s was not 200 OK: %s" % (url, resp.status))
