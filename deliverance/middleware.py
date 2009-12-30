@@ -64,11 +64,11 @@ class DeliveranceMiddleware(object):
             log = self.log_factory(req, self, **self.log_factory_kw)
             ## FIXME: should this be put in both the orig_req and this req?
             req.environ['deliverance.log'] = log
-        def resource_fetcher(url):
+        def resource_fetcher(url, retry_inner_if_not_200=False):
             """
             Return the Response object for the given URL
             """
-            return self.get_resource(url, orig_req, log)
+            return self.get_resource(url, orig_req, log, retry_inner_if_not_200)
         if req.path_info_peek() == '.deliverance':
             req.path_info_pop()
             resp = self.internal_app(req, resource_fetcher)
@@ -150,11 +150,21 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             resp.md5_etag()
         return resp
 
-    def get_resource(self, url, orig_req, log):
+    def get_resource(self, url, orig_req, log, retry_inner_if_not_200=False):
         """
         Gets the resource at the given url, using the original request
         `orig_req` as the basis for constructing the subrequest.
         Returns a `webob.Response` object.
+
+        If `url.startswith(orig_req.application_url + '/')`, then Deliverance
+        will try to fetch the resource by making a subrequest to the app that
+        is being wrapped by Deliverance, instead of an external subrequest.
+
+        This can cause problems in some setups -- see #16. To work around
+        this, if `retry_inner_if_not_200` is True, then, in the situation
+        described above, non-200 responses from the inner app will be tossed
+        out, and the request will be retried as an external http request.
+        Currently this is used only by RuleSet.get_theme
         """
         assert url is not None
         if url.lower().startswith('file:'):
@@ -181,6 +191,7 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             subresp.body = f.read()
             f.close()
             return subresp
+
         elif url.startswith(orig_req.application_url + '/'):
             subreq = orig_req.copy_get()
             subreq.environ['deliverance.subrequest_original_environ'] = orig_req.environ
@@ -198,14 +209,19 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             ## FIXME: handle non-200?
             log.debug(self, 'Internal request for %s: %s content-type: %s',
                             url, subresp.status, subresp.content_type)
-            return subresp
-        else:
-            ## FIXME: pluggable subrequest handler?
-            subreq = Request.blank(url)
-            subresp = subreq.get_response(proxy_exact_request)
-            log.debug(self, 'External request for %s: %s content-type: %s',
-                      url, subresp.status, subresp.content_type)
-            return subresp
+
+            if not retry_inner_if_not_200:
+                return subresp
+            if subresp.status_int != 200:
+                log.debug(self,
+                          'Internal request for %s was not 200 OK; retrying as external request.' % url)
+            
+        ## FIXME: pluggable subrequest handler?
+        subreq = Request.blank(url)
+        subresp = subreq.get_response(proxy_exact_request)
+        log.debug(self, 'External request for %s: %s content-type: %s',
+                  url, subresp.status, subresp.content_type)
+        return subresp
 
     def link_to(self, req, url, source=False, line=None, selector=None, 
                 browse=False):
