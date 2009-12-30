@@ -8,6 +8,9 @@ class GarbageCollectingMiddleware(object):
     def __init__(self, app):
         self.app = app
 
+    def log_description(self):
+        return "garbagecollect"
+
     def __call__(self, environ, start_response):
         res = self.app(environ, start_response)
 
