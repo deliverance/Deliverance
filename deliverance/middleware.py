@@ -43,6 +43,7 @@ class DeliveranceMiddleware(object):
         self.rule_getter = rule_getter
         self.log_factory = log_factory
         self.log_factory_kw = log_factory_kw
+
         ## FIXME: clearly, this should not be a dictionary:
         self.known_html = set()
         self.known_titles = {}
@@ -212,12 +213,21 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
 
             if not retry_inner_if_not_200:
                 return subresp
-            if subresp.status_int != 200:
+
+            if subresp.status_int == 200:
+                return subresp
+            elif 'x-deliverance-theme-subrequest' in orig_req.headers:
+                log.debug(self, 
+                          'Internal request for %s was not 200 OK; '
+                          'returning it anyway.' % url)
+                return subresp
+            else:
                 log.debug(self,
                           'Internal request for %s was not 200 OK; retrying as external request.' % url)
             
         ## FIXME: pluggable subrequest handler?
         subreq = Request.blank(url)
+        subreq.headers['x-deliverance-theme-subrequest'] = "1"
         subresp = subreq.get_response(proxy_exact_request)
         log.debug(self, 'External request for %s: %s content-type: %s',
                   url, subresp.status, subresp.content_type)
