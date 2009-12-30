@@ -27,7 +27,7 @@ class RuleSet(object):
         self.default_theme = default_theme
         self.source_location = source_location
 
-    def apply_rules(self, req, resp, resource_fetcher, log):
+    def apply_rules(self, req, resp, resource_fetcher, log, default_theme=None):
         """
         Apply the whatever the appropriate rules are to the request/response.
         """
@@ -61,6 +61,10 @@ class RuleSet(object):
         if theme is None:
             theme = self.default_theme
 
+        if theme is None and default_theme is not None:
+            theme = Theme(href=default_theme, 
+                          source_location=self.source_location)
+            
         if theme is None:
             log.error(self, "No theme has been defined for the request")
             return resp

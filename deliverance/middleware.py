@@ -38,11 +38,13 @@ class DeliveranceMiddleware(object):
 
     ## FIXME: is log_factory etc very useful?
     def __init__(self, app, rule_getter, log_factory=SavingLogger, 
-                 log_factory_kw={}):
+                 log_factory_kw={}, default_theme=None):
         self.app = app
         self.rule_getter = rule_getter
         self.log_factory = log_factory
         self.log_factory_kw = log_factory_kw
+
+        self.default_theme = default_theme
 
         ## FIXME: clearly, this should not be a dictionary:
         self.known_html = set()
@@ -102,7 +104,8 @@ class DeliveranceMiddleware(object):
                       % req.url)
             self.known_titles[req.url] = self._get_title(resp.body)
             self.known_html.add(req.url)
-        resp = rule_set.apply_rules(req, resp, resource_fetcher, log)
+        resp = rule_set.apply_rules(req, resp, resource_fetcher, log, 
+                                    default_theme=self.default_theme)
         if clientside:
             resp.decode_content()
             resp.body = self._substitute_jsenable(resp.body)
@@ -655,6 +658,7 @@ from paste.deploy.converters import asbool
 
 def make_deliverance_middleware(app, global_conf,
                                 rule_uri=None, rule_filename=None,
+                                theme_uri=None,
                                 debug=None,
                                 execute_pyref=None):
 
@@ -676,7 +680,7 @@ def make_deliverance_middleware(app, global_conf,
     
     execute_pyref = asbool(execute_pyref)
 
-    app = DeliveranceMiddleware(app, rule_getter)
+    app = DeliveranceMiddleware(app, rule_getter, default_theme=theme_uri)
 
     return security.SecurityContext.middleware(
         app,
