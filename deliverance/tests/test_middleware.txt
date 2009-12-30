@@ -50,8 +50,7 @@ The rule xml:
     ...   <theme href="/theme.html" />
     ...   <match path="exact:/magic" class="magic" />
     ...   <rule class="magic">
-    ...     <prepend content="elements:/html/head/meta"
-    ...              theme="children:/html/head"/>
+    ...     
     ...   </rule>
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
@@ -409,7 +408,7 @@ preserved rather than being rewritten as unclosed tags. Let's see:
     >>> app['/magic'].body = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     ... "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     ... <html><head>
-    ... <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    ... <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
     ... <meta http-equiv="refresh" content="5" />
     ... </head><body> 
     ... <img src="foo.png" /> 
@@ -424,6 +423,7 @@ Now let's see what happens when Deliverance is done with it:
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html><head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="refresh" content="5" />
     </head><body> 
     <img src="foo.png" /> 
     A simple page</body></html>
@@ -433,6 +433,7 @@ Now let's see what happens when Deliverance is done with it:
         @import "http://localhost/style2.css";
       </style>
       <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta http-equiv="refresh" content="5" />
       </head><body>
     <BLANKLINE>
       <div id="header" class="title-bar">
