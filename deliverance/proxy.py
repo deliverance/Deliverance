@@ -327,16 +327,10 @@ class Proxy(object):
 
         proxy_req.path_info += request.path_info
 
-        ## FIXME: this logic could be refactored for clarity
-        if proxy_req.query_string:
-            if request.query_string:
-                request.query_string += '&'
-            ## FIXME: add query before or after existing query?
-            #         http://oss.openplans.org/deliverance/ticket/10 -egj
-            proxy_req.query_string = request.query_string + \
-                proxy_req.query_string
-        else:
-            # need to carry along request.query_string even if the base proxy dest has no qs!
+        if proxy_req.query_string and request.query_string:
+            proxy_req.query_string = '%s&%s' % \
+                (proxy_req.query_string, request.query_string)
+        elif request.query_string:
             proxy_req.query_string = request.query_string
 
         proxy_req.accept_encoding = None
