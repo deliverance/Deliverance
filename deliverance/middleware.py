@@ -682,10 +682,12 @@ def make_deliverance_middleware(app, global_conf,
 
     app = DeliveranceMiddleware(app, rule_getter, default_theme=theme_uri)
 
-    return security.SecurityContext.middleware(
+    app = security.SecurityContext.middleware(
         app,
         display_local_files=debug, display_logging=debug,
         execute_pyref=execute_pyref)
+    
+    return app
 
 if __name__ == '__main__':
     import doctest

@@ -46,10 +46,16 @@ parser.add_option(
     dest='debug_headers',
     help='Show (in the console) all the incoming and outgoing headers; '
     'use twice for bodies')
-    
+parser.add_option(
+    '--garbage-collect',
+    action='store_true',
+    dest='garbage_collect',
+    help='Wrap the application in a middleware that calls gc.collect() '
+    'at the end of every request (see #22)')
 
 def run_command(rule_filename, debug=False, interactive_debugger=False, 
-                debug_headers=False, profile=False, memory_profile=False):
+                debug_headers=False, profile=False, memory_profile=False,
+                garbage_collect=False):
     """Actually runs the command from the parsed arguments"""
     settings = ProxySettings.parse_file(rule_filename)
     app = ReloadingApp(rule_filename, settings)
@@ -81,6 +87,10 @@ def run_command(rule_filename, debug=False, interactive_debugger=False,
     if debug_headers:
         from wsgifilter.proxyapp import DebugHeaders
         app = DebugHeaders(app, show_body=debug_headers > 1)
+    if garbage_collect:
+        from deliverance.garbagecollect import GarbageCollectingMiddleware
+        app = GarbageCollectingMiddleware(app)
+
     print 'To see logging, visit %s/.deliverance/login' % settings.base_url
     print '    after login go to %s/?deliv_log' % settings.base_url
     if profile:
@@ -129,7 +139,8 @@ def main(args=None):
                 interactive_debugger=options.interactive_debugger,
                 debug=options.debug, debug_headers=options.debug_headers,
                 profile=options.profile,
-                memory_profile=options.memory_profile)
+                memory_profile=options.memory_profile,
+                garbage_collect=options.garbage_collect)
 
 if __name__ == '__main__':
     main()
