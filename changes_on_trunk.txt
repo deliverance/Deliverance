@@ -2,3 +2,5 @@
 
  * There is a new theme_uri parameter to the middleware factory which you can use in Paste .ini configuration.
    This will be treated as the global default theme uri and will be used if no theme is defined in the ruleset.
+
+ * #22 -- you can now run Deliverance with a garbagecollection middleware
