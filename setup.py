@@ -58,5 +58,8 @@ New in this release:
 
       [paste.filter_app_factory]
       main = deliverance.middleware:make_deliverance_middleware
+
+      [paste.filter_factory]
+      garbagecollect = deliverance.garbagecollect:filter_factory
       """,
       )

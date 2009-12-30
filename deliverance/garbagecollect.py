@@ -16,5 +16,9 @@ class GarbageCollectingMiddleware(object):
             environ['deliverance.log'].debug(
                 self,
                 'Garbage-collected %s unreachable objects' % n)
-
         return res
+
+def filter_factory(global_conf):
+    def filter(app):
+        return GarbageCollectingMiddleware(app)
+    return filter
