@@ -53,12 +53,25 @@ parser.add_option(
     help='Wrap the application in a middleware that calls gc.collect() '
     'at the end of every request (see #22)')
 
-def run_command(rule_filename, debug=False, interactive_debugger=False, 
+def rule_wrapper(ruleset):
+    def rule_getter(get_resource, app, orig_req):
+        return ruleset
+    return rule_getter
+
+def run_command(rule_filenames, debug=False, interactive_debugger=False, 
                 debug_headers=False, profile=False, memory_profile=False,
                 garbage_collect=False):
     """Actually runs the command from the parsed arguments"""
+
+    rule_filename = rule_filenames[0]
+    rule_filenames = rule_filenames[1:]
+
+    from deliverance.ruleset import RuleSet
+    if rule_filenames:
+        wrappers = [rule_wrapper(RuleSet.parse_file(f)) for f in rule_filenames]
+
     settings = ProxySettings.parse_file(rule_filename)
-    app = ReloadingApp(rule_filename, settings)
+    app = ReloadingApp(rule_filename, settings, extra_deliverances=wrappers)
     if profile:
         try:
             from repoze.profile.profiler import AccumulatingProfileMiddleware
@@ -102,14 +115,18 @@ class ReloadingApp(object):
     This is a WSGI app that notices when the rule file changes, and
     reloads it in that case.
     """
-    def __init__(self, rule_filename, settings):
+    def __init__(self, rule_filename, settings, extra_deliverances=None):
         self.rule_filename = rule_filename
         self.settings = settings
         self.proxy_set = None
         self.proxy_set_mtime = None
         self.application = None
+
+        self.extra_deliverances = extra_deliverances
+
         # This gives syntax errors earlier:
         self.load_proxy_set(warn=False)
+
         
     def __call__(self, environ, start_response):
         if (self.proxy_set is None
@@ -121,7 +138,9 @@ class ReloadingApp(object):
         """Loads or reloads the ProxySet object from the file"""
         if warn:
             print 'Reloading rule file %s' % self.rule_filename
-        self.proxy_set = ProxySet.parse_file(self.rule_filename)
+        self.proxy_set = ProxySet.parse_file(
+            self.rule_filename,
+            extra_deliverances=self.extra_deliverances)
         self.proxy_set_mtime = os.path.getmtime(self.rule_filename)
         self.application = self.settings.middleware(self.proxy_set.application)
 
@@ -132,10 +151,10 @@ def main(args=None):
     options, args = parser.parse_args(args)
     if not args:
         parser.error('You must provide a rule file')
-    if len(args) > 1:
-        parser.error('Only one argument (the rule file) allowed')
-    rule_filename = args[0]
-    run_command(rule_filename,
+    #if len(args) > 1:
+    #    parser.error('Only one argument (the rule file) allowed')
+    rule_filenames = args
+    run_command(rule_filenames,
                 interactive_debugger=options.interactive_debugger,
                 debug=options.debug, debug_headers=options.debug_headers,
                 profile=options.profile,

@@ -2,11 +2,12 @@
 
 import re
 from lxml.html import tostring, document_fromstring
-from lxml.etree import XML, Comment
+from lxml.etree import XML, Comment, parse
 from webob.headerdict import HeaderDict
 from deliverance.exceptions import AbortTheme, DeliveranceSyntaxError
 from deliverance.pagematch import run_matches, Match, ClientsideMatch
 from deliverance.rules import Rule, remove_content_attribs
+from deliverance.util.filetourl import filename_to_url, url_to_filename
 from deliverance.themeref import Theme
 from urlparse import urljoin
 
@@ -199,6 +200,15 @@ class RuleSet(object):
                 rules_by_class.setdefault(class_name, []).append(rule)
         return cls(matchers, clientsides, rules_by_class, default_theme=default_theme,
                    source_location=source_location)
+
+    @classmethod
+    def parse_file(cls, filename):
+        """Parse this from a filname"""
+        file_url = filename_to_url(filename)
+        tree = parse(filename, base_url=file_url)
+        el = tree.getroot()
+        tree.xinclude()
+        return cls.parse_xml(el, file_url)
 
     def clientside_actions(self, req, resp, log):
         extra_headers = parse_meta_headers(resp.body)

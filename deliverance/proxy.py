@@ -22,7 +22,7 @@ from deliverance.pagematch import AbstractMatch
 from deliverance.util.converters import asbool
 from deliverance.middleware import DeliveranceMiddleware
 from deliverance.ruleset import RuleSet
-from deliverance.log import SavingLogger
+from deliverance.log import SavingLogger, PrintingLogger
 from deliverance.util.uritemplate import uri_template_substitute
 from deliverance.util.nesteddict import NestedDict
 from deliverance.security import execute_pyref, edit_local_files
@@ -37,30 +37,40 @@ class ProxySet(object):
     ruleset.
     """
 
-    def __init__(self, proxies, ruleset, source_location=None):
+    def __init__(self, proxies, ruleset, source_location=None, 
+                 extra_deliverances=None):
         self.proxies = proxies
         self.ruleset = ruleset
         self.source_location = source_location
-        self.deliverator = DeliveranceMiddleware(self.proxy_app, self.rule_getter)
+        self.deliverator = DeliveranceMiddleware(self.proxy_app, self.rule_getter,
+                                                 log_factory=PrintingLogger)
+
+        extra_deliverances = extra_deliverances or []
+        for rule_getter in extra_deliverances:
+            self.deliverator = DeliveranceMiddleware(
+                self.deliverator, rule_getter,
+                log_factory=PrintingLogger)
 
     @classmethod
-    def parse_xml(cls, el, source_location):
+    def parse_xml(cls, el, source_location, extra_deliverances=None):
         """Parse an instance from an XML/etree element"""
         proxies = []
         for child in el:
             if child.tag == 'proxy':
                 proxies.append(Proxy.parse_xml(child, source_location))
         ruleset = RuleSet.parse_xml(el, source_location)
-        return cls(proxies, ruleset, source_location)
+        return cls(proxies, ruleset, source_location,
+                   extra_deliverances=extra_deliverances)
 
     @classmethod
-    def parse_file(cls, filename):
+    def parse_file(cls, filename, extra_deliverances=None):
         """Parse this from a filname"""
         file_url = filename_to_url(filename)
         tree = parse(filename, base_url=file_url)
         el = tree.getroot()
         tree.xinclude()
-        return cls.parse_xml(el, file_url)
+        return cls.parse_xml(el, file_url,
+                             extra_deliverances=extra_deliverances)
 
     def proxy_app(self, environ, start_response):
         """Implements the proxy, finding the matching `Proxy` object and
@@ -99,7 +109,7 @@ class ProxySet(object):
         the proxies itself.
         """
         req = Request(environ)
-        log = SavingLogger(req, self.deliverator)
+        log = PrintingLogger(req, self.deliverator)
         req.environ['deliverance.log'] = log
         if req.path_info.startswith('/.deliverance/proxy-editor/'):
             req.path_info_pop()
