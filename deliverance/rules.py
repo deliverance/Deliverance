@@ -93,7 +93,7 @@ class RuleMatch(AbstractMatch):
         """
         inst = cls(**cls.parse_match_xml(el, source_location))
         inst.rule = rule
-        return rule
+        return inst
 
     def debug_description(self):
         """Used by AbstractMatch for logging"""
