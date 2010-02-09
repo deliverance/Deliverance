@@ -52,6 +52,9 @@ The rule xml:
     ...   <rule class="magic">
     ...     
     ...   </rule>
+    ...   <rule path="/foo">
+    ...     <drop content="#badstuff" />
+    ...   </rule>
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
@@ -65,9 +68,6 @@ The rule xml:
     ...     <drop theme="tag:#copyright" notheme="ignore" />
     ...     <drop content="#cc" nocontent="ignore" />
     ...     <replace content="children:#content" theme="children:#content" nocontent="abort" />
-    ...   </rule>
-    ...   <rule path="/foo">
-    ...     <drop content="#badstuff" />
     ...   </rule>
     ... </ruleset>'''
 
@@ -275,6 +275,9 @@ Here we'll remove the theming rules for the blog:
     ...   <match response-header="X-No-Deliverate: boolean:true" abort="1" />
     ...   <match environ="wsgi.url_scheme: https" class="via-https" />
     ...   <theme href="/theme.html" />
+    ...   <rule path="/foo">
+    ...     <drop content="#badstuff" />
+    ...   </rule>
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
@@ -496,6 +499,7 @@ Test that rule matches work:
        <a name="top"></a>
        <div id="content">
        <div id="goodstuff">Good!</div>
+       </div>
        <a href="#top">Back to top</a>
      </div>
    <BLANKLINE>
