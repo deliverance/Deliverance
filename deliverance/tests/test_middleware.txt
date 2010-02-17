@@ -432,7 +432,7 @@ Now let's see what happens when Deliverance is done with it:
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html><head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
     <meta http-equiv="refresh" content="5" />
     </head><body> 
     <img src="foo.png" /> 
@@ -442,7 +442,7 @@ Now let's see what happens when Deliverance is done with it:
     <html xmlns="http://www.w3.org/1999/xhtml"><head><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css" /><style type="text/css">
         @import "http://localhost/style2.css";
       </style>
-      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
       <meta http-equiv="refresh" content="5" />
       </head><body>
     <BLANKLINE>
