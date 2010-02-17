@@ -101,12 +101,12 @@ class RuleSet(object):
 
         ## FIXME: this seems like a terrible way to preserve the content's DOCTYPE
         if resp.body.strip().startswith("<!DOCTYPE"):
-            theme_str = tostring(theme_doc)
+            theme_str = tostring(theme_doc, method=method, include_meta_content_type=True)
             theme_str = content_tree.docinfo.doctype + theme_str
             theme_doc = document_fromstring(theme_str)
         tree = theme_doc.getroottree()
 
-        resp.body = tostring(tree, method=method)
+        resp.body = tostring(tree, method=method, include_meta_content_type=True)
         return resp
 
     def check_clientside(self, req, log):
@@ -147,7 +147,7 @@ class RuleSet(object):
     def parse_document(self, s, url):
         """
         Parses the given document as an HTML document.
-        """
+        """    
         return document_fromstring(s, base_url=url)
 
     def log_description(self, log=None):

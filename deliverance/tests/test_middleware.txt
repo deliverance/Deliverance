@@ -58,6 +58,7 @@ The rule xml:
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
+    ...     <prepend content="elements:/html/head/meta" theme="children:/html/head" nocontent="ignore" />  
     ...   </rule>
     ...   <rule class="breakout">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
@@ -281,6 +282,7 @@ Here we'll remove the theming rules for the blog:
     ...   <rule class="default">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
     ...     <replace content="children:body" theme="children:#content" nocontent="abort" />
+    ...     <prepend content="elements:/html/head/meta" theme="children:/html/head" nocontent="ignore" />  
     ...   </rule>
     ...   <rule class="breakout">
     ...     <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
@@ -439,12 +441,9 @@ Now let's see what happens when Deliverance is done with it:
     A simple page</body></html>
     Themed content:
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-    <html xmlns="http://www.w3.org/1999/xhtml"><head><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css" /><style type="text/css">
+    <html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" /><meta http-equiv="refresh" content="5" /><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css" /><style type="text/css">
         @import "http://localhost/style2.css";
-      </style>
-      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
-      <meta http-equiv="refresh" content="5" />
-      </head><body>
+      </style></head><body>
     <BLANKLINE>
       <div id="header" class="title-bar">
         <h1 id="title">This is the theme title</h1>
@@ -466,17 +465,6 @@ Now let's see what happens when Deliverance is done with it:
 
 It worked. There's a new id="top" attribute on the <a name="top"> tag;
 it's required for XHTML: http://www.w3.org/TR/xhtml1/#h-4.10
-
-In the above example note also that meta Content-Type tags are dropped
-even though we have a rule to preserve them -- I think that's related
-to the following lxml.html behavior:
-
-   >>> from lxml.html import tostring, fromstring
-   >>> x="""<html><head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"></meta></head></html>"""
-   >>> tostring(fromstring(x))
-   '<html><head></head></html>'
-   >>> tostring(fromstring(x), include_meta_content_type=True)
-   '<html><head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"></head></html>'
 
 Test that rule matches work:
 
