@@ -9,6 +9,7 @@ from deliverance.pagematch import run_matches, Match, ClientsideMatch
 from deliverance.rules import Rule, remove_content_attribs
 from deliverance.themeref import Theme
 from deliverance.util.cdata import escape_cdata, unescape_cdata
+from deliverance.util.charset import fix_meta_charset_position
 from urlparse import urljoin
 
 class RuleSet(object):
@@ -73,7 +74,10 @@ class RuleSet(object):
         try:
             theme_href = theme.resolve_href(req, resp, log)
             theme_doc = self.get_theme(theme_href, resource_fetcher, log, should_escape_cdata=True)
-            content_doc = self.parse_document(escape_cdata(resp.body), req.url)
+            body = resp.body
+            body = escape_cdata(body)
+            body = fix_meta_charset_position(body)
+            content_doc = self.parse_document(body, req.url)
 
             run_standard = True
             for rule in rules:

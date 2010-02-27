@@ -15,6 +15,7 @@ from deliverance.selector import Selector
 from deliverance.pagematch import AbstractMatch
 from deliverance.themeref import Theme
 from deliverance.util.cdata import escape_cdata, unescape_cdata
+from deliverance.util.charset import fix_meta_charset_position
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
@@ -485,8 +486,11 @@ class TransformAction(AbstractAction):
                     self, 'Resource %s returned the status %s; skipping rule',
                     href, content_resp.status)
                 return
+            body = content_resp.body
+            body = escape_cdata(body)
+            body = fix_meta_charset_position(body)
             content_doc = document_fromstring(
-                escape_cdata(content_resp.body), base_url=self.content_href)
+                body, base_url=self.content_href)
         if not self.if_content_matches(content_doc, log):
             return
         content_type, content_els, content_attributes = self.select_elements(

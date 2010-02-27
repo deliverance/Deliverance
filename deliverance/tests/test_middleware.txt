@@ -737,3 +737,21 @@ contain the markers that we use internally for the CDATA start and end:
      </div>
    <BLANKLINE>
     </body></html>
+
+lxml will properly parse html documents only if the meta tag with charset
+declaration occurs before any chars outside ASCII (per the HTML spec). To
+play nicely with content that breaks that assumption, Deliverance will move
+the charset declaration before passing the document to lxml, to make sure
+the resulting content isn't mangled.
+
+   >>> app['/reddot'] = Response('''\
+   ... <html><head>
+   ...  <title>\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e</title>
+   ...  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   ...  </head><body>
+   ...     \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e
+   ...  </body>
+   ... </html>''')
+
+   >>> compare_request('/reddot', deliv_filename)
+   'Original content:\n<html><head>\n <title>\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e</title>\n <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n </head><body>\n    \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e\n </body>\n</html>\nThemed content:\n<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>&#26085;&#26412;&#35486;</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css"><![CDATA[\n    @import "http://localhost/style2.css";\n    ]]>\n  </style></head><body>\n\n  <div id="header" class="title-bar">\n    <h1 id="title">This is the theme title</h1>\n    <div class="topnav"></div>\n  </div>\n  <div id="content-wrapper">\n    <a name="top"></a>\n    <div id="content">\n    &#26085;&#26412;&#35486;\n </div>\n    <a href="#top">Back to top</a>\n  </div>\n\n  <div id="footer">\n    foo\n    <![CDATA[\n            some unescaped script content in the footer\n            ]]>\n  </div>\n\n </body></html>'
