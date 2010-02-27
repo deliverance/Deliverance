@@ -14,6 +14,7 @@ from deliverance.util.converters import asbool, html_quote
 from deliverance.selector import Selector
 from deliverance.pagematch import AbstractMatch
 from deliverance.themeref import Theme
+from deliverance.util.cdata import escape_cdata, unescape_cdata
 
 CONTENT_ATTRIB = 'x-a-marker-attribute-for-deliverance'
 
@@ -485,7 +486,7 @@ class TransformAction(AbstractAction):
                     href, content_resp.status)
                 return
             content_doc = document_fromstring(
-                content_resp.body, base_url=self.content_href)
+                escape_cdata(content_resp.body), base_url=self.content_href)
         if not self.if_content_matches(content_doc, log):
             return
         content_type, content_els, content_attributes = self.select_elements(

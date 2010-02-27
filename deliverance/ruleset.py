@@ -8,6 +8,7 @@ from deliverance.exceptions import AbortTheme, DeliveranceSyntaxError
 from deliverance.pagematch import run_matches, Match, ClientsideMatch
 from deliverance.rules import Rule, remove_content_attribs
 from deliverance.themeref import Theme
+from deliverance.util.cdata import escape_cdata, unescape_cdata
 from urlparse import urljoin
 
 class RuleSet(object):
@@ -71,8 +72,8 @@ class RuleSet(object):
 
         try:
             theme_href = theme.resolve_href(req, resp, log)
-            theme_doc = self.get_theme(theme_href, resource_fetcher, log)
-            content_doc = self.parse_document(resp.body, req.url)
+            theme_doc = self.get_theme(theme_href, resource_fetcher, log, should_escape_cdata=True)
+            content_doc = self.parse_document(escape_cdata(resp.body), req.url)
 
             run_standard = True
             for rule in rules:
@@ -99,6 +100,7 @@ class RuleSet(object):
         else:
             method = "html"
 
+
         ## FIXME: this seems like a terrible way to preserve the content's DOCTYPE
         if resp.body.strip().startswith("<!DOCTYPE"):
             theme_str = tostring(theme_doc, method=method, include_meta_content_type=True)
@@ -107,6 +109,8 @@ class RuleSet(object):
         tree = theme_doc.getroottree()
 
         resp.body = tostring(tree, method=method, include_meta_content_type=True)
+        resp.body = unescape_cdata(resp.body)
+
         return resp
 
     def check_clientside(self, req, log):
@@ -116,7 +120,7 @@ class RuleSet(object):
                 return True
         return False
 
-    def get_theme(self, url, resource_fetcher, log):
+    def get_theme(self, url, resource_fetcher, log, should_escape_cdata=False):
         """
         Retrieves the theme at the given URL.  Also stores it in the
         log for later use by the log.
@@ -131,7 +135,10 @@ class RuleSet(object):
                 self, "The resource %s was not 200 OK: %s" % (url, resp.status))
             raise AbortTheme(
                 "The resource %s returned an error: %s" % (url, resp.status))
-        doc = self.parse_document(resp.body, url)
+        body = resp.body
+        if should_escape_cdata:
+            body = escape_cdata(body)
+        doc = self.parse_document(body, url)
         self.make_links_absolute(doc)
         return doc
 
@@ -287,3 +294,4 @@ standard_rule = Rule.parse_xml(XML('''\
           theme="children:/html/head" nocontent="ignore" />
   <!-- FIXME: Any handling for overlapping/identical elements? -->
 </rule>'''), 'deliverance.ruleset.standard_rule')
+
