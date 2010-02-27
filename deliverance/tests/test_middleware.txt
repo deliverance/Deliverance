@@ -676,3 +676,64 @@ content documents, when the `href` attribute  is used in a rule action:
      </div>
    <BLANKLINE>
     </body></html>
+
+Note that there's a small chance of false positives, if a document happens to
+contain the markers that we use internally for the CDATA start and end:
+
+   >>> app['/newfooter'] = Response('''\
+   ... <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   ... <html>
+   ...  <body>
+   ...   <div id="footer">
+   ...     foo
+   ...     __START_CDATA__
+   ...             some unescaped script content in the footer
+   ...             __END_CDATA__
+   ...   </div>
+   ...  </body>
+   ... </html>''')
+    
+   >>> print compare_request('/cdata', deliv_filename) # doctest: +REPORT_UDIFF
+   Original content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   <html xmlns="http://www.w3.org/1999/xhtml">
+       <head>
+           <title></title>
+       </head>
+       <body><script type="text/javascript">
+           <![CDATA[
+                   ... unescaped script content ...
+                   ]]>
+                   </script>
+                   <img src="http://foo.jpg"/>
+       </body>
+   </html>
+   Themed content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   <html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=ASCII" /><title></title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css" /><style type="text/css"><![CDATA[
+       @import "http://localhost/style2.css";
+       ]]>
+     </style></head><body>
+   <BLANKLINE>
+     <div id="header" class="title-bar">
+       <h1 id="title">This is the theme title</h1>
+       <div class="topnav"></div>
+     </div>
+     <div id="content-wrapper">
+       <a name="top" id="top"></a>
+       <div id="content"><script type="text/javascript">
+           <![CDATA[
+                   ... unescaped script content ...
+                   ]]>
+                   </script><img src="http://foo.jpg" /></div>
+       <a href="#top">Back to top</a>
+     </div>
+   <BLANKLINE>
+     <div id="footer">
+       foo
+       <![CDATA[
+               some unescaped script content in the footer
+               ]]>
+     </div>
+   <BLANKLINE>
+    </body></html>
