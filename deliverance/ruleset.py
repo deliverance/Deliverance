@@ -73,7 +73,9 @@ class RuleSet(object):
 
         try:
             theme_href = theme.resolve_href(req, resp, log)
-            theme_doc = self.get_theme(theme_href, resource_fetcher, log, should_escape_cdata=True)
+            theme_doc = self.get_theme(
+                theme_href, resource_fetcher, log, 
+                should_escape_cdata=True, should_fix_meta_charset_position=True)
             body = resp.body
             body = escape_cdata(body)
             body = fix_meta_charset_position(body)
@@ -124,7 +126,9 @@ class RuleSet(object):
                 return True
         return False
 
-    def get_theme(self, url, resource_fetcher, log, should_escape_cdata=False):
+    def get_theme(self, url, resource_fetcher, log,
+                  should_escape_cdata=False,
+                  should_fix_meta_charset_position=False):
         """
         Retrieves the theme at the given URL.  Also stores it in the
         log for later use by the log.
@@ -142,6 +146,8 @@ class RuleSet(object):
         body = resp.body
         if should_escape_cdata:
             body = escape_cdata(body)
+        if should_fix_meta_charset_position:
+            body = fix_meta_charset_position(body)
         doc = self.parse_document(body, url)
         self.make_links_absolute(doc)
         return doc

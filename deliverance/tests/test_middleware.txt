@@ -753,5 +753,117 @@ the resulting content isn't mangled.
    ...  </body>
    ... </html>''')
 
-   >>> compare_request('/reddot', deliv_filename)
-   'Original content:\n<html><head>\n <title>\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e</title>\n <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n </head><body>\n    \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e\n </body>\n</html>\nThemed content:\n<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>&#26085;&#26412;&#35486;</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css"><![CDATA[\n    @import "http://localhost/style2.css";\n    ]]>\n  </style></head><body>\n\n  <div id="header" class="title-bar">\n    <h1 id="title">This is the theme title</h1>\n    <div class="topnav"></div>\n  </div>\n  <div id="content-wrapper">\n    <a name="top"></a>\n    <div id="content">\n    &#26085;&#26412;&#35486;\n </div>\n    <a href="#top">Back to top</a>\n  </div>\n\n  <div id="footer">\n    foo\n    <![CDATA[\n            some unescaped script content in the footer\n            ]]>\n  </div>\n\n </body></html>'
+   >>> print compare_request('/reddot', deliv_filename) # doctest: +REPORT_UDIFF
+   Original content:
+   <html><head>
+    <title>日本語</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head><body>
+       日本語
+    </body>
+   </html>
+   Themed content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+   <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>&#26085;&#26412;&#35486;</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css"><![CDATA[
+       @import "http://localhost/style2.css";
+       ]]>
+     </style></head><body>
+   <BLANKLINE>
+     <div id="header" class="title-bar">
+       <h1 id="title">This is the theme title</h1>
+       <div class="topnav"></div>
+     </div>
+     <div id="content-wrapper">
+       <a name="top"></a>
+       <div id="content">
+       &#26085;&#26412;&#35486;
+    </div>
+       <a href="#top">Back to top</a>
+     </div>
+   <BLANKLINE>
+     <div id="footer">
+       foo
+       <![CDATA[
+               some unescaped script content in the footer
+               ]]>
+     </div>
+   <BLANKLINE>
+    </body></html>
+
+Let's test that for the theme document also. We'll put the Japanese title and misplaced
+charset declaration in the theme instead of the content. The resulting title should be
+the correct HTML sequence:
+
+   >>> app['/reddot'] = Response('''\
+   ... <html><head>
+   ...  </head><body>
+   ...     foo
+   ...  </body>
+   ... </html>''')
+
+   >>> app['/theme.html'] = Response('''\
+   ... <html>
+   ...  <head>
+   ...   <title>\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e</title>
+   ...   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   ...   <link rel=Stylesheet type="text/css" href="style.css">
+   ...   <style type="text/css"><![CDATA[
+   ...     @import "style2.css";
+   ...     ]]>
+   ...   </style>
+   ...  </head>
+   ...  <body>
+   ... 
+   ...   <div id="header" class="title-bar">
+   ...     <h1 id="title">This is the theme title</h1>
+   ...     <div class="topnav"></div>
+   ...   </div>
+   ...   <div id="content-wrapper">
+   ...     <a name="top"></a>
+   ...     <div id="content">
+   ...       This content will be replaced.
+   ...     </div>
+   ...     <a href="#top">Back to top</a>
+   ...   </div>
+   ... 
+   ...   <div id="footer">
+   ...     <span id="copyright">Copyright (C)</span> 2000 Some Corporation
+   ...   </div>
+   ... 
+   ...  </body>
+   ... </html>''')
+
+   >>> print compare_request('/reddot', deliv_filename) # doctest: +REPORT_UDIFF
+   Original content:
+   <html><head>
+    </head><body>
+       foo
+    </body>
+   </html>
+   Themed content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+   <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>&#26085;&#26412;&#35486;</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css"><![CDATA[
+       @import "http://localhost/style2.css";
+       ]]>
+     </style></head><body>
+   <BLANKLINE>
+     <div id="header" class="title-bar">
+       <h1 id="title">This is the theme title</h1>
+       <div class="topnav"></div>
+     </div>
+     <div id="content-wrapper">
+       <a name="top"></a>
+       <div id="content">
+       foo
+    </div>
+       <a href="#top">Back to top</a>
+     </div>
+   <BLANKLINE>
+     <div id="footer">
+       foo
+       <![CDATA[
+               some unescaped script content in the footer
+               ]]>
+     </div>
+   <BLANKLINE>
+    </body></html>
