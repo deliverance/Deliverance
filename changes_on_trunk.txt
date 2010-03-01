@@ -1,6 +1,30 @@
- * #16
+ * The paste.deploy configuration and middleware factory now accept a `theme_uri`
+   parameter.
 
- * There is a new theme_uri parameter to the middleware factory which you can use in Paste .ini configuration.
-   This will be treated as the global default theme uri and will be used if no theme is defined in the ruleset.
+   If used, this will be the global default theme uri.  It will be used if no
+   theme is defined within the ruleset.
 
- * #22 -- you can now run Deliverance with a garbagecollection middleware
+ * Internal subrequests that return non-200 response codes are now retried as external
+   HTTP requests. (#16)
+
+ * Request/response matching in <rule> elements now work. (#6)
+
+ * <meta http-equiv="Content-Type"> tags are no longer stripped from documents.
+   Instead, they are always included in the output of Deliverance, with a default
+   charset of ASCII. (#34)
+
+ * CDATA sections in XHTML documents are left as-is instead of being incorrectly
+   escaped. (#36)
+
+ * Before applying the rules, Deliverance now moves the <meta> tag with a charset
+   declaration to be the first child of the <head> element, if both are present.
+   This ensures that non-ASCII characters in the <head> are converted to the correct
+   HTML sequences. (#12)
+
+ * There is now a garbage-collecting WSGI middleware `deliverance.garbagecollect`,
+   disabled by default, which calls `gc.collect()` after every request. This was
+   added after a report (unconfirmed) of potential memory leaks when using some
+   versions of lxml. (#22)
+
+   You can use it with `deliverance-proxy --garbage-collect` or, in paste.deploy
+   configurations, filter your app with `use = egg:Deliverance#garbagecollect`.
