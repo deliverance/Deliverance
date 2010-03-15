@@ -55,6 +55,9 @@ class DeliveranceMiddleware(object):
         return 'Deliverance'
 
     def __call__(self, environ, start_response):
+        return self.apply(environ, start_response, self.default_theme)
+
+    def apply(self, environ, start_response, default_theme):
         req = Request(environ)
         if 'deliv_notheme' in req.GET:
             return self.app(environ, start_response)
@@ -105,7 +108,7 @@ class DeliveranceMiddleware(object):
             self.known_titles[req.url] = self._get_title(resp.body)
             self.known_html.add(req.url)
         resp = rule_set.apply_rules(req, resp, resource_fetcher, log, 
-                                    default_theme=self.default_theme)
+                                    default_theme=default_theme)
         if clientside:
             resp.decode_content()
             resp.body = self._substitute_jsenable(resp.body)
