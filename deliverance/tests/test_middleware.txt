@@ -867,3 +867,62 @@ the correct HTML sequence:
      </div>
    <BLANKLINE>
     </body></html>
+
+Some non-ASCII characters can end up mangled when they pass through lxml.html::
+
+   >>> from lxml.html import fromstring, tostring
+   >>> x = "<html><body>…</body></html>"
+   >>> print tostring(fromstring(x))
+   <html><body>&#226;&#128;&#166;</body></html>
+   
+That should have been "&#8230;", which is the HTML code for the ellipsis character.
+The way to fix this is to decode the string to unicode before lxml.html gets it::
+
+   >>> print tostring(fromstring(x.decode('utf8')))
+   <html><body>&#8230;</body></html>
+
+So, internally, Deliverance will use webob.Response.unicode_body, which uses the
+response's charset to figure out how to decode the string. Let's make sure that
+these characters aren't mangled when they are themed through Deliverance::
+
+   >>> app['/mangled'] = Response('''\
+   ... <html><head>
+   ...  </head><body>
+   ...     …
+   ...  </body>
+   ... </html>''')
+
+   >>> print compare_request('/mangled', deliv_filename) # doctest: +REPORT_UDIFF
+   Original content:
+   <html><head>
+    </head><body>
+       …
+    </body>
+   </html>
+   Themed content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+   <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>&#26085;&#26412;&#35486;</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css"><![CDATA[
+       @import "http://localhost/style2.css";
+       ]]>
+     </style></head><body>
+   <BLANKLINE>
+     <div id="header" class="title-bar">
+       <h1 id="title">This is the theme title</h1>
+       <div class="topnav"></div>
+     </div>
+     <div id="content-wrapper">
+       <a name="top"></a>
+       <div id="content">
+       &#8230;
+    </div>
+       <a href="#top">Back to top</a>
+     </div>
+   <BLANKLINE>
+     <div id="footer">
+       foo
+       <![CDATA[
+               some unescaped script content in the footer
+               ]]>
+     </div>
+   <BLANKLINE>
+    </body></html>

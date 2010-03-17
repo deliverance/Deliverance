@@ -76,7 +76,7 @@ class RuleSet(object):
             theme_doc = self.get_theme(
                 theme_href, resource_fetcher, log, 
                 should_escape_cdata=True, should_fix_meta_charset_position=True)
-            body = resp.body
+            body = resp.unicode_body
             body = escape_cdata(body)
             body = fix_meta_charset_position(body)
             content_doc = self.parse_document(body, req.url)
@@ -105,7 +105,6 @@ class RuleSet(object):
             method = "xml"
         else:
             method = "html"
-
 
         ## FIXME: this seems like a terrible way to preserve the content's DOCTYPE
         if resp.body.strip().startswith("<!DOCTYPE"):
@@ -143,7 +142,7 @@ class RuleSet(object):
                 self, "The resource %s was not 200 OK: %s" % (url, resp.status))
             raise AbortTheme(
                 "The resource %s returned an error: %s" % (url, resp.status))
-        body = resp.body
+        body = resp.unicode_body
         if should_escape_cdata:
             body = escape_cdata(body)
         if should_fix_meta_charset_position:
@@ -242,7 +241,7 @@ class RuleSet(object):
                     rules.append(rule)
                     if rule.theme:
                         assert 0, 'no rule themes should be present'
-        content_doc = self.parse_document(resp.body, req.url)
+        content_doc = self.parse_document(resp.unicode_body, req.url)
         actions = []
         run_standard = True
         for rule in rules:
