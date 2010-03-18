@@ -2,7 +2,9 @@
 
 import re
 
-META_CHARSET_TAG = re.compile("""(<meta[^>]*charset=["']*[^"'>]*["']*[>])""", re.IGNORECASE|re.DOTALL)
+META_CHARSET_TAG = re.compile(
+    """(<meta[^>]*charset=(?P<charset>[^"'>]*)["']?[ ]?[/]?[>])""",
+    re.IGNORECASE|re.DOTALL)
 HEAD_TAG = re.compile('<head>', re.IGNORECASE)
 
 def fix_meta_charset_position(s):
