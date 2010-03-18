@@ -9,7 +9,7 @@ from deliverance.pagematch import run_matches, Match, ClientsideMatch
 from deliverance.rules import Rule, remove_content_attribs
 from deliverance.themeref import Theme
 from deliverance.util.cdata import escape_cdata, unescape_cdata
-from deliverance.util.charset import fix_meta_charset_position
+from deliverance.util.charset import fix_meta_charset_position, force_charset
 from urlparse import urljoin
 
 class RuleSet(object):
@@ -76,6 +76,7 @@ class RuleSet(object):
             theme_doc = self.get_theme(
                 theme_href, resource_fetcher, log, 
                 should_escape_cdata=True, should_fix_meta_charset_position=True)
+            resp = force_charset(resp)
             body = resp.unicode_body
             body = escape_cdata(body)
             body = fix_meta_charset_position(body)
@@ -142,7 +143,10 @@ class RuleSet(object):
                 self, "The resource %s was not 200 OK: %s" % (url, resp.status))
             raise AbortTheme(
                 "The resource %s returned an error: %s" % (url, resp.status))
+        
+        resp = force_charset(resp)
         body = resp.unicode_body
+
         if should_escape_cdata:
             body = escape_cdata(body)
         if should_fix_meta_charset_position:
@@ -241,6 +245,7 @@ class RuleSet(object):
                     rules.append(rule)
                     if rule.theme:
                         assert 0, 'no rule themes should be present'
+        resp = force_charset(resp)
         content_doc = self.parse_document(resp.unicode_body, req.url)
         actions = []
         run_standard = True

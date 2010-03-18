@@ -7,6 +7,13 @@ docs = {
     """<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"/>""": "ISO-8859-1",
     """<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />""": "UTF-8",
     """<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >""": "UTF-8",
+    """<meta charset="UTF-8" >""": "UTF-8",
+    """<meta charset="UTF-8" />""": "UTF-8",
+    """<meta charset="UTF-8">""": "UTF-8",
+
+    # it's not completely strict; these are OK too:
+    """<meta charset="UTF-8>""": "UTF-8",
+    """<meta charset='UTF-8">""": "UTF-8",
 }
 
 bad_docs = [
