@@ -109,7 +109,7 @@ class RuleSet(object):
 
         ## FIXME: this seems like a terrible way to preserve the content's DOCTYPE
         if resp.body.strip().startswith("<!DOCTYPE"):
-            theme_str = tostring(theme_doc, method=method, include_meta_content_type=True)
+            theme_str = tostring(theme_doc, include_meta_content_type=True)
             theme_str = content_tree.docinfo.doctype + theme_str
             theme_doc = document_fromstring(theme_str)
         tree = theme_doc.getroottree()
