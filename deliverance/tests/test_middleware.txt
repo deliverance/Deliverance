@@ -497,6 +497,92 @@ Test that rule matches work:
    <BLANKLINE>
     </body></html>
 
+Test that HTML comments inside SCRIPT and STYLE tags aren't escaped:
+
+   >>> app['/scriptcomments'] = Response('''\
+   ... <html><head>
+   ...  <style type="text/css" media="all"><!-- @import url( http://localhost:8080/testplonesite/content_types.css); --></style>
+   ...  </head><body>
+   ...     foo
+   ...  </body>
+   ... </html>''')
+
+   >>> print compare_request('/scriptcomments', deliv_filename) # doctest: +REPORT_UDIFF
+   Original content:
+   <html><head>
+    <style type="text/css" media="all"><!-- @import url( http://localhost:8080/testplonesite/content_types.css); --></style>
+    </head><body>
+       foo
+    </body>
+   </html>
+   Themed content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+   <html><head><style type="text/css" media="all"><!-- @import url( http://localhost:8080/testplonesite/content_types.css); --></style><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+       @import "http://localhost/style2.css";
+     </style></head><body>
+   <BLANKLINE>
+     <div id="header" class="title-bar">
+       <h1 id="title">This is the theme title</h1>
+       <div class="topnav"></div>
+     </div>
+     <div id="content-wrapper">
+       <a name="top"></a>
+       <div id="content">
+       foo
+    </div>
+       <a href="#top">Back to top</a>
+     </div>
+   <BLANKLINE>
+     <div id="footer">
+       <span id="copyright">Copyright (C)</span> 2000 Some Corporation
+     </div>
+   <BLANKLINE>
+    </body></html>
+
+Works fine; what about XHTML?
+
+   >>> app['/scriptcomments'] = Response('''\
+   ... <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   ... <html><head>
+   ...  <style type="text/css" media="all"><!-- @import url( http://localhost:8080/testplonesite/content_types.css); --></style>
+   ...  </head><body>
+   ...     foo
+   ...  </body>
+   ... </html>''')
+
+   >>> print compare_request('/scriptcomments', deliv_filename) # doctest: +REPORT_UDIFF
+   Original content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   <html><head>
+    <style type="text/css" media="all"><!-- @import url( http://localhost:8080/testplonesite/content_types.css); --></style>
+    </head><body>
+       foo
+    </body>
+   </html>
+   Themed content:
+   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   <html><head><style type="text/css" media="all"><!-- @import url( http://localhost:8080/testplonesite/content_types.css); --></style><title>This is a theme title</title><link rel="Stylesheet" type="text/css" href="http://localhost/style.css"><style type="text/css">
+       @import "http://localhost/style2.css";
+     </style></head><body>
+   <BLANKLINE>
+     <div id="header" class="title-bar">
+       <h1 id="title">This is the theme title</h1>
+       <div class="topnav"></div>
+     </div>
+     <div id="content-wrapper">
+       <a name="top" id="top"></a>
+       <div id="content">
+       foo
+    </div>
+       <a href="#top">Back to top</a>
+     </div>
+   <BLANKLINE>
+     <div id="footer">
+       <span id="copyright">Copyright (C)</span> 2000 Some Corporation
+     </div>
+   <BLANKLINE>
+    </body></html>
+
 CDATA sections in XHTML documents should be preserved! lxml has a tendency to escape the angle brackets
 that start and end a CDATA section in XHTML documents (but not HTML) -- so Deliverance will munge the 
 markers that start and end CDATA sections before passing the documents to lxml, and then unmunge them
@@ -914,6 +1000,7 @@ the correct HTML sequence:
    <BLANKLINE>
     </body></html>
 
+
 Some non-ASCII characters can end up mangled when they pass through lxml.html::
 
    >>> from lxml.html import fromstring, tostring
@@ -972,3 +1059,4 @@ these characters aren't mangled when they are themed through Deliverance::
      </div>
    <BLANKLINE>
     </body></html>
+
