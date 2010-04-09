@@ -73,9 +73,13 @@ class RuleSet(object):
 
         try:
             theme_href = theme.resolve_href(req, resp, log)
-            theme_doc = self.get_theme(
-                theme_href, resource_fetcher, log, 
-                should_escape_cdata=True, should_fix_meta_charset_position=True)
+            original_theme_resp = self.get_theme_response(
+                theme_href, resource_fetcher, log)
+            theme_doc = self.get_theme_doc(
+                original_theme_resp, theme_href,
+                should_escape_cdata=True,
+                should_fix_meta_charset_position=True)
+
             resp = force_charset(resp)
             body = resp.unicode_body
             body = escape_cdata(body)
@@ -100,18 +104,19 @@ class RuleSet(object):
         remove_content_attribs(theme_doc)
         ## FIXME: handle caching?
 
-        content_tree = content_doc.getroottree()
+        if original_theme_resp.body.strip().startswith("<!DOCTYPE"):
+            tree = theme_doc.getroottree()
+        else:
+            tree = content_doc.getroottree()
 
-        if "XHTML" in content_tree.docinfo.doctype:
+        if "XHTML" in tree.docinfo.doctype:
             method = "xml"
         else:
             method = "html"
 
-        ## FIXME: this seems like a terrible way to preserve the content's DOCTYPE
-        if resp.body.strip().startswith("<!DOCTYPE"):
-            theme_str = tostring(theme_doc, include_meta_content_type=True)
-            theme_str = content_tree.docinfo.doctype + theme_str
-            theme_doc = document_fromstring(theme_str)
+        theme_str = tostring(theme_doc, include_meta_content_type=True)
+        theme_str = tree.docinfo.doctype + theme_str
+        theme_doc = document_fromstring(theme_str)
         tree = theme_doc.getroottree()
 
         resp.body = tostring(tree, method=method, include_meta_content_type=True)
@@ -126,13 +131,7 @@ class RuleSet(object):
                 return True
         return False
 
-    def get_theme(self, url, resource_fetcher, log,
-                  should_escape_cdata=False,
-                  should_fix_meta_charset_position=False):
-        """
-        Retrieves the theme at the given URL.  Also stores it in the
-        log for later use by the log.
-        """
+    def get_theme_response(self, url, resource_fetcher, log):
         log.info(self, 'Fetching theme from %s' % url)
         log.theme_url = url
         ## FIXME: should do caching
@@ -143,8 +142,13 @@ class RuleSet(object):
                 self, "The resource %s was not 200 OK: %s" % (url, resp.status))
             raise AbortTheme(
                 "The resource %s returned an error: %s" % (url, resp.status))
-        
         resp = force_charset(resp)
+        return resp
+
+    def get_theme_doc(self, resp, url, 
+                      should_escape_cdata=False,
+                      should_fix_meta_charset_position=False):
+        
         body = resp.unicode_body
 
         if should_escape_cdata:
@@ -154,6 +158,18 @@ class RuleSet(object):
         doc = self.parse_document(body, url)
         self.make_links_absolute(doc)
         return doc
+
+    def get_theme(self, url, resource_fetcher, log,
+                  should_escape_cdata=False,
+                  should_fix_meta_charset_position=False):
+        """
+        Retrieves the theme at the given URL.  Also stores it in the
+        log for later use by the log.
+        """        
+        resp = self.get_theme_response(url, resource_fetcher, log)
+        return self.get_theme_doc(resp, url, 
+                                  should_escape_cdata,
+                                  should_fix_meta_charset_position)
 
     def make_links_absolute(self, doc):
         base_url = doc.base_url
