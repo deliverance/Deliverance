@@ -10,6 +10,7 @@ Deliverance is a tool to theme HTML, applying a consistent style to applications
    philosophy
    configuration
    pyref
+   output-format
    clientside-theming
    code-map
    news
@@ -23,5 +24,3 @@ These are some documents that may or may not be accurate; they are a little out 
    page-classes
    rules
    proxy
-
-.. comment: FIXME: should those last 3 documents just be deleted?

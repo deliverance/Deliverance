@@ -1,0 +1,14 @@
+Controlling the output format
+=============================
+
+Deliverance can produce output as HTML or XHTML. On each request, it
+determines the output format by looking for DOCTYPE declarations in
+the theme and content. The precedence rules it uses are:
+
+1. If the theme declares its doctype, it is used in the output always.
+2. Otherwise, if the content declares a doctype, it is used in the output.
+3. If neither document declares a doctype, the output format is HTML.
+
+This allows the integrator to override the output format by specifying
+a doctype in the theme.
+
