@@ -634,7 +634,9 @@ class FileRuleGetter(object):
         filename = self.filename
 
         try:
-            doc = parse(filename, base_url='file://'+os.path.abspath(filename)).getroot()
+            fp = open(filename)
+            doc = parse(fp, base_url='file://'+os.path.abspath(filename)).getroot()
+            fp.close()
         except XMLSyntaxError, e:
             raise Exception('Invalid syntax in %s: %s' % (filename, e))
         assert doc.tag == 'ruleset', (
