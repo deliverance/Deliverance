@@ -8,7 +8,7 @@ Starting with virtualenv
 
 If you are familiar with `virtualenv <http://pypi.python.org/pypi/virtualenv>`_ and `easy_install <http://peak.telecommunity.com/DevCenter/EasyInstall>`_ you can skip this section.
 
-We'll be setting everything up in an isolated environment.  Nothing in this will effect anything on your system outside of the directories we set up in this tutorial -- so you can just delete the directory and forget about the whole thing if you don't like it.
+We'll be setting everything up in an isolated environment.  Nothing in this will affect anything on your system outside of the directories we set up in this tutorial -- so you can just delete the directory and forget about the whole thing if you don't like it.
 
 The first thing we'll do is get virtualenv and create an environment.  Grab `virtualenv.py <http://svn.colorstudy.com/virtualenv/trunk/virtualenv.py>`_, and run::
 
