@@ -21,13 +21,9 @@ Note you can run ``source DelivTest/bin/activate`` to change ``$PATH`` so that e
 Installing the Software
 -----------------------
 
-We won't actually use ``easy_install`` much, we'll just install another installer::
+You can use easy_install to install the latest release of Deliverance and all its dependencies:
 
-    $ DelivTest/bin/easy_install pip
-
-And we'll use the ``pip`` installer to install Deliverance.  This has the benefit over ``easy_install`` of installing all the source at once and with versions of the software that are known to work with each other.  So, we'll install the Deliverance bundle::
-
-    $ DelivTest/bin/pip install http://deliverance.openplans.org/dist/Deliverance-snapshot-latest.pybundle
+    $ easy_install Deliverance
 
 .. comment:
 
