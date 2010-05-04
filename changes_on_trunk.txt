@@ -1,5 +1,0 @@
- * Characters <, >, and & are no longer escaped when they appear
-   within a CDATA section in XHTML output mode.
-
- * The theme's doctype is now given priority over the content
-   doctype, to give users more control over the output format.
