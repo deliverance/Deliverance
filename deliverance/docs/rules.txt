@@ -27,6 +27,7 @@ Multiple selectors can be given with ||.  Each selector can be CSS or XPath.  Th
 Some types are invalid in some positions; this will be noted later on.
 
 
+
 Actions
 -------
 
@@ -226,4 +227,11 @@ The content has a class that uses a CSS style that breaks out of the theme.  You
         nocontent="ignore" />
 
 
+
+You want to copy all the items with class .one and all the items with class .three, preserving their order:
+
+.. code-block:: xml
+  
+  <replace content=".one, .three"
+  	   theme="div#place-to-put-them" />
 
