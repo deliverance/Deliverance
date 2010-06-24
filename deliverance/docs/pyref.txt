@@ -18,9 +18,8 @@ case, as do the expected return values.  See below for details.
 When they are available, ``request`` and ``response`` are `WebOb <http://pythonpaste.org/webob/>`_ 
 objects and ``log`` is a Python logging object.
 
-
-Examples
---------
+Details
+-------
 
 Theme
 ~~~~~
