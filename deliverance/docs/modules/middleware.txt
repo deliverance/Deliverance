@@ -10,3 +10,5 @@ Module Contents
 
 .. autoclass:: DeliveranceMiddleware
 .. autoclass:: SubrequestRuleGetter
+.. autoclass:: FileRuleGetter
+.. autofunction:: make_deliverance_middleware

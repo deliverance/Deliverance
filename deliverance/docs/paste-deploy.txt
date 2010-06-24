@@ -43,5 +43,5 @@ Instantiating the middleware from code
 --------------------------------------
 
 The factory function
-:meth:`~deliverance.middleware.make_deliverance_middleware` can be
+:func:`~deliverance.middleware.make_deliverance_middleware` can be
 used to wrap a WSGI application with Deliverance theming middleware.
