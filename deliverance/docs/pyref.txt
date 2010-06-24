@@ -42,7 +42,90 @@ Then define a function like:
 
 ## FIXME: what is ``response`` actually?  Where does it come from?
 
+Dest
+~~~~
 
+Within a ``<proxy>`` tag, you can use a ``<dest pyref>`` to
+dynamically generate the proxy destination from code.  Your pyref
+function should return a URL.  For example:
+
+.. code-block:: xml
+
+    <proxy path="/trac">
+      <dest pyref="mymodule:get_proxy_dest" />
+    </proxy>
+
+with the function:
+
+.. code-block:: python
+
+    def get_proxy_dest(request, log):
+        if not request.remote_addr.startswith('192'):
+            raise AbortProxy('Bad remote_addr: %r' % request.remote_addr)
+        return 'http://localhost:10002'
+
+You can return any URL.  URI template substitution is *not* performed.
+If you raise ``AbortProxy`` then the ``<proxy>`` will be skipped, and
+another proxy will be looked for.  (If nothing matches a 404 error is
+returned.)
+
+Request
+~~~~~~~
+
+Within a ``<proxy>`` tag, you can use a ``<request pyref>`` to
+arbitrarily modify or replace the request object before the proxying
+occurs.
+
+Your pyref function must return a webob.Request object.  For example:
+
+.. code-block:: xml
+
+    <request pyref="mymodule:modify_proxy_request" />
+
+with the code:
+
+.. code-block:: python
+
+    def modify_proxy_request(request, log):
+        request.header['X-Project-Name'] = request.host.split('.')[0]
+        return request
+
+Note that you can modify the request in-place or return a new request.
+
+Response
+~~~~~~~~
+
+Within a ``<proxy>`` tag you can use a ``<response pyref>`` to
+arbitrarily modify or replace the response object returned by the
+proxy, before theming occurs.
+
+Your pyref function will receive six arguments (and any custom keyword
+arguments you define) -- the signature is (request, response,
+orig_base, proxied_base, proxied_url, log):
+
+* orig_base: the original URL base received by Deliverance, e.g. http://localhost:8080/trac
+* proxied_base: where dest sent it to, e.g. http://localhost:10001/
+* proxied_url: the full destination, e.g. http://localhost:10001/report/1
+
+Since ``request`` is a webob.Request object, you can get the full
+original URL from ``request.url``, and all headers.
+
+Your pyref function must return a webob.Response object.  For example:
+
+.. code-block:: xml
+
+    <response pyref="mymodule:modify_proxy_response" />
+
+with the code:
+
+.. code-block:: python
+
+    def modify_proxy_response(request, response, 
+                              orig_base, proxied_base, proxied_url, log):
+        response.body += 'look at me!'
+        return response
+
+Note that you can modify the response in place or return a new webob.Response.
 
 Disabling
 ---------

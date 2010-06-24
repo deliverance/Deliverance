@@ -57,8 +57,8 @@ classes`_.
 Pyref in themes
 ~~~~~~~~~~~~~~~
 
-The theme element also supports `pyref Python references
-<pyref.html#theme>`_ as an alternative to the ``href`` attribute.
+`The theme element also supports pyref <pyref.html#theme>`_ as an
+alternative to the ``href`` attribute.
 
 rule
 ----
@@ -120,39 +120,66 @@ so there are different explicit types of selection:
 ``tag:``
     This applies the rule to the tag, but not the children of the element.  For instance, dropping a tag keeps the children in the document, but removes their enclosing tag.
 
-You can apply any of these like ``content="children:#content"``.  Not all combinations make sense, and some are not allowed.  For instance, ``<replace content="attributes:#content" theme="elements:#header" />`` does not make sense, as you can't replace elements with attributes.  Generally ``elements:`` and ``children:`` work together, ``attributes:`` only works with ``attributes:``, and ``tag:`` only works with ``tag:``.
+You can apply any of these like ``content="children:#content"``.  Not
+all combinations make sense, and some are not allowed.  For instance,
+``<replace content="attributes:#content" theme="elements:#header" />``
+does not make sense, as you can't replace elements with attributes.
+Generally ``elements:`` and ``children:`` work together,
+``attributes:`` only works with ``attributes:``, and ``tag:`` only
+works with ``tag:``.
 
-When selecting elements you can use the ``||`` operator.  This applies to both CSS and XPath selectors, and with the operator you can mix the two.  The ``||`` operator takes the results of the first selector that matches anything.  So ``content="#content || children:body"`` will take the element ``#content`` if there is one, and if there is not one it will take all the children of ``<body>``.  You can mix ``elements:`` and ``children:`` using ``||``, though no other types can be mixed like this.
+When selecting elements you can use the ``||`` operator.  This applies
+to both CSS and XPath selectors, and with the operator you can mix the
+two.  The ``||`` operator takes the results of the first selector that
+matches anything.  So ``content="#content || children:body"`` will
+take the element ``#content`` if there is one, and if there is not one
+it will take all the children of ``<body>``.  You can mix
+``elements:`` and ``children:`` using ``||``, though no other types
+can be mixed like this. 
 
 ``<replace>``
 ~~~~~~~~~~~~~
 
-The ``<replace>`` action replaces something in the theme with something in the content.  Exactly what is replaced depends on the selection type.  Some examples:
+The ``<replace>`` action replaces something in the theme with
+something in the content.  Exactly what is replaced depends on the
+selection type.  Some examples: 
 
 .. code-block:: xml
 
     <replace content="children:#content-wrapper" theme="children:#content" />
 
-this replaces the elements *inside* the theme element ``#content`` with the elements inside the content element ``#content-wrapper``.  The resulting document won't have any element with the id ``#content-wrapper`` (unless the theme already had an element with that id).
+this replaces the elements *inside* the theme element ``#content``
+with the elements inside the content element ``#content-wrapper``.
+The resulting document won't have any element with the id
+``#content-wrapper`` (unless the theme already had an element with
+that id). 
 
 .. code-block:: xml
 
     <replace content="elements:#content-wrapper" theme="elements:#content" />
     <replace content="#content-wrapper" theme="#content" />
 
-both of these are the same (``elements:`` is the default selection type).  This replaces the theme element ``#content`` with the content element ``#content-wrapper``.  The resulting document has no element ``#content``.
+both of these are the same (``elements:`` is the default selection
+type).  This replaces the theme element ``#content`` with the content
+element ``#content-wrapper``.  The resulting document has no element
+``#content``. 
 
 .. code-block:: xml
 
     <replace content="attributes:body" theme="attributes:body" />
 
-this removes all the attributes (e.g., ``class``, ``onload``) from the ``<body>`` element in the theme, and moves over the attributes from the content body element.
+this removes all the attributes (e.g., ``class``, ``onload``) from the
+``<body>`` element in the theme, and moves over the attributes from
+the content body element. 
 
 .. code-block:: xml
 
     <replace content="tag:#content" theme="tag:#content" />
 
-this replaces the tag ``#content`` in the theme with its corresponding tag from the theme.  They might not be the same tag name (e.g., the theme might be a ``<p>`` and the content ``<div>``), and all attributes will be taken from the content.
+this replaces the tag ``#content`` in the theme with its corresponding
+tag from the theme.  They might not be the same tag name (e.g., the
+theme might be a ``<p>`` and the content ``<div>``), and all
+attributes will be taken from the content. 
 
 ``<append>`` and ``<prepend>``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,7 +192,10 @@ things from the content before things in the theme.  Some examples:
 
     <append content="children:#sidenav" theme="children:#sidebar" />
 
-this moves the children of the content element ``#sidenav`` to the end of the theme element ``#sidebar``, combining the navigation of the theme and content.  If you wanted the content navigation to go first you'd use:
+this moves the children of the content element ``#sidenav`` to the end
+of the theme element ``#sidebar``, combining the navigation of the
+theme and content.  If you wanted the content navigation to go first
+you'd use: 
 
 .. code-block:: xml
 
@@ -177,13 +207,15 @@ Another example:
 
     <append content="children:#sidenav" theme="ol.menulinks" />
 
-this moves the children of ``#sidenav`` *after the element* with the element in the theme ``<ol class="menulinks">``.
+this moves the children of ``#sidenav`` *after the element* with the
+element in the theme ``<ol class="menulinks">``. 
 
 .. code-block:: xml
 
     <append content="li.reference" theme="children:ol.menulinks" />
 
-this moves any element in the content like ``<li class="reference">`` *into* the element in the theme ``<ol class="menulinks">``.
+this moves any element in the content like ``<li class="reference">``
+*into* the element in the theme ``<ol class="menulinks">``. 
 
 You can also use these with attributes:
 
@@ -191,7 +223,11 @@ You can also use these with attributes:
 
     <append content="attributes:div#content" theme="attributes:div#content-wrapper" />
 
-This adds any attributes from ``div#content`` into the theme element ``div#content-wrapper`` -- but when the attribute already exists in the theme, the theme attribute is kept.  If you use ``<prepend>`` then when there are overlapping attributes the content attribute value is kept.
+This adds any attributes from ``div#content`` into the theme element
+``div#content-wrapper`` -- but when the attribute already exists in
+the theme, the theme attribute is kept.  If you use ``<prepend>`` then
+when there are overlapping attributes the content attribute value is
+kept. 
 
 .. comment: FIXME: should attributes(class) know about how classes can be combined?
 
@@ -239,16 +275,27 @@ which removes all ``<font>`` tags, but doesn't remove any actual text content.
 ``if-content``
 ~~~~~~~~~~~~~~
 
-*All* the actions can take an attribute ``if-content="selector"``.  This selector is attempted on the content, and if it doesn't match anything then the action is skipped.
+*All* the actions can take an attribute ``if-content="selector"``.
+ This selector is attempted on the content, and if it doesn't match
+ anything then the action is skipped.
 
 Also you can use ``not:`` like ``if-content="not:.container"``.
 
 Zero or multiple matches and error handling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Except for ``<drop>``, in actions it is necessary that the ``theme`` selector match exactly one element.  If it doesn't match *any* element, then the action can't be performed.  If it matches many elements then the action is ambiguous: which element should be the target?  Also, when no content element is matched it is a sign something is wrong, and in some cases if multiple content elements are matched it is a problem.
+Except for ``<drop>``, in actions it is necessary that the ``theme``
+selector match exactly one element.  If it doesn't match *any*
+element, then the action can't be performed.  If it matches many
+elements then the action is ambiguous: which element should be the
+target?  Also, when no content element is matched it is a sign
+something is wrong, and in some cases if multiple content elements are
+matched it is a problem.
 
-The default handling for all these is to log the problem at the level "warn".  If there are multiple matches when that is not expected, the default handling is to log and use the first element.  There are four attributes to override this:
+The default handling for all these is to log the problem at the level
+"warn".  If there are multiple matches when that is not expected, the
+default handling is to log and use the first element.  There are four
+attributes to override this: 
 
 ``notheme``:
     The handling when no theme element is found.
@@ -259,7 +306,13 @@ The default handling for all these is to log the problem at the level "warn".  I
 ``manycontent``:
     The handling when more than on content element is found (and that doesn't make sense in the context of the action).
 
-A value ``notheme="ignore"`` means that the action is ignored and only a "debug" level logging message is produced.  A value like ``nocontent="abort"`` means that if there is no content then all theming will be aborted, and the unthemed content page will be displayed.  For ``manytheme`` and ``manycontent`` you can indicate ``first`` or ``last`` to select the first (default) or last element.  You can combine this like ``manytheme="ignore:first"``.
+A value ``notheme="ignore"`` means that the action is ignored and only
+a "debug" level logging message is produced.  A value like
+``nocontent="abort"`` means that if there is no content then all
+theming will be aborted, and the unthemed content page will be
+displayed.  For ``manytheme`` and ``manycontent`` you can indicate
+``first`` or ``last`` to select the first (default) or last element.
+You can combine this like ``manytheme="ignore:first"``. 
 
 An example:
 
@@ -268,7 +321,11 @@ An example:
     <replace content="children:#content" theme="children:#content"
              nocontent="abort" />
 
-Almost all rules should have at least one action with ``nocontent="abort"``.  This is the action that moves the primary body of the content into the theme.  If that primary body can't be found then when people browse the page they'll see the theme and lose all the useful content.
+Almost all rules should have at least one action with
+``nocontent="abort"``.  This is the action that moves the primary body
+of the content into the theme.  If that primary body can't be found
+then when people browse the page they'll see the theme and lose all
+the useful content. 
 
 ``manycontent`` is used when you are using selection types ``attributes:`` or ``tag:`` -- in both these cases the theme and content element match up one-to-one.
 
@@ -277,16 +334,24 @@ When using ``<drop>`` multiple theme and content elements are expected, so no er
 Including external content with ``href``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In addition to manipulating the theme and content documents, you can bring in content from a third source using the ``href`` attribute on a rule.
+In addition to manipulating the theme and content documents, you can
+bring in content from a third source using the ``href`` attribute on a
+rule.
 
-If you include ``href`` the document at that location is used instead of normal content document.  For example:
+If you include ``href`` the document at that location is used instead
+of normal content document.  For example:
 
 .. code-block:: xml
 
     <append href="/sidebar" content="children:body" 
             theme="children:#sidebar" />
 
-This appends all the elements in the body of ``/sidebar`` into the theme.  This can be used to make the theme more dynamic.  Deliverance doesn't produce content on its own, or modify content in complex ways, but you can use includes like these to introduce several sources of dynamic content into a single page: ``/sidebar`` can be a dynamically generated page itself.
+This appends all the elements in the body of ``/sidebar`` into the
+theme.  This can be used to make the theme more dynamic.  Deliverance
+doesn't produce content on its own, or modify content in complex ways,
+but you can use includes like these to introduce several sources of
+dynamic content into a single page: ``/sidebar`` can be a dynamically
+generated page itself.
 
 Moving and copying
 ~~~~~~~~~~~~~~~~~~
@@ -313,12 +378,17 @@ with the rules:
                nocontent="abort" />
     </rule>
 
-If elements were copied the navigation would show up twice in the resulting page.  If you *do* want content copied instead of moved then add ``move="0"`` to the action.
+If elements were copied the navigation would show up twice in the
+resulting page.  
+
+If you *do* want content copied instead of moved then add ``move="0"``
+to the action.
 
 Standard actions and ``suppress-standard``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are several actions that are "standard".  These are common for HTML generally.  The actions are:
+There are several actions that are "standard".  These are common for
+HTML generally.  The actions are: 
 
 .. code-block:: xml
 
@@ -333,7 +403,9 @@ There are several actions that are "standard".  These are common for HTML genera
             theme="children:/html/head" nocontent="ignore" />
   </rule>
 
-These copy over the title and any links, scripts, or stylesheets from the content into the theme.  These are always applied unless you use ``<rule suppress-standard="1">``.
+These copy over the title and any links, scripts, or stylesheets from
+the content into the theme.  These are always applied unless you use
+``<rule suppress-standard="1">``.
 
 
 .. _`page classes`:
@@ -342,35 +414,58 @@ These copy over the title and any links, scripts, or stylesheets from the conten
 match and page classes
 ----------------------
 
-Note: for a simple site you can mostly ignore this, and just define a single ``<rule>`` that is applied to all requests.  But in many cases you will need to apply specific rules only to parts of the website.  For example, different applications may have navigation in specific parts of the page, and you want rules to move that navigation around the page that is specific to the application.
+Note: for a simple site you can mostly ignore this, and just define a
+single ``<rule>`` that is applied to all requests.  But in many cases
+you will need to apply specific rules only to parts of the website.
+For example, different applications may have navigation in specific
+parts of the page, and you want rules to move that navigation around
+the page that is specific to the application.
 
-Often different sets of rules will apply to different parts of the site.  To define what rules go with what requests/responses there is the concept of "page classes".  These are classes that apply to the page, and any rules with those classes are used.  For example, imagine a page has the classes ``trac`` and ``default``.  Then these rules would be used:
+Often different sets of rules will apply to different parts of the
+site.  To define what rules go with what requests/responses there is
+the concept of "page classes".  These are classes that apply to the
+page, and any rules with those classes are used.  For example, imagine
+a page has the classes ``trac`` and ``default``.  Then these rules
+would be used: 
 
 .. code-block:: xml
 
     <rule class="trac">...</rule>
     <rule class="default">...</rule>
 
-Like CSS any rules that match any of the classes on a page will be run.  Also like CSS you can have multiple classes anywhere, separated by spaces.  Unlike CSS the classes are ordered, and define the order the rules are run in.
+Like CSS any rules that match any of the classes on a page will be
+run.  Also like CSS you can have multiple classes anywhere, separated
+by spaces.  Unlike CSS the classes are ordered, and define the order
+the rules are run in. 
 
 .. comment: FIXME: should they be run according to the order of the rules in the ruleset?
 
-There are several ways to define classes on a page.  If you have control of the server you can add the response header ``X-Deliverance-Page-Class`` with the page classes.  You can also add a ``class`` attribute to `proxy`_ elements.
+There are several ways to define classes on a page.  If you have
+control of the server you can add the response header
+``X-Deliverance-Page-Class`` with the page classes.  You can also add
+a ``class`` attribute to `proxy`_ elements. 
 
-A third way is with ``<match>``.  These elements match requests and add classes.  You can use them like:
+A third way is with ``<match>``.  These elements match requests and
+add classes.  You can use them like: 
 
 .. code-block:: python
 
     <match domain="lists.*" class="lists" />
 
-This will add the "lists" class to any requests going to a domain ``lists.*``.  The request matching is described in `request/response matching`_.
+This will add the "lists" class to any requests going to a domain
+``lists.*``.  The request matching is described in `request/response
+matching`_. 
 
 proxy and server-settings
 -------------------------
 
-Deliverance comes with a proxy, ``deliverance-proxy``.  This starts a server and proxies HTTP requests to other backend servers (Zope, Apache/PHP, paster, etc).
+Deliverance comes with a proxy, ``deliverance-proxy``.  This starts a
+server and proxies HTTP requests to other backend servers (Zope,
+Apache/PHP, paster, etc). 
 
-Settings for the proxying also go in the rule file.  The ``<server-settings>`` element defines aspects of the server, while ``<proxy>`` defines specific servers to proxy to.
+Settings for the proxying also go in the rule file.  The
+``<server-settings>`` element defines aspects of the server, while
+``<proxy>`` defines specific servers to proxy to. 
 
 .. _`server-settings`:
 
@@ -397,39 +492,62 @@ This element looks like:
       <dev-expiration>60</dev-expiration>
     </server-settings>
 
-You can't actually use quite all of these together.  Going over the individual settings:
+You can't actually use quite all of these together.  Going over the
+individual settings:
 
 ``<server>``:
-    This gives the host and port to use.  If you use ``localhost`` or ``127.0.0.1`` for the host then only local connections are allowed.  If you use ``0.0.0.0`` then the server is started up on all your interfaces.  The default is ``localhost:8080``.
+    This gives the host and port to use.  If you use ``localhost`` or
+    ``127.0.0.1`` for the host then only local connections are
+    allowed.  If you use ``0.0.0.0`` then the server is started up on
+    all your interfaces.  The default is ``localhost:8080``. 
 
 ``<execute-pyref>``:
-    This defaults to true.  If this is true then ``pyref`` attributes are allowed (see `pyref Python References`_).  This gives anyone who can write to your rules the ability to execute arbitrary code for each request, so you should turn it off if untrusted people have that access.
+    This defaults to true.  If this is true then ``pyref`` attributes
+    are allowed (see `pyref Python References`_).  This gives anyone
+    who can write to your rules the ability to execute arbitrary code
+    for each request, so you should turn it off if untrusted people
+    have that access. 
 
 ``<display-local-files>``:
-    The `developer debugging console`_ will, by default, display any local files.  If the person accessing that console generally has ssh or other access to the server this isn't a problem.  But if not you should turn this off.
+    The `developer debugging console`_ will, by default, display any
+    local files.  If the person accessing that console generally has
+    ssh or other access to the server this isn't a problem.  But if
+    not you should turn this off. 
 
 ``<edit-local-files>``:
-    You can edit files through the `developer debugging console`_ unless you include ``<edit-local-files>false</edit-local-files>``.
+    You can edit files through the `developer debugging console`_
+    unless you include
+    ``<edit-local-files>false</edit-local-files>``.
 
 The ``<dev-*>`` tags define access to the `developer console`_.
 
 ``<dev-allow>``:
-    This is a list of IP addresses (or IP+mask) that are allowed access.
+    This is a list of IP addresses (or IP+mask) that are allowed
+    access. 
 
 ``<dev-deny>``:
     These addresses are specifically disallowed.
 
 ``<dev-htpasswd>``:
-    This is a list of usernames and passwords created with the Apache ``htpasswd`` program.  You log in using these.
+    This is a list of usernames and passwords created with the Apache
+    ``htpasswd`` program.  You log in using these. 
 
 ``<dev-user>``:
-    Instead of ``<dev-htpasswd>`` you can put username/passwords directly in.  This isn't a very good idea, but combined with a restrictive ``<dev-allow>`` it's not so bad.  You can't use both this and ``<dev-htpasswd>``.  You must use one of these to get access to the console.
+    Instead of ``<dev-htpasswd>`` you can put username/passwords
+    directly in.  This isn't a very good idea, but combined with a
+    restrictive ``<dev-allow>`` it's not so bad.  You can't use both
+    this and ``<dev-htpasswd>``.  You must use one of these to get
+    access to the console. 
 
 ``<dev-expiration>``:
-    The time, in minutes, that a session can last.  You have to re-login after this amount of time.  This defaults to 0, meaning no expiration.
+    The time, in minutes, that a session can last.  You have to
+    re-login after this amount of time.  This defaults to 0, meaning
+    no expiration. 
 
 ``<dev-secret-file>``:
-    The location where the server-side secret should be kept.  This file will be created on its own, as well as the directory that contains it, but Deliverance needs permission to write here.
+    The location where the server-side secret should be kept.  This
+    file will be created on its own, as well as the directory that
+    contains it, but Deliverance needs permission to write here. 
 
 .. comment: FIXME: what's the default IP restriction?
 .. comment: FIXME: say something about variable substitution.
@@ -447,52 +565,66 @@ The ``<proxy>`` element is what defines what gets routed where.  The basic patte
       <dest href="http://localhost:10002" />
     </proxy>
 
-This proxies any requests to ``/trac`` to the dest address.  A request to something like ``/trac/view/1`` will go to ``http://localhost:10002/view/1``.  If you wanted to keep ``/trac`` you can use ``<proxy strip-script-name="0">``.
+This proxies any requests to ``/trac`` to the dest address.  A request
+to something like ``/trac/view/1`` will go to
+``http://localhost:10002/view/1``.
 
-If you want to pass the ``Host`` header through without changing it, use ``<proxy keep-host="1">``.  This generally represents the request accurately, but has not been the norm for systems like this, and often the original host name is only available in ``X-Forwarded-Host``.  "Real" proxies like Squid usually preserve the Host header.  Apache does not unless you configure it to do so.  So if you have setup your system for Apache proxying you probably weren't preserving the Host header.
+If you wanted to keep ``/trac`` you can use ``<proxy strip-script-name="0">``.
 
-You can also match against things besides the path; anything in `request/response matching`_ is available.  But without a simple ``path`` match the path stripping won't work.  (A path match like ``path="regex:.*/manage$"`` wouldn't work, for instance.)
+If you want to pass the ``Host`` header through without changing it,
+use ``<proxy keep-host="1">``.  This generally represents the request
+accurately, but has not been the norm for systems like this, and often
+the original host name is only available in ``X-Forwarded-Host``.
+"Real" proxies like Squid usually preserve the Host header.  Apache
+does not unless you configure it to do so.  So if you have setup your
+system for Apache proxying you probably weren't preserving the Host
+header.
 
-You can also add `page classes`_ for the proxied request, by using ``<proxy class="page-class">``.
+You can also match against things besides the path; anything in
+`request/response matching`_ is available.  But without a simple
+``path`` match the path stripping won't work.  (A path match like
+``path="regex:.*/manage$"`` wouldn't work, for instance.)
 
-You can use ``<proxy editable="1">`` to allow the files references by the proxy to be editable through the `developer debugging console`_.  If you do this you have to have a ``<dest>`` that references a ``file:///...`` URL.
+You can also add `page classes`_ for the proxied request, by using
+``<proxy class="page-class">``.
+
+You can use ``<proxy editable="1">`` to allow the files references by
+the proxy to be editable through the `developer debugging console`_.
+If you do this you have to have a ``<dest>`` that references a
+``file:///...`` URL.
 
 The proxy can contain several elements...
 
 proxy: ``<dest>``
 +++++++++++++++++
 
-The ``<dest>`` element defines the destination.  You must have a dest element.
+The ``<dest>`` element defines the destination.  You must have a dest
+element.
 
-You can give an ``href`` value of both ``http://...`` URLs and ``file:///...`` URLs.  Files are served directly without proxying, though this is seemless to the rest of the process.
+You can give an ``href`` value of both ``http://...`` URLs and
+``file:///...`` URLs.  Files are served directly without proxying,
+though this is seemless to the rest of the process.
 
-The value in ``href`` can be a URI template (though only the simplest form of template).  You can use headers like ``{Host}``, environmental variables like ``{REMOTE_USER}``, or the variable ``{here}`` which points to the directory containing the rule file.  I.e., if the rule file is in ``/etc/deliverance/rules/ruleset.xml`` then ``{here}`` would be ``file:///etc/deliverance/rules``.  This template is substituted for every request, so it can be fully dynamic.
+The value in ``href`` can be a URI template (though only the simplest
+form of template).  You can use headers like ``{Host}``, environmental
+variables like ``{REMOTE_USER}``, or the variable ``{here}`` which
+points to the directory containing the rule file.  I.e., if the rule
+file is in ``/etc/deliverance/rules/ruleset.xml`` then ``{here}``
+would be ``file:///etc/deliverance/rules``.  This template is
+substituted for every request, so it can be fully dynamic.
 
-In addition to this you can use `pyref Python references`_, like:
+`The dest element also supports pyref <pyref.html#dest>`_, as an
+alternative to the ``href`` attribute.
 
-.. code-block:: xml
-
-    <proxy path="/trac">
-      <dest pyref="mymodule:get_proxy_dest" />
-    </proxy>
-
-with the function:
-
-.. code-block:: python
-
-    def get_proxy_dest(request, log):
-        if not request.remote_addr.startswith('192'):
-            raise AbortProxy('Bad remote_addr: %r' % request.remote_addr)
-        return 'http://localhost:10002'
-
-You can return any URL.  URI template substitution is *not* performed.  If you raise ``AbortProxy`` then the ``<proxy>`` will be skipped, and another proxy will be looked for.  (If nothing matches a 404 error is returned.)
-
-If you want to perform request rewriting (as described in the next section) you can use ``<dest next="1">`` and the request modifications will be performed but otherwise the proxy section will be skipped.
+If you want to perform request rewriting (as described in the next
+section) you can use ``<dest next="1">`` and the request modifications
+will be performed but otherwise the proxy section will be skipped.
 
 proxy: ``<request>``
 ++++++++++++++++++++
 
-This modifies the request before it is proxied on.  You can add headers and run Python code against the request.
+This modifies the request before it is proxied on.  You can add
+headers and run Python code against the request.
 
 To add a header:
 
@@ -500,21 +632,7 @@ To add a header:
 
     <request header="X-Project-Name" content="My Project" />
 
-You can also use a `pyref Python reference`_, like:
-
-.. code-block:: xml
-
-    <request pyref="mymodule:modify_proxy_request" />
-
-with the code:
-
-.. code-block:: python
-
-    def modify_proxy_request(request, log):
-        request.header['X-Project-Name'] = request.host.split('.')[0]
-        return request
-
-You can modify the request in-place or return a new request.
+`The request element also supports pyref <pyref.html#request>`_.
 
 proxy: ``<response>``
 +++++++++++++++++++++
@@ -525,44 +643,37 @@ This modifies the response.  Like the request you can add headers:
 
     <response header="Cache-Control" content="max-age=0" />
 
-You can also rewrite links, which means you can proxy from a site that doesn't particularly want to be proxied.  So if you proxy to ``http://othersite.com`` then of course all the links it returns will be to ``http://othersite.com``.  Using link rewriting it will rewrite all those links to go back through the proxy.  This includes the ``Location`` header, any references to ``domain`` in cookies, and all links in the HTML.
+You can also rewrite links, which means you can proxy from a site that
+doesn't particularly want to be proxied.  So if you proxy to
+``http://othersite.com`` then of course all the links it returns will
+be to ``http://othersite.com``.  Using link rewriting it will rewrite
+all those links to go back through the proxy.  This includes the
+``Location`` header, any references to ``domain`` in cookies, and all
+links in the HTML.
 
 .. code-block:: xml
 
     <response rewrite-links="1" />
 
-And of course there's pyref:
-
-.. code-block:: xml
-
-    <response pyref="mymodule:modify_proxy_response" />
-
-with the code:
-
-.. code-block:: python
-
-    def modify_proxy_response(
-        request, response, orig_base, proxied_base, proxied_url, log):
-        # orig_base: the original URL base: http://localhost:8080/trac
-        # proxied_base: where dest sent it to: http://localhost:10001/
-        # proxied_url: the full destination, e.g.,
-        #    http://localhost:10001/view/1
-        # request.url: the full original URL, e.g.,
-        #    http://localhost:8080/trac/view/1
-        response.body += 'look at me!'
-        return response
+`The response element also supports pyref <pyref.html#response>`_.
 
 request/response matching
 -------------------------
 
-Many elements can match requests and responses: the `match`_ element, `rule`_, and `proxy`_.  They all use the same matching.
+Many elements can match requests and responses: the `match`_ element,
+`rule`_, and `proxy`_.  They all use the same matching. 
 
-There are several attributes that match against different parts of the request or response.  If you provide multiple attribute then they must all match.
+There are several attributes that match against different parts of the
+request or response.  If you provide multiple attribute then they must
+all match.
 
 String Matching
 ~~~~~~~~~~~~~~~
 
-These attributes match a string value against a pattern you provide.  There are several kinds of patterns; different attributes default to different types of patterns, whatever is most logical for the attribute value.
+These attributes match a string value against a pattern you provide.
+There are several kinds of patterns; different attributes default to
+different types of patterns, whatever is most logical for the
+attribute value.
 
 First, the attributes:
 
