@@ -10,7 +10,7 @@ sections.  A quick overview:
 
 `theme`_:
     Determine the theme to apply to the page.
-`rule_`: 
+`rule`_: 
     Apply the actual transformations to the page by moving elements
     from the content into the theme.
 `match and page classes`_:
