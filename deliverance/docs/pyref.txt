@@ -1,22 +1,35 @@
 Python References
 =================
 
-Many places in the configuration take optional ``pyref`` attributes.  These reference a module/function name.  The general pattern is:
+Many places in the configuration take optional ``pyref`` attributes.
+These reference a module/function name.  
+
+The general pattern is:
 
 ``pyref="location:function_name"``
 
-    The ``location`` can be a module name, or ``file:/path/to/filename.py``.  If it is a literal filename, then the file is exec'd and turned into a module that way.  All references are to functions (or callable objects), and so you must give the function name.  Note that the ``file:`` case isn't a URL, just a path.
+    The ``location`` can be a module name, or
+    ``file:/path/to/filename.py``.  If it is a literal filename, then
+    the file is exec'd and turned into a module that way.  All
+    references are to functions (or callable objects), and so you must
+    give the function name.  Note that the ``file:`` case isn't a URL,
+    just a path. 
 
 ``pyarg-foo="bar"``
 
-    You can pass extra ad hoc arguments to the function using attributes in this form.  This would add the keyword argument ``foo="bar"`` to the function call.  All arguments have string (well, unicode) values.
+    You can pass extra ad hoc arguments to the function using
+    attributes in this form.  This would add the keyword argument
+    ``foo="bar"`` to the function call.  All arguments have string
+    (well, unicode) values. 
 
-In addition to the ad-hoc arguments, parameters such as the request and response, and a logger,
-will be passed into your ``pyref`` functions.  The particular parameters passed in vary for each
-case, as do the expected return values.  See below for details.
+In addition to the ad-hoc arguments, parameters such as the request
+and response, and a logger, will be passed into your ``pyref``
+functions.  The particular parameters passed in vary for each case, as
+do the expected return values.  See below for details. 
 
-When they are available, ``request`` and ``response`` are `WebOb <http://pythonpaste.org/webob/>`_ 
-objects and ``log`` is a Python logging object.
+When they are available, ``request`` and ``response`` are `WebOb
+<http://pythonpaste.org/webob/>`_ objects and ``log`` is a Python
+logging object.
 
 Details
 -------
@@ -39,7 +52,12 @@ Then define a function like:
     def get_theme(request, response, log):
         return "/%s/theme.html" % request.host
 
-## FIXME: what is ``response`` actually?  Where does it come from?
+``request`` is the original request received by Deliverance.
+
+``response`` is the *content* HTTP response, i.e. the current page to
+be themed.  Note that this allows you to point to different theme
+locations based on conditions of the current page, by inspecting
+``response``'s status code, headers or even body.
 
 Dest
 ~~~~
