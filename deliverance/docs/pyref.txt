@@ -127,6 +127,34 @@ with the code:
 
 Note that you can modify the response in place or return a new webob.Response.
 
+Match, rule, proxy
+~~~~~~~~~~~~~~~~~~
+
+The ``<match>``, ``<rule>`` and ``<proxy>`` elements all support a
+``pyref`` attribute to determine whether they should be active for the
+current request.
+
+Your ``pyref`` function should return a boolean.
+
+The signature is (request, response, response_headers, log):
+
+* response: the current response object, if applicable.
+* response_headers: a list of all the headers in the response,
+  if applicable, including ``<meta http-equiv>`` headers.
+
+In ``<proxy>`` elements, ``response`` and ``response_headers`` will be
+``None``, because ``<proxy>`` commands occur before any subrequest is
+made.
+
+An example:
+
+.. code-block:: python
+
+    def match_request(request, response, response_headers, log):
+        if response.headers.get('x-notheme'):
+            raise AbortTheme
+        return True
+
 Disabling
 ---------
 

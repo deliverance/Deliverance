@@ -673,6 +673,9 @@ There are several attributes that match against different parts of the
 request or response.  If you provide multiple attribute then they must
 all match.
 
+`These elements all support pyref <pyref.html#match-rule-proxy>`_ for
+matching requests and responses.
+
 String Matching
 ~~~~~~~~~~~~~~~
 
@@ -752,20 +755,6 @@ The attributes available:
 ``environ``:
     Matches keys in the request environment.
 
-Python References
-~~~~~~~~~~~~~~~~~
-
-You can also use a ``pyref``, with a function like:
-
-.. code-block:: python
-
-    def match_request(request, response, response_headers, log):
-        if response.headers.get('x-notheme'):
-            raise AbortTheme
-        return True
-
-Note that ``response_headers`` is a list of all the headers, including
-``<meta http-equiv>`` headers.
 
 .. _`pyref Python reference`:
 
