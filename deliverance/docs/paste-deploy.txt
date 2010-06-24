@@ -1,0 +1,47 @@
+Using Deliverance middleware with Paste Deploy
+==============================================
+
+You can set up Deliverance's core feature, transforming responses
+as controlled by a rule file, as WSGI middleware using Paste Deploy
+(or other systems).  
+
+Not all features will work -- for example, proxying and the developer
+console.  These "extra" functions can be set up with separate WSGI
+components, but that setup is not currently documented; if you've done
+it please contribute documentation.
+
+In this setup, the Deliverance middleware will silently ignore any
+commands in the rules file that it doesn't understand.
+
+Paste Deploy configuration
+--------------------------
+
+Configuration looks like:
+
+.. code-block:: ini
+
+    [filter:deliverance]
+    use = egg:Deliverance
+    rule_filename = /path/to/rules.xml
+    theme_uri = http://deliveranceproject.org/mytheme.html
+    execute_pyref = true
+    debug = true
+
+The only required configuration is a rules document.  You can specify
+this with either ``rule_filename`` or with ``rule_uri``, which takes both
+file:// and http:// URLs.
+
+``theme_uri``, if provided, specifies the default theme document to be
+used.  If any ``<theme>`` elements are present in your rules, they
+will take precedence if active for a given request; ``theme_uri`` will
+only be used as a fallback.  But using ``theme_uri`` allows you to
+omit ``<theme>`` entirely if that's your preference.
+
+``execute_pyref`` and ``debug`` are both `False` by default.
+
+Instantiating the middleware from code
+--------------------------------------
+
+The factory function
+:meth:`~deliverance.middleware.make_deliverance_middleware` can be
+used to wrap a WSGI application with Deliverance theming middleware.
