@@ -1,0 +1,3 @@
+
+* Pass open file objects to lxml instead of filenames. Apparently lxml can segfault in some circumstances
+  if you pass a filename for it to open multiple times. (kiorky)

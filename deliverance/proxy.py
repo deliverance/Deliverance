@@ -57,7 +57,9 @@ class ProxySet(object):
     def parse_file(cls, filename):
         """Parse this from a filname"""
         file_url = filename_to_url(filename)
-        tree = parse(filename, base_url=file_url)
+        file = open(filename)
+        tree = parse(file, base_url=file_url)
+        file.close()
         el = tree.getroot()
         tree.xinclude()
         return cls.parse_xml(el, file_url)
@@ -775,7 +777,9 @@ class ProxySettings(object):
     def parse_file(cls, filename):
         """Parse from a file"""
         file_url = filename_to_url(filename)
-        tree = parse(filename, base_url=file_url)
+        file = open(filename)
+        tree = parse(file, base_url=file_url)
+        file.close()
         el = tree.getroot()
         tree.xinclude()
         return cls.parse_xml(el, file_url, traverse=True)
