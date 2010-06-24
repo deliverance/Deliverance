@@ -1,7 +1,7 @@
 Python References
 =================
 
-Many places in the configuration take ``pyref`` attributes.  These reference a module/function name.  The general pattern is:
+Many places in the configuration take optional ``pyref`` attributes.  These reference a module/function name.  The general pattern is:
 
 ``pyref="location:function_name"``
 
@@ -11,40 +11,38 @@ Many places in the configuration take ``pyref`` attributes.  These reference a m
 
     You can pass extra ad hoc arguments to the function using attributes in this form.  This would add the keyword argument ``foo="bar"`` to the function call.  All arguments have string (well, unicode) values.
 
+In addition to the ad-hoc arguments, parameters such as the request and response, and a logger,
+will be passed into your ``pyref`` functions.  The particular parameters passed in vary for each
+case, as do the expected return values.  See below for details.
+
+When they are available, ``request`` and ``response`` are `WebOb <http://pythonpaste.org/webob/>`_ 
+objects and ``log`` is a Python logging object.
+
+
 Examples
 --------
+
+Theme
+~~~~~
+
+A ``<theme pyref>`` replaces a ``<theme href>`` and so your pyref function should return a string href.
 
 You can use a ``<theme>`` like:
 
 .. code-block:: xml
 
-    <theme pyref="file:/home/me/src/customize-deliverance.py:get_theme"
-           pyarg-default_theme="default"
-           pyarg-base="/home/me/src/custom-themes" 
-           pyarg-base_url="/custom-themes" />
+    <theme pyref="mymodule:get_theme" />
 
-    <proxy path="/custom-themes">
-        <dest href="file:///home/me/src/custom-themes" />
-    </proxy>
-
-Then your code might look like:
+Then define a function like:
 
 .. code-block:: python
 
-    def get_theme(request, response, log, default_theme, 
-                  base, base_url):
-        host = request.host.split(':')[0]
-        if os.path.exists(os.path.join(base, host, 'theme.html'):
-            return base_url + '/' + host + '/theme.html'
-        elif not default_theme:
-            log.fatal(None, 
-                      "Theme for host %r doesn't exist and no default theme was given"
-                      % host)
-            raise AbortTheme("No theme found")
-        else:
-            log.debug(None,
-                      "Falling back to default theme")
-            return base_url + '/' + default_theme + '/theme.html'
+    def get_theme(request, response, log):
+        return "/%s/theme.html" % request.host
+
+## FIXME: what is ``response`` actually?  Where does it come from?
+
+
 
 Disabling
 ---------

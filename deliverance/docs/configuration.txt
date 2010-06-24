@@ -3,10 +3,16 @@ Deliverance Configuration
 
 .. contents::
 
-All the configuration for Deliverance goes in an XML file.  This file can configure page matches, transformation rules, proxying, and server settings.  Though it is all in one file, there are several major sections.  A quick overview:
+All the configuration for Deliverance goes in an XML file.  This file
+can configure page matches, transformation rules, proxying, and server
+settings.  Though it is all in one file, there are several major
+sections.  A quick overview:
 
-`rule and theme`_:
-    Determine the theme and apply the actual transformations to the page.
+`theme`_:
+    Determine the theme to apply to the page.
+`rule_`: 
+    Apply the actual transformations to the page by moving elements
+    from the content into the theme.
 `match and page classes`_:
     In more complicated sites, page classes allow you to apply rules based on different criteria.
 `proxy and server-settings`_: 
@@ -22,13 +28,11 @@ Everything goes in a ``<ruleset>`` tag.
 
 .. comment: FIXME: should this be <deliverance>?
 
-rule and theme
---------------
-
-This is the core of what Deliverance does: take a theme along with your content, and apply transformations.
+The core function of Deliverance is to take a theme along with your
+content, and apply transformations.  So we'll start there.
 
 theme
-~~~~~
+-----
 
 The ``<theme>`` element defines the theme you'll be using.  The theme is given as a URL.  The basic form is:
 
@@ -36,35 +40,44 @@ The ``<theme>`` element defines the theme you'll be using.  The theme is given a
 
     <theme href="/theme.html" />
 
-This defines the theme as being at ``/theme.html``.  If possible it will be fetched with an internal request, though external requests are also possible (if you host the theme outside of Deliverance).
+This defines the theme as being at ``/theme.html``.  If possible it
+will be fetched with an internal request, though external requests are
+also possible (if you host the theme outside of Deliverance).
 
-If you have ``<theme>`` at the global level (in the ``<ruleset>`` element) then that is the default theme.  You can also put it inside ``<rule>`` elements, and then it will apply just to that rule set.  This is useful if you are using `match and page classes`_.
+Scoped themes
+~~~~~~~~~~~~~
 
-The theme element also supports `pyref Python references`_.  If you use:
+If you have a ``<theme>`` at the global level (in the ``<ruleset>``
+element) then that is the default theme.
 
-.. code-block:: xml
+You can also put it inside ``<rule>`` elements, and then it will apply
+just to that rule set. This is useful if you are using `match and page
+classes`_.
 
-    <theme pyref="mymodule:get_theme" />
+Pyref in themes
+~~~~~~~~~~~~~~~
 
-Then define a function like:
-
-.. code-block:: python
-
-    def get_theme(request, response, log):
-        return "/%s/theme.html" % request.host
-
-The ``request`` and ``response`` objects are `WebOb <http://pythonpaste.org/webob/>`_ objects.
-
-The default function name is ``get_theme``.
+The theme element also supports `pyref Python references
+<pyref.html#theme>`_ as an alternative to the ``href`` attribute.
 
 rule
-~~~~
+----
 
-The ``<rule>`` element defines a set of transformations.  It also supports `page classes`_ and `request/response matching`_, which you can read about in those sections.  Also, as mentioned above, you can include a ``<theme>`` element.  But the most important thing is the transformation actions.
+The ``<rule>`` element defines a set of transformations.  It also
+supports `page classes`_ and `request/response matching`_, which you
+can read about in those sections.  Also, as mentioned above, you can
+include a ``<theme>`` element.  But the most important thing is the
+transformation actions.
 
-Deliverance has a built-in set of default actions to take care of things like copying the document title and any ``script``, ``link`` and ``style`` attributes over. These rules can be suppressed by adding an ``suppress-standard='true'`` attribute on the ``<rule>`` element.
+Deliverance has a built-in set of default actions to take care of
+things like copying the document title and any ``script``, ``link``
+and ``style`` attributes over. These rules can be suppressed by adding
+an ``suppress-standard='true'`` attribute on the ``<rule>`` element.
 
-The transformation actions are applied in order.  The starting point for the transformation is the *theme* document, and the actions copy elements from the content into the theme.
+The transformation actions are applied in order. 
+
+The starting point for the transformation is the *theme* document.
+The actions copy elements from the content into the theme.
 
 There are four actions:
 
@@ -78,15 +91,23 @@ There are four actions:
     Removes elements from the theme or the content.
 
 Selection and selection types
-++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Each rule depends on selecting elements from the theme and content.  The most basic selection is done with CSS 3 selectors.  For instance, this places the element in the content with the id ``content`` *after* the element in the theme with the id ``header``:
+Each rule depends on selecting elements from the theme and content.
+The most basic selection is done with CSS 3 selectors.  For instance,
+this places the element in the content with the id ``content`` *after*
+the element in the theme with the id ``header``:
 
 .. code-block:: xml
 
     <append content="#content" theme="#header" />
 
-You can also use `XPath <http://www.w3.org/TR/xpath>`_ selectors.  Any selector starting with ``/`` is treated as an XPath expression, while everything else is treated as CSS.  CSS can only select elements, and while XPath can select text or attributes Deliverance is only interested in elements.  Moving elements around has some limitations, so there are different explicit types of selection:
+You can also use `XPath <http://www.w3.org/TR/xpath>`_ selectors.  Any
+selector starting with ``/`` is treated as an XPath expression, while
+everything else is treated as CSS.  CSS can only select elements, and
+while XPath can select text or attributes Deliverance is only
+interested in elements.  Moving elements around has some limitations,
+so there are different explicit types of selection:
 
 .. comment: FIXME: a better XPath link would be nice, like to a tutorial.
 
@@ -104,7 +125,7 @@ You can apply any of these like ``content="children:#content"``.  Not all combin
 When selecting elements you can use the ``||`` operator.  This applies to both CSS and XPath selectors, and with the operator you can mix the two.  The ``||`` operator takes the results of the first selector that matches anything.  So ``content="#content || children:body"`` will take the element ``#content`` if there is one, and if there is not one it will take all the children of ``<body>``.  You can mix ``elements:`` and ``children:`` using ``||``, though no other types can be mixed like this.
 
 ``<replace>``
-+++++++++++++
+~~~~~~~~~~~~~
 
 The ``<replace>`` action replaces something in the theme with something in the content.  Exactly what is replaced depends on the selection type.  Some examples:
 
@@ -134,9 +155,11 @@ this removes all the attributes (e.g., ``class``, ``onload``) from the ``<body>`
 this replaces the tag ``#content`` in the theme with its corresponding tag from the theme.  They might not be the same tag name (e.g., the theme might be a ``<p>`` and the content ``<div>``), and all attributes will be taken from the content.
 
 ``<append>`` and ``<prepend>``
-++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-These actions obvious are very similar; ``<append>`` puts things from te content after things in the theme, and ``<prepend>`` puts things from the content before things in the theme.  Some examples:
+These actions obviously are very similar; ``<append>`` puts things
+from te content after things in the theme, and ``<prepend>`` puts
+things from the content before things in the theme.  Some examples:
 
 .. code-block:: xml
 
@@ -175,9 +198,13 @@ This adds any attributes from ``div#content`` into the theme element ``div#conte
 You can't use ``tag:`` with these actions.
 
 ``<drop>``
-++++++++++
+~~~~~~~~~~
 
-The ``<drop>`` action is used to remove problematic elements from a theme or content.  Also like any rule you can use ``<drop>`` with `if-content`_ to make the drop conditional conditions.  Since this action doesn't move elements around you don't need to provide both ``content`` and ``theme`` attributes; either will do.
+The ``<drop>`` action is used to remove problematic elements from a
+theme or content.  Also like any rule you can use ``<drop>`` with
+`if-content`_ to make the drop conditional conditions.  Since this
+action doesn't move elements around you don't need to provide both
+``content`` and ``theme`` attributes; either will do.
 
 A common example is removing a stylesheet which introduces conflicts:
 
@@ -185,7 +212,13 @@ A common example is removing a stylesheet which introduces conflicts:
 
     <drop content="link[href $= '/sitestyle.css']" />
 
-This is one of the more advanced selectors that CSS 3 allows.  You can't (confidently) use it in browsers yet, but you can in Deliverance!  The ``$=`` operator means *ends-with*, so this selector could be described as: *all link elements with href attributes that end with '/sitestyle.css'*.  Other operators are the obvious ``=``, ``^=`` which means *starts-with*, ``*=`` which means *contains*.  Note that all comparisons are case-sensitive.
+This is one of the more advanced selectors that CSS 3 allows.  You
+can't (confidently) use it in browsers yet, but you can in
+Deliverance!  The ``$=`` operator means *ends-with*, so this selector
+could be described as: *all link elements with href attributes that
+end with '/sitestyle.css'*.  Other operators are the obvious ``=``,
+``^=`` which means *starts-with*, ``*=`` which means *contains*.  Note
+that all comparisons are case-sensitive. 
 
 .. comment: FIXME: should those realy be case-sensitive?
 
@@ -204,14 +237,14 @@ which removes the class from any ``<a class="external-link">`` elements.
 which removes all ``<font>`` tags, but doesn't remove any actual text content.
 
 ``if-content``
-++++++++++++++
+~~~~~~~~~~~~~~
 
 *All* the actions can take an attribute ``if-content="selector"``.  This selector is attempted on the content, and if it doesn't match anything then the action is skipped.
 
 Also you can use ``not:`` like ``if-content="not:.container"``.
 
 Zero or multiple matches and error handling
-+++++++++++++++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Except for ``<drop>``, in actions it is necessary that the ``theme`` selector match exactly one element.  If it doesn't match *any* element, then the action can't be performed.  If it matches many elements then the action is ambiguous: which element should be the target?  Also, when no content element is matched it is a sign something is wrong, and in some cases if multiple content elements are matched it is a problem.
 
@@ -242,7 +275,7 @@ Almost all rules should have at least one action with ``nocontent="abort"``.  Th
 When using ``<drop>`` multiple theme and content elements are expected, so no error handling is necessary in that case.
 
 Including external content with ``href``
-++++++++++++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In addition to manipulating the theme and content documents, you can bring in content from a third source using the ``href`` attribute on a rule.
 
@@ -256,9 +289,12 @@ If you include ``href`` the document at that location is used instead of normal 
 This appends all the elements in the body of ``/sidebar`` into the theme.  This can be used to make the theme more dynamic.  Deliverance doesn't produce content on its own, or modify content in complex ways, but you can use includes like these to introduce several sources of dynamic content into a single page: ``/sidebar`` can be a dynamically generated page itself.
 
 Moving and copying
-++++++++++++++++++
+~~~~~~~~~~~~~~~~~~
 
-By default actions *move* elements from the content to the theme.  That is, if you select content with an action, later actions won't be able to access those content elements.  This is particularly useful in cases like this:
+By default actions *move* elements from the content to the theme.
+That is, if you select content with an action, later actions won't be
+able to access those content elements.  This is particularly useful in
+cases like this:
 
 .. code-block:: html
 
@@ -280,7 +316,7 @@ with the rules:
 If elements were copied the navigation would show up twice in the resulting page.  If you *do* want content copied instead of moved then add ``move="0"`` to the action.
 
 Standard actions and ``suppress-standard``
-++++++++++++++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are several actions that are "standard".  These are common for HTML generally.  The actions are:
 
