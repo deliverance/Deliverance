@@ -1,0 +1,13 @@
+Developer Debugging Console
+===========================
+
+You must be logged in to view the developer console.  The login page
+is available at ``/.deliverance/login`` -- you define the users using
+the `server-settings <configuration.html#server-settings>`_ configuration. 
+
+After you log in you can add ``?deliv_log`` to any page URL to get a
+log at the bottom of the page.  The log describes in detail how the
+page was transformed, including information about how the proxy was
+chosen and any subrequests.  It also lets you browse the source
+involved, see what the selectors select in the content or theme, or
+get a list of interesting ids and classes in the content. 

@@ -14,15 +14,21 @@ sections.  A quick overview:
     Apply the actual transformations to the page by moving elements
     from the content into the theme.
 `match and page classes`_:
-    In more complicated sites, page classes allow you to apply rules based on different criteria.
+    In more complicated sites, page classes allow you to apply rules
+    based on different criteria. 
 `proxy and server-settings`_: 
     Controls the proxy destinations, server, and security settings.
 `request/response matching`_:
-    Several elements can be conditionally used only when the request or response matches conditions.  All these elements share common behavior and attributes.
+    Several elements can be conditionally used only when the request
+    or response matches conditions.  All these elements share common
+    behavior and attributes. 
 `pyref Python references`_:
-    Several elements can call Python hooks.  This describes the general syntax, while the details of the hook are described alongside the element.
-`developer debugging console`_:
-    This gives you information about what Deliverance is doing, on a page-by-page basis.
+    Several elements can call Python hooks.  This describes the
+    general syntax, while the details of the hook are described
+    alongside the element. 
+`clientside theming`_:
+    You can enable an experimental feature which will apply themes in
+    the browser.
 
 Everything goes in a ``<ruleset>`` tag.
 
@@ -509,7 +515,7 @@ individual settings:
     have that access. 
 
 ``<display-local-files>``:
-    The `developer debugging console`_ will, by default, display any
+    The `developer debugging console <debugging-console.html>`_ will, by default, display any
     local files.  If the person accessing that console generally has
     ssh or other access to the server this isn't a problem.  But if
     not you should turn this off. 
@@ -519,7 +525,7 @@ individual settings:
     unless you include
     ``<edit-local-files>false</edit-local-files>``.
 
-The ``<dev-*>`` tags define access to the `developer console`_.
+The ``<dev-*>`` tags define access to the `developer debugging console`_.
 
 ``<dev-allow>``:
     This is a list of IP addresses (or IP+mask) that are allowed
@@ -769,52 +775,20 @@ pyref Python references
 ``pyref`` attribute references allow you to hook into Python code.  To
 read about the details see the `pyref <pyref.html>`_ document.
 
-.. _`developer console`:
-
-Developer Debugging Console
----------------------------
-
-You must be logged in to view the developer console.  The login page
-is available at ``/.deliverance/login`` -- you define the users using
-the `server-settings`_ configuration. 
-
-After you log in you can add ``?deliv_log`` to any page URL to get a
-log at the bottom of the page.  The log describes in detail how the
-page was transformed, including information about how the proxy was
-chosen and any subrequests.  It also lets you browse the source
-involved, see what the selectors select in the content or theme, or
-get a list of interesting ids and classes in the content. 
+.. _`clientside theming`:
 
 Clientside Theming
 ------------------
 
 There is an experimental feature that allows client-side theming using
-Javascript.  This serves the blank theme to the user, with content
-pulled in via XMLHttpRequests.  This means the user will get a
-response quickly, seeing the contentless theme page to start with (and
-so you should write the theme so that any slots contain text like
-"Loading...").  The individual chunks that are pulled in will be
-cachable on the client side. 
+Javascript.  See `client-side theming <clientside-theming.html>`_ for
+details.
 
 To enable this put this in your config::
 
     <clientside />
 
-You may also put conditionals on it, like ``<clientside
-path="/slow-part" />``.  You can only use one theme in this case, as
-page classes are not matched before you send the theme.  Also any
-rules that use ``href="..."`` must be possible to apply out-of-order,
-as the XMLHttpRequest's may come in unexpected orders.  Using, for
-instance, ``<replace>`` and ``<append>`` on the same element is
-problematic in this case -- a better solution would be to clear out
-the theme target element and use ``<prepend>`` and ``<append>``. 
+You may also put conditionals on it, like::
 
-Deliverance will be careful about using this technique.  Only clients
-that are known to run Javascript will be sent these pages (this is
-tested by setting a cookie via Javascript, and then testing on
-subsequent requests if the cookie is set).  Also, pages won't be
-themed like this until it's known that the backend request yields
-HTML.  If these aren't true the normal server-side theming is used,
-which should be equivalent. 
+    <clientside path="/slow-part" />
 
-This has only been tested on Firefox.

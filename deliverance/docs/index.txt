@@ -11,6 +11,7 @@ Deliverance is a tool to theme HTML, applying a consistent style to applications
    configuration
    pyref
    output-format
+   debugging-console
    clientside-theming
    code-map
    news
