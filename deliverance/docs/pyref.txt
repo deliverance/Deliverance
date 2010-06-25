@@ -37,7 +37,8 @@ Details
 Theme
 ~~~~~
 
-A ``<theme pyref>`` replaces a ``<theme href>`` and so your pyref function should return a string href.
+A ``<theme pyref>`` replaces a ``<theme href>`` and so your pyref
+function should return a string href.
 
 You can use a ``<theme>`` like:
 
@@ -58,6 +59,10 @@ Then define a function like:
 be themed.  Note that this allows you to point to different theme
 locations based on conditions of the current page, by inspecting
 ``response``'s status code, headers or even body.
+
+You can raise :exc:`~deliverance.exceptions.AbortTheme` in this
+function (or anywhere else) to signal that the response should be
+returned without any theme applied.
 
 Dest
 ~~~~
@@ -82,9 +87,10 @@ with the function:
         return 'http://localhost:10002'
 
 You can return any URL.  URI template substitution is *not* performed.
-If you raise ``AbortProxy`` then the ``<proxy>`` will be skipped, and
-another proxy will be looked for.  (If nothing matches a 404 error is
-returned.)
+
+If you raise :exc:`~deliverance.exceptions.AbortProxy` then the
+``<proxy>`` will be skipped, and another proxy will be looked for.
+(If nothing matches a 404 error is returned.)
 
 Request
 ~~~~~~~

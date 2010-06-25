@@ -11,6 +11,7 @@ Module Contents
 .. autoexception:: DeliveranceError
 .. autoexception:: DeliveranceSyntaxError
 .. autoexception:: AbortTheme
+.. autoexception:: AbortProxy
 
 Utilities
 ---------
