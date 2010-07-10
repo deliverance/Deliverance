@@ -1,6 +1,18 @@
 News
 ====
 
+0.3.0
+-----
+
+ * Pass open file objects to lxml instead of filenames. Apparently 
+   lxml can segfault in some circumstances if you pass a filename 
+   for it to open multiple times. (kiorky)
+
+ * Reorganized pyref documentation into a single document for easier
+   reference.
+
+ * Added a document on configuring Deliverance with Paste Deploy.
+
 0.3c4
 -----
 
