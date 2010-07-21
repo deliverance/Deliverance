@@ -185,6 +185,25 @@ class ExactMatcher(Matcher):
 
 _add_matcher(ExactMatcher)
         
+class ReverseMatcher(Matcher):
+    """
+    Allows to reverse the result of any matcher
+    """
+
+    name = 'not'
+
+    def __init__(self, pattern):
+        self.pattern = pattern
+        self.matcher = compile_matcher(self.pattern, default='exact')
+
+    def __call__(self, s):
+        return not self.matcher(s)
+
+    def strip_prefix(self):
+        return self.pattern
+
+_add_matcher(ReverseMatcher)
+
 class ExactInsensitiveMatcher(Matcher):
     """
     Matches a string exactly, but ignoring case.

@@ -740,6 +740,11 @@ also apply to the key/value matching described in the next section):
     pattern is fairly insignificant, except ``boolean:not`` inverts
     the match. 
 
+``not:``
+    This allows to reverse the result of any matcher. So
+    ``not:path:/some-path`` will match ``/some-path-to-somewhere``,
+    but it will not match ``/some-path/to/a/place``.
+
 Key/Value Matching
 ~~~~~~~~~~~~~~~~~~
 
