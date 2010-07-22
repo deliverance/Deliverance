@@ -20,7 +20,7 @@ class AbstractMatch(object):
 
     def __init__(self, path=None, domain=None,
                  request_header=None, response_header=None, environ=None,
-                 pyref=None, source_location=None, response_status=None):
+                 pyref=None, source_location=None):
         ## FIXME: this should add response_status
         self.path = path
         self.domain = domain
@@ -29,7 +29,6 @@ class AbstractMatch(object):
         self.environ = environ
         self.pyref = pyref
         self.source_location = source_location
-        self.response_status = response_status
 
     
     @classmethod
@@ -43,7 +42,6 @@ class AbstractMatch(object):
                                          header=True)
         response_header = cls._parse_attr(el, 'response-header', default='exact', 
                                           header=True)
-        response_status = cls._parse_attr(el, 'response-status', default='exact')
         environ = cls._parse_attr(el, 'environ', default='exact', header=True)
         pyref = PyReference.parse_xml(
             el, source_location=source_location,
@@ -54,13 +52,12 @@ class AbstractMatch(object):
             domain=domain,
             request_header=request_header,
             response_header=response_header,
-            response_status=response_status,
             environ=environ,
             pyref=pyref,
             source_location=source_location)
 
     match_attrs = [
-        'path', 'domain', 'request-header', 'response-header', 'environ', 'pyref', 'response-status']
+        'path', 'domain', 'request-header', 'response-header', 'environ', 'pyref']
 
     @staticmethod
     def _parse_attr(el, attr, default=None, header=False):
@@ -85,7 +82,6 @@ class AbstractMatch(object):
             ('domain', self.domain),
             ('request-header', self.request_header),
             ('response-header', self.response_header),
-            ('response-status', self.response_status),
             ('environ', self.environ)]:
             if value:
                 parts.append(u'%s="%s"' % (attr, html_quote(unicode(value))))
@@ -159,14 +155,6 @@ class AbstractMatch(object):
                     debug_context, 'Skipping %s because the response headers %s '
                     'do not match response-header="%s"',
                     debug_name, ', '.join(header_debug), self.response_header)
-                return False
-        if self.response_status:
-            result = self.response_status(str(resp.status_int))
-            if not result:
-                log.debug(
-                    debug_context, 'Skipping %s because response status %s do not '
-                    'match request-header="%s"',
-                    debug_name, resp.status_int, self.response_status)
                 return False
         if self.environ:
             result, keys = self.environ(request.environ)

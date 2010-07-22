@@ -693,18 +693,12 @@ First, the attributes:
     This matches the request host, the domain name of the request URL.
     The default pattern type is ``wildcard-insensitive:``. 
 
-``response-status``:
-    (New in 0.4) This matches the response status code (200, 404, 503...). 
-    The default pattern type is ``exact:``.
-
 Each pattern string can start with ``patterntype:`` which defines what
 kind of pattern it is.  Here's a list of the available patterns (these
 also apply to the key/value matching described in the next section): 
 
 ``wildcard:``
-    This is a wildcard match, i.e., you can use ``*``. If matching 
-    ``response-status`` you can match all server errors with the
-    pattern ``wildcard:5*``
+    This is a wildcard match, i.e., you can use ``*``.
 
 ``wildcard-insensitive:``
     Wildcards that are case-insensitive.
@@ -739,12 +733,6 @@ also apply to the key/value matching described in the next section):
     and "on" are true.  Empty, or any other value, is false.  The
     pattern is fairly insignificant, except ``boolean:not`` inverts
     the match. 
-
-``not:``
-    (New in 0.4) This reverses the result of any matcher. So
-    ``not:path:/some-path`` will match ``/some-path-to-somewhere``,
-    but it will not match ``/some-path/to/a/place``.
-
 
 Key/Value Matching
 ~~~~~~~~~~~~~~~~~~
