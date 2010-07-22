@@ -1,1 +1,7 @@
 
+ * Added a response-status matcher, for matching against the status code of the response.
+   Use like <match response-status="404" class="notfounds" /> (esanchez)
+
+ * Added a ReverseMatcher, which allows you to prefix a match statement with not: to reverse
+   the result.  Use like <match path="not:/bad-path" /> (esanchez)
+
