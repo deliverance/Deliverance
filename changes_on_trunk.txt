@@ -11,3 +11,12 @@
    theme immediately, allowing subsequent actions to act on those
    elements within the theme. (ejucovy)
 
+ * Factored out method ``DeliveranceMiddleware.default_theme(self, environ)``
+   so that subclasses can implement custom logic for calculating the global
+   default theme per request based on the WSGI environment and the value of
+   ``self._default_theme`` which is set by the ``theme_uri`` parameter in
+   the paste.deploy configuration.
+
+   The default implementation returns the raw string ``self._default_theme``
+   directly.
+

@@ -44,11 +44,21 @@ class DeliveranceMiddleware(object):
         self.log_factory = log_factory
         self.log_factory_kw = log_factory_kw
 
-        self.default_theme = default_theme
+        self._default_theme = default_theme
 
         ## FIXME: clearly, this should not be a dictionary:
         self.known_html = set()
         self.known_titles = {}
+
+    def default_theme(self, environ):
+        """
+        The URI of the global default theme, if one is set, or None.
+
+        This is a method that takes the WSGI environ so that subclasses
+        can override the behavior (for example setting the default theme
+        to a URI template that is interpolated on every request)
+        """
+        return self._default_theme
 
     def log_description(self, log=None):
         """The description shown in the log for this context"""
@@ -105,7 +115,7 @@ class DeliveranceMiddleware(object):
             self.known_titles[req.url] = self._get_title(resp.body)
             self.known_html.add(req.url)
         resp = rule_set.apply_rules(req, resp, resource_fetcher, log, 
-                                    default_theme=self.default_theme)
+                                    default_theme=self.default_theme(environ))
         if clientside:
             resp.decode_content()
             resp.body = self._substitute_jsenable(resp.body)
