@@ -431,7 +431,8 @@ class TransformAction(AbstractAction):
 
     def __init__(self, source_location, content, theme, if_content=None, 
                  content_href=None, move=True, nocontent=None, notheme=None, 
-                 manytheme=None, manycontent=None):
+                 manytheme=None, manycontent=None,
+                 collapse_sources=False):
         self.source_location = source_location
         assert content is not None
         self.content = content
@@ -452,6 +453,7 @@ class TransformAction(AbstractAction):
         self.notheme = self.convert_error('notheme', notheme)
         self.manytheme = self.convert_error('manytheme', manytheme)
         self.manycontent = self.convert_error('manycontent', manycontent)
+        self.collapse_sources = collapse_sources
 
     @classmethod
     def from_xml(cls, tag, source_location):
@@ -463,12 +465,15 @@ class TransformAction(AbstractAction):
         if_content = cls.compile_selector(tag, 'if-content', source_location, invertable=True)
         content_href = tag.get('href')
         move = asbool(tag.get('move', '1'))
+        collapse_sources = asbool(tag.get('collapse-sources', '0'))
+
         return cls(source_location, content, theme, if_content=if_content,
                    content_href=content_href, move=move,
                    nocontent=tag.get('nocontent'),
                    notheme=tag.get('notheme'),
                    manytheme=tag.get('manytheme'),
-                   manycontent=tag.get('manycontent'))
+                   manycontent=tag.get('manycontent'),
+                   collapse_sources=collapse_sources)
 
     def apply(self, content_doc, theme_doc, resource_fetcher, log):
         """
@@ -549,7 +554,8 @@ class TransformAction(AbstractAction):
             theme_el = theme_els[0]
         if not self.move and theme_type in ('children', 'elements'):
             content_els = copy.deepcopy(content_els)
-        mark_content_els(content_els)
+        if not self.collapse_sources:
+            mark_content_els(content_els)
         self.apply_transformation(content_type, content_els, attributes, 
                                   theme_type, theme_el, log)
 

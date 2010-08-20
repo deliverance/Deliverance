@@ -5,3 +5,9 @@
  * Added a ReverseMatcher, which allows you to prefix a match statement with not: to reverse
    the result.  Use like <match path="not:/bad-path" /> (esanchez)
 
+ * Added a boolean collapse-sources attribute on TransformActions
+   (append, prepend, replace) which can signal that elements moved
+   from the content to the theme should be "fully collapsed" into the
+   theme immediately, allowing subsequent actions to act on those
+   elements within the theme. (ejucovy)
+

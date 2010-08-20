@@ -393,6 +393,72 @@ resulting page.
 If you *do* want content copied instead of moved then add ``move="0"``
 to the action.
 
+Keeping track of sources
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default Deliverance keeps track of the source of elements in the theme.
+If content elements are merged into the theme, later actions won't be able
+to find those elements in the theme.  So in a case with a content like:
+
+.. code-block:: html
+
+    <body>
+      <div>Content div!</div>
+    </body>
+
+and a theme like:
+
+.. code-block:: html
+
+    <body>
+      <div>Theme div</div>
+      <div>Another theme div</div>
+      <span>Fleem</span>
+    </body>
+
+with the rules:
+
+.. code-block:: xml
+
+    <rule>
+      <append content="div" theme="children:body" />
+      <drop theme="div" />
+    </rule>
+
+The result will be
+
+.. code-block:: html
+
+    <body>
+      <span>Fleem</span>
+      <div>Content div!</div>
+    </body>
+
+It is occasionally useful to tell Deliverance to ignore this distinction
+and act on elements that were placed in the theme by an earlier rule. To
+do this, use a ``<rule collapse-sources="1" />``.
+
+If this attribute is set for an action, then elements that are moved into
+the theme during that action will be immediately merged with the theme
+so that later actions on the theme can act upon them.
+
+In the above example, if the rules were:
+
+.. code-block:: xml
+
+    <rule>
+      <append content="div" theme="children:body" collapse-sources="1" />
+      <drop theme="div" />
+    </rule>
+
+The result would instead be
+
+.. code-block:: html
+
+    <body>
+      <span>Fleem</span>
+    </body>
+
 Standard actions and ``suppress-standard``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

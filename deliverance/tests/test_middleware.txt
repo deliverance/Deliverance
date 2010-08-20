@@ -1060,3 +1060,91 @@ these characters aren't mangled when they are themed through Deliverance::
    <BLANKLINE>
     </body></html>
 
+By default Deliverance keeps track of the source of elements in the
+theme.  If content elements are merged into the theme, later actions
+won't be able to find those elements in the theme.  So in the
+following case::
+
+    >>> new_rule_xml = '''\
+    ... <ruleset>
+    ...   <theme href="/collapse-theme" />
+    ...   <rule class="default">
+    ...     <append content="div" theme="children:body" />
+    ...     <drop theme="div" />
+    ...   </rule>
+    ... </ruleset>'''
+    >>> f = open(rule_filename, 'w+')
+    >>> f.write(new_rule_xml)
+    >>> f.close()
+
+    >>> app['/collapse-theme'] = Response("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    ... "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    ... <html><head></head><body> 
+    ... <div>Theme div</div>
+    ... <div>Another theme div</div>
+    ... <span>Fleem</span>
+    ... </body></html>""")
+
+    >>> app['/collapse-content'] = Response("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    ... "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    ... <html><head></head><body> 
+    ... <div>Content div!</div>
+    ... </body></html>""")
+
+The <div>Content div!</div> from the content source will remain in the
+output, since the <drop> action only applies to elements that were in
+the original theme, even though that div has landed in the theme by
+the time the <drop> action occurs::
+
+    >>> print compare_request('/collapse-content', deliv_filename) # doctest: +REPORT_UDIFF
+    Original content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    <html><head></head><body> 
+    <div>Content div!</div>
+    </body></html>
+    Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    <html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=ASCII" /></head><body> 
+    <BLANKLINE>
+    <BLANKLINE>
+    <span>Fleem</span>
+    <div>Content div!</div>
+    </body></html>
+
+It is occasionally useful to tell Deliverance to ignore this
+distinction and act on elements that were placed in the theme by an
+earlier rule. To do this, use a ``<rule collapse-sources="1" />``. If
+this attribute is set for an action, then elements that are moved into
+the theme during that action will be immediately merged with the theme
+so that later actions on the theme can act upon them.  So in our
+example, setting ``collapse-sources="1"`` on the <append> action will
+cause the final output to contain no <div>s at all::
+
+    >>> new_rule_xml = '''\
+    ... <ruleset>
+    ...   <theme href="/collapse-theme" />
+    ...   <rule class="default">
+    ...     <append content="div" theme="children:body" collapse-sources="1" />
+    ...     <drop theme="div" />
+    ...   </rule>
+    ... </ruleset>'''
+    >>> f = open(rule_filename, 'w+')
+    >>> f.write(new_rule_xml)
+    >>> f.close()
+
+    >>> print compare_request('/collapse-content', deliv_filename) # doctest: +REPORT_UDIFF
+    Original content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    <html><head></head><body> 
+    <div>Content div!</div>
+    </body></html>
+    Themed content:
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    <html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=ASCII" /></head><body> 
+    <BLANKLINE>
+    <BLANKLINE>
+    <span>Fleem</span>
+    <BLANKLINE>
+    </body></html>
