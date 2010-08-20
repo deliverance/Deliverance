@@ -239,12 +239,37 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
                           'Internal request for %s was not 200 OK; retrying as external request.' % url)
             
         ## FIXME: pluggable subrequest handler?
-        subreq = Request.blank(url)
-        subreq.headers['x-deliverance-theme-subrequest'] = "1"
+        subreq = self.build_external_subrequest(url, orig_req, log)
         subresp = subreq.get_response(proxy_exact_request)
         log.debug(self, 'External request for %s: %s content-type: %s',
                   url, subresp.status, subresp.content_type)
         return subresp
+
+    def build_external_subrequest(self, url, orig_req, log):
+        """
+        Returns a webob.Request to be used when Deliverance is getting
+        a resource via an external subrequest (as opposed to a file://
+        URL or an internal subrequest to the application being wrapped
+        by Deliverance)
+
+        The method returns a webob.Request object; the default
+        implementation returns a blank Request with only the header
+        ``x-deliverance-theme-subrequest`` set.  Subclasses can
+        override this behavior, e.g. to preserve certain headers from
+        the original request into subrequests.
+
+        ``url``:
+          The URL of the resource to be fetched
+
+        ``orig_req``:
+          The original request received by Deliverance
+
+        ``log``:
+          The logging object
+        """
+        subreq = Request.blank(url)
+        subreq.headers['x-deliverance-theme-subrequest'] = "1"
+        return subreq
 
     def link_to(self, req, url, source=False, line=None, selector=None, 
                 browse=False):

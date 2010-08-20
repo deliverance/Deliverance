@@ -20,3 +20,13 @@
    The default implementation returns the raw string ``self._default_theme``
    directly.
 
+ * Factored out method ``DeliveranceMiddleware.build_external_subrequest``
+   which is called when Deliverance is getting a resource via an external
+   subrequest (as opposed to a file:// URL or an internal subrequest to the
+   application being wrapped by Deliverance)
+
+   The method returns a webob.Request object; the default implementation
+   returns a blank Request with only the header
+   ``x-deliverance-theme-subrequest`` set.  Subclasses can override
+   this behavior, e.g. to preserve certain headers from the original
+   request into subrequests. 
