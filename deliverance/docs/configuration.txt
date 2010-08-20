@@ -58,7 +58,10 @@ element) then that is the default theme.
 
 You can also put it inside ``<rule>`` elements, and then it will apply
 just to that rule set. This is useful if you are using `match and page
-classes`_.
+classes`_. 
+
+In the case that multiple matching rule sets declare themes,
+the last theme seen is used.
 
 Pyref in themes
 ~~~~~~~~~~~~~~~
