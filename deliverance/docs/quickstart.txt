@@ -66,6 +66,13 @@ If you prefer to use buildout, here's an example of a ``buildout.cfg`` file for 
       Deliverance
   interpreter = py
 
+Warning: plone.recipe.deliverance
+---------------------------------
+
+You might come across a package `plone.recipe.deliverance
+<http://pypi.python.org/pypi/plone.recipe.deliverance>`_.  It is
+unmaintained, so don't try to use it.
+
 Creating a Configuration
 ------------------------
 
