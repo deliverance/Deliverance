@@ -25,18 +25,22 @@ You can use easy_install to install the latest release of Deliverance and all it
 
     $ easy_install Deliverance
 
+You can also install with pip if that's your preference:
+
+    $ pip install Deliverance
+
 .. comment:
 
     This isn't really necessary anymore, I think:
 
     To install lxml, you have to have ``libxml2`` installed, and the ``-dev`` packages for ``libxml2`` and Python itself.  On Ubuntu this is ``libxml2-dev``, ``libxslt1-dev``, and ``python2.5-dev``.
 
-This can take a long time to crunch.  On a Mac you must have the developer tools installed.
+This can take a long time to crunch, because of the lxml dependency.  On a Mac you must have the developer tools installed.
 
-If Normal Installation Fails: buildout
---------------------------------------
+Installing with buildout
+------------------------
 
-For some people on some machines, you may find that the normal installation fails.  Or you might just like buildout.  If you do, here's an example of a ``buildout.cfg`` file for building Deliverance (from Martin Aspeli)::
+If you prefer to use buildout, here's an example of a ``buildout.cfg`` file for building Deliverance (from Martin Aspeli)::
 
   [buildout]
   parts = 
@@ -105,32 +109,6 @@ You can start the server with::
 The site will be at ``http://localhost:8000`` and you can login at ``http://localhost:8000/.deliverance/login``
 
 Once you have logged in you can look at ``http://localhost:8000/?deliv_log`` to see a log of everything Deliverance is doing (at the bottom of the page).
-
-Using Buildout
---------------
-
-Gaël Pasgrimaud wrote up `instructions on installing Deliverance using buildout and pip <http://www.gawel.org/weblog/en/2008/12/combine-zc.buildout-an-pip-benefits>`_.  The basic recipe looks like::
-
-    [buildout]
-    # the cache dir is used by buildout & pip
-    download-cache = download
-    parts = eggs
-
-    [eggs]
-    recipe = gp.recipe.pip
-
-    # eggs installed by pip (also add the Deliverance bundle)
-    install =
-        Cython
-        --install-option=--static-deps lxml==2.2alpha1
-        http://deliverance.openplans.org/dist/Deliverance-snapshot-latest.pybundle
-
-    # eggs installed by zc.recipe.egg
-    eggs =
-        Paste
-        pyquery
-
-This uses his `gp.recipe.pip <http://pypi.python.org/pypi/gp.recipe.pip>`_ buildout recipe.
 
 Editing the Rules
 -----------------
