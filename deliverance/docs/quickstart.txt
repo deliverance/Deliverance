@@ -40,31 +40,22 @@ This can take a long time to crunch, because of the lxml dependency.  On a Mac y
 Installing with buildout
 ------------------------
 
-If you prefer to use buildout, here's an example of a ``buildout.cfg`` file for building Deliverance (from Martin Aspeli)::
+If you prefer to use buildout, here's an example of a ``buildout.cfg`` file for building Deliverance::
 
-  [buildout]
-  parts = 
-      lxml
+  [buildout]                            
+  parts =  
       server
-  develop = 
-      src/Deliverance
-  versions = versions
+                     
+  [server]                           
+  recipe = zc.recipe.egg                 
+  eggs =                              
+      PasteScript                                   
+      Deliverance     
 
-  [versions]
-  lxml = 2.1.2
-
-  [lxml]
-  recipe = z3c.recipe.staticlxml
-  egg = lxml == 2.1.2
-  force = false
-
-  [server]
-  recipe = zc.recipe.egg
-  eggs =
-      lxml
-      PasteScript
-      Deliverance
-  interpreter = py
+You might have trouble installing lxml, particularly if you're on a
+Mac.  If so, you might want to incorporate `z3c.recipe.staticlxml
+<http://pypi.python.org/pypi/z3c.recipe.staticlxml>`_ into your
+buildout.
 
 Warning: plone.recipe.deliverance
 ---------------------------------
