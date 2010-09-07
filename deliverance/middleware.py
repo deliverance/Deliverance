@@ -64,10 +64,15 @@ class DeliveranceMiddleware(object):
         """The description shown in the log for this context"""
         return 'Deliverance'
 
+    def notheme_request(self, req):
+        if 'deliv_notheme' in req.GET:
+            return True
+
     def __call__(self, environ, start_response):
         req = Request(environ)
-        if 'deliv_notheme' in req.GET:
+        if self.notheme_request(req):
             return self.app(environ, start_response)
+
         req.environ['deliverance.base_url'] = req.application_url
         ## FIXME: copy_get?:
         orig_req = Request(environ.copy())
