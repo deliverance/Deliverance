@@ -45,9 +45,6 @@ New in this release:
         "chardet",
         "simplejson",
         ],
-      dependency_links=[
-        "https://svn.openplans.org/svn/DevAuth/trunk#egg=DevAuth-dev",
-        ],
       entry_points="""
       [console_scripts]
       deliverance-proxy = deliverance.proxycommand:main
