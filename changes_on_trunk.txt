@@ -1,1 +1,2 @@
-
+ * Compatible with WebOb 1.0 (or 0.9.8)
+ * Remove dependency_link for unpinned trunk of DevAuth
