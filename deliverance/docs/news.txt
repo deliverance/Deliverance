@@ -1,6 +1,20 @@
 News
 ====
 
+0.3.1
+-----
+
+ * Compatible with WebOb 1.0 (or 0.9.8)
+
+ * Remove dependency_link for unpinned trunk of DevAuth
+
+0.3
+---
+
+ * Pass open file objects to lxml instead of filenames. Apparently
+   lxml can segfault in some circumstances if you pass a filename 
+   for it to open multiple times. (kiorky)
+
 0.3c4
 -----
 
