@@ -3,7 +3,12 @@
 import re
 from lxml.html import tostring, document_fromstring
 from lxml.etree import XML, Comment
-from webob.headerdict import HeaderDict
+
+try: # webob 1.0
+    from webob.headers import ResponseHeaders
+except ImportError:  # webob 0.9.8
+    from webob.headerdict import HeaderDict as ResponseHeaders
+
 from deliverance.exceptions import AbortTheme, DeliveranceSyntaxError
 from deliverance.pagematch import run_matches, Match, ClientsideMatch
 from deliverance.rules import Rule, remove_content_attribs
@@ -35,7 +40,7 @@ class RuleSet(object):
         """
         extra_headers = parse_meta_headers(resp.body)
         if extra_headers:
-            response_headers = HeaderDict(resp.headerlist + extra_headers)
+            response_headers = ResponseHeaders(resp.headerlist + extra_headers)
         else:
             response_headers = resp.headers
         try:
@@ -239,7 +244,7 @@ class RuleSet(object):
     def clientside_actions(self, req, resp, log):
         extra_headers = parse_meta_headers(resp.body)
         if extra_headers:
-            response_headers = HeaderDict(resp.headerlist + extra_headers)
+            response_headers = ResponseHeaders(resp.headerlist + extra_headers)
         else:
             response_headers = resp.headers
         try:
