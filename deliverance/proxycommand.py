@@ -4,6 +4,7 @@ import sys
 import os
 import optparse
 from paste.httpserver import serve
+from pkg_resources import get_distribution
 from deliverance.proxy import ProxySet
 from deliverance.proxy import ProxySettings
 
@@ -11,10 +12,11 @@ description = """\
 Starts up a proxy server using the given rule file.
 """
 
+version = get_distribution("deliverance").version
+
 parser = optparse.OptionParser(
     usage='%prog [OPTIONS] RULE.xml',
-    ## FIXME: get from pkg_resources:
-    version='0.1',
+    version=version,
     description=description,
     )
 ## FIXME: these should be handled by the settings (or just picked up from devauth):
