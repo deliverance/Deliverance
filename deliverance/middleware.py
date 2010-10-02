@@ -730,8 +730,3 @@ def make_deliverance_middleware(app, global_conf,
         execute_pyref=execute_pyref)
     
     return app
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testfile('tests/test_middleware.txt')
-
