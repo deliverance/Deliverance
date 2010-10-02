@@ -27,8 +27,10 @@ from deliverance.rules import clientside_action
 from deliverance.ruleset import RuleSet
 
 
-__all__ = ['DeliveranceMiddleware', 'RulesetGetter', 'SubrequestRuleGetter',
-           'FileRuleGetter', 'make_deliverance_middleware' ]
+__all__ = ['DeliveranceMiddleware', 
+           'SubrequestRuleGetter',
+           'FileRuleGetter', 
+           'make_deliverance_middleware' ]
 
 
 class DeliveranceMiddleware(object):
