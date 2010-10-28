@@ -69,6 +69,8 @@ class DeliveranceMiddleware(object):
     def notheme_request(self, req):
         if 'deliv_notheme' in req.GET:
             return True
+        if req.headers.get("X-Deliverance-Notheme", False):
+            return True
 
     def __call__(self, environ, start_response):
         req = Request(environ)
@@ -102,6 +104,11 @@ class DeliveranceMiddleware(object):
             else:
                 log.debug(self, 'Not doing clientside theming because jsEnabled cookie not set')
         resp = req.get_response(self.app)
+
+        if self.notheme_request(req):
+            log.debug(self, "Not theming the request")
+            return resp(environ, start_response)
+
         ## FIXME: also XHTML?
         if resp.content_type != 'text/html':
             ## FIXME: remove from known_html?
