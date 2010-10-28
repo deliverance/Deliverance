@@ -15,6 +15,7 @@ from webob import exc
 from wsgiproxy.exactproxy import proxy_exact_request
 from tempita import html_quote
 from paste.fileapp import FileApp
+from paste.deploy import loadwsgi
 from lxml.etree import tostring as xml_tostring, Comment, parse
 from lxml.html import document_fromstring, tostring
 from deliverance.exceptions import DeliveranceSyntaxError, AbortProxy
@@ -126,7 +127,8 @@ class Proxy(object):
     def __init__(self, match, dest,
                  request_modifications, response_modifications,
                  strip_script_name=True, keep_host=False,
-                 source_location=None, classes=None, editable=False):
+                 source_location=None, classes=None, editable=False,
+                 wsgi=None):
         self.match = match
         self.match.proxy = self
         self.dest = dest
@@ -137,6 +139,11 @@ class Proxy(object):
         self.source_location = source_location
         self.classes = classes
         self.editable = editable
+        self.wsgi = wsgi
+
+    def get_endpoint(self):
+        ## FIXME: should we assert that one of these is not None?  I think so
+        return self.dest or self.wsgi
 
     def log_description(self, log=None):
         """The debugging description for use in log display"""
@@ -154,7 +161,7 @@ class Proxy(object):
         if self.editable:
             parts.append('editable="1"')
         parts.append('&gt;<br>\n')
-        parts.append('&nbsp;' + self.dest.log_description(log))
+        parts.append('&nbsp;' + self.get_endpoint().log_description(log))
         parts.append('<br>\n')
         if self.request_modifications:
             if len(self.request_modifications) > 1:
@@ -177,11 +184,16 @@ class Proxy(object):
         assert el.tag == 'proxy'
         match = ProxyMatch.parse_xml(el, source_location)
         dest = None
+        wsgi = None
         request_modifications = []
         response_modifications = []
         strip_script_name = True
         keep_host = False
         editable = asbool(el.get('editable'))
+        rewriting_links = None
+
+        ## FIXME: this inline validation is a bit brittle because it is
+        ##        order-dependent, but validation errors generally aren't
         for child in el:
             if child.tag == 'dest':
                 if dest is not None:
@@ -189,7 +201,30 @@ class Proxy(object):
                         "You cannot have more than one <dest> tag (second tag: %s)"
                         % xml_tostring(child),
                         element=child, source_location=source_location)
+                if wsgi is not None:
+                    raise DeliveranceSyntaxError(
+                        "You cannot have both a <dest> tag and a <wsgi> tag (second tag: %s)"
+                        % xml_tostring(child),
+                        element=child, source_location=source_location)
                 dest = ProxyDest.parse_xml(child, source_location)
+            elif child.tag == 'wsgi':
+                if wsgi is not None:
+                    raise DeliveranceSyntaxError(
+                        "You cannot have more than one <wsgi> tag (second tag: %s)"
+                        % xml_tostring(child),
+                        element=child, source_location=source_location)
+                if dest is not None:
+                    raise DeliveranceSyntaxError(
+                        "You cannot have both a <dest> tag and a <wsgi> tag (second tag: %s)"
+                        % xml_tostring(child),
+                        element=child, source_location=source_location)
+                if rewriting_links is not None:
+                    raise DeliveranceSyntaxError(
+                        "You cannot use ``<response rewrite-links='1'>`` in a proxy with a ``<wsgi>`` tag",
+                        element=child, source_location=source_location)
+                    
+                wsgi = ProxyWsgi.parse_xml(child, source_location)
+
             elif child.tag == 'transform':
                 if child.get('strip-script-name'):
                     strip_script_name = asbool(child.get('strip-script-name'))
@@ -200,8 +235,17 @@ class Proxy(object):
                 request_modifications.append(
                     ProxyRequestModification.parse_xml(child, source_location))
             elif child.tag == 'response':
-                response_modifications.append(
-                    ProxyResponseModification.parse_xml(child, source_location))
+                mod = ProxyResponseModification.parse_xml(child, source_location)
+                if mod.rewrite_links == True:
+                    rewriting_links = mod
+                    
+                if wsgi is not None:
+                    raise DeliveranceSyntaxError(
+                        "You cannot use ``<response rewrite-links='1'>`` in a proxy with a ``<wsgi>`` tag",
+                        element=child, source_location=source_location)
+
+                response_modifications.append(mod)
+                    
             elif child.tag is Comment:
                 continue
             else:
@@ -228,7 +272,7 @@ class Proxy(object):
         inst = cls(match, dest, request_modifications, response_modifications,
                    strip_script_name=strip_script_name, keep_host=keep_host,
                    source_location=source_location, classes=classes,
-                   editable=editable)
+                   editable=editable, wsgi=wsgi)
         match.proxy = inst
         return inst
 
@@ -255,15 +299,29 @@ class Proxy(object):
         log = request.environ['deliverance.log']
         for modifier in self.request_modifications:
             request = modifier.modify_request(request, log)
-        if self.dest.next:
+        if self.dest and self.dest.next:
             raise AbortProxy
-        dest = self.dest(request, log)
-        log.debug(self, '<proxy> matched; forwarding request to %s' % dest)
+
+        dest, wsgiapp = None, None
+        if self.dest:
+            dest = self.dest(request, log)
+            log.debug(self, '<proxy> matched; forwarding request to %s' % dest)
+        else:
+            wsgi_app = self.wsgi(request, log)
+            log.debug(self, '<proxy> matched; forwarding request to %s' % wsgi_app)
+
         if self.classes:
             log.debug(self, 'Adding class="%s" to page' % ' '.join(self.classes))
             existing_classes = request.environ.setdefault('deliverance.page_classes', [])
             existing_classes.extend(self.classes)
-        response, orig_base, proxied_base, proxied_url = self.proxy_to_dest(request, dest)
+
+        if dest is not None:
+            response, orig_base, proxied_base, proxied_url = self.proxy_to_dest(request, dest)
+        else:
+            ## FIXME: proxied_base and proxied_url don't really have a meaning here,
+            ##        but the modifier signature expects them
+            response, orig_base, proxied_base, proxied_url = self.proxy_to_wsgi(request, wsgi_app)
+
         for modifier in self.response_modifications:
             response = modifier.modify_response(request, response, orig_base, 
                                                 proxied_base, proxied_url, log)
@@ -317,6 +375,16 @@ class Proxy(object):
             proxy_req.script_name = ''
 
         return proxy_req
+
+    def proxy_to_wsgi(self, request, wsgi_app):
+        """ Forward a request to an inner wsgi app """
+        orig_base = url_normalize(request.application_url)
+
+        ## FIXME: should this be request.copy()?
+        proxy_req = Request(request.environ.copy())
+        resp = proxy_req.get_response(wsgi_app)
+
+        return resp, orig_base, None, None
 
     def proxy_to_dest(self, request, dest):
         """Do the actual proxying, without applying any transformations"""
@@ -448,6 +516,41 @@ class ProxyMatch(AbstractMatch):
         if self.path:
             return self.path.strip_prefix()
         return None
+
+class ProxyWsgi(object):
+    """ Represents the ``<wsgi>`` element """
+
+    def __init__(self, app=None, source_location=None):
+        if not app.startswith("config:") and not app.startswith("egg:"):
+            app = "config:%s" % app
+        self.app_string = app
+        self.app = loadwsgi.loadapp(app)
+        self.source_location = source_location
+
+    @classmethod
+    def parse_xml(cls, el, source_location):
+        """ Parse an instance from an etree XML element """
+        app = el.get('app')
+        if not app:
+            raise DeliveranceSyntaxError(
+                "A ``<wsgi>`` tag must have an ``app`` attribute",
+                element=el, source_location=source_location)
+        return cls(app, source_location=source_location)
+
+    def __call__(self, request, log):
+        """ 
+        Determine the destination given the request,
+        returning a WSGI callable
+        """
+        return self.app
+    
+    def log_description(self, log=None):
+        """The text to show when this is the context of a log message"""
+        parts = ['&lt;wsgi']
+        if self.app_string:
+            parts.append('app="%s"' % html_quote(self.app_string))
+        parts.append('/&gt;')
+        return ' '.join(parts)
 
 class ProxyDest(object):
     """Represents the ``<dest>`` element"""
@@ -592,21 +695,23 @@ class ProxyResponseModification(object):
         """
         Modify the response however the user wanted.
         """
-        # This might not have a trailing /:
-        exact_proxied_base = proxied_base
-        if not proxied_base.endswith('/'):
-            proxied_base += '/'
-        exact_orig_base = orig_base
-        if not orig_base.endswith('/'):
-            orig_base += '/'
-        assert (proxied_url.startswith(proxied_base) 
-                or proxied_url.split('?', 1)[0] == proxied_base[:-1]), (
-            "Unexpected proxied_url %r, doesn't start with proxied_base %r"
-            % (proxied_url, proxied_base))
-        assert (request.url.startswith(orig_base) 
-                or request.url.split('?', 1)[0] == orig_base[:-1]), (
-            "Unexpected request.url %r, doesn't start with orig_base %r"
-            % (request.url, orig_base))
+        if proxied_base is not None and proxied_url is not None:
+            # This might not have a trailing /:
+            exact_proxied_base = proxied_base
+            if not proxied_base.endswith('/'):
+                proxied_base += '/'
+            exact_orig_base = orig_base
+            if not orig_base.endswith('/'):
+                orig_base += '/'
+            assert (proxied_url.startswith(proxied_base) 
+                    or proxied_url.split('?', 1)[0] == proxied_base[:-1]), (
+                "Unexpected proxied_url %r, doesn't start with proxied_base %r"
+                % (proxied_url, proxied_base))
+            assert (request.url.startswith(orig_base) 
+                    or request.url.split('?', 1)[0] == orig_base[:-1]), (
+                "Unexpected request.url %r, doesn't start with orig_base %r"
+                % (request.url, orig_base))
+
         if self.pyref:
             if not execute_pyref(request):
                 log.error(
@@ -618,6 +723,7 @@ class ProxyResponseModification(object):
                     response = result
         if self.header:
             response.headers[self.header] = self.content
+
         if self.rewrite_links:
             def link_repl_func(link):
                 """Rewrites a link to point to this proxy"""
