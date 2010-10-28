@@ -282,6 +282,8 @@ class Proxy(object):
         This also applies all the request and response transformations.
         """
         request = Request(environ)
+        original_script_name = request.script_name
+        original_path_info = request.path_info
         prefix = self.match.strip_prefix()
         if prefix:
             if prefix.endswith('/'):
@@ -300,6 +302,8 @@ class Proxy(object):
         for modifier in self.request_modifications:
             request = modifier.modify_request(request, log)
         if self.dest and self.dest.next:
+            request.script_name = original_script_name
+            request.path_info = original_path_info
             raise AbortProxy
 
         dest, wsgiapp = None, None
@@ -382,6 +386,7 @@ class Proxy(object):
 
         ## FIXME: should this be request.copy()?
         proxy_req = Request(request.environ.copy())
+
         resp = proxy_req.get_response(wsgi_app)
 
         return resp, orig_base, None, None
