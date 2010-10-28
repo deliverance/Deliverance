@@ -71,6 +71,8 @@ class DeliveranceMiddleware(object):
             return True
         if req.headers.get("X-Deliverance-Notheme", False):
             return True
+        if req.headers.get("X-Requested-With", None) == "XMLHttpRequest":
+            return True
 
     def __call__(self, environ, start_response):
         req = Request(environ)
