@@ -304,7 +304,8 @@ class Proxy(object):
         if self.dest and self.dest.next:
             request.script_name = original_script_name
             request.path_info = original_path_info
-            raise AbortProxy
+            log.debug(self, "Aborting proxy, <dest next='1' />")
+            raise AbortProxy, '<dest next="1">'
 
         dest, wsgiapp = None, None
         if self.dest:
@@ -658,8 +659,15 @@ class ProxyRequestModification(object):
                 elif isinstance(result, Request):
                     request = result
         if self.header:
+            log.info(self, "Setting request header %s = %s" %
+                     (self.header, self.content))
             request.headers[self.header] = self.content
         return request
+
+    def log_description(self, log=None):
+        if self.pyref:
+            return '&lt;request pyref="%s" /&gt;' % self.pyref
+        return '&lt;request header="%s" content="%s" /&gt;' % (self.header, self.content)
 
 class ProxyResponseModification(object):
     """Represents the ``<response>`` element in ``<proxy>``"""
