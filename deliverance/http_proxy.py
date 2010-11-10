@@ -7,6 +7,7 @@ import urllib
 import urlparse
 from webob import Request
 import logging
+from webob import exc
 
 class Proxy(object):
 
