@@ -219,7 +219,7 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             new_path_info = url[len(orig_req.application_url):]
             query_string = ''
             if '?' in new_path_info:
-                new_path_info, query_string = new_path_info.split('?')
+                new_path_info, query_string = new_path_info.split('?', 1)
             new_path_info = urllib.unquote(new_path_info)
             assert new_path_info.startswith('/')
             subreq.path_info = new_path_info
