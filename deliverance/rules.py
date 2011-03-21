@@ -1205,10 +1205,17 @@ def mark_content_els(els):
     """
     Mark an element as originating from the content (this uses a special attribute)
     """
+    ## FIXME: see http://trac.socialplanning.org/deliverance/ticket/70
     for el in els:
         ## FIXME: maybe put something that is trackable to the rule
         ## that moved the element
-        el.set(CONTENT_ATTRIB, '1')
+        try:
+            el.set(CONTENT_ATTRIB, '1')
+        except TypeError:
+            # If the element is an comment node or some other node
+            # that doesn't support setting attributes, just ignore it.
+            # http://trac.socialplanning.org/deliverance/ticket/69
+            pass
 
 def is_content_element(el):
     """
