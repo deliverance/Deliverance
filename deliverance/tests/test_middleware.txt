@@ -144,6 +144,10 @@ a helper function to make the content easy to compare:
 
 First we'll look at the blog, fairly simple:
 
+    >>> resp = Request.blank('/blog/index.html').get_response(deliv_filename)
+    >>> resp.content_length == len(resp.body)
+    True
+
     >>> print compare_request('/blog/index.html', deliv_filename) # doctest: +REPORT_UDIFF
     Original content:
     <html><head><title>A blog post</title>
@@ -1148,3 +1152,41 @@ cause the final output to contain no <div>s at all::
     <span>Fleem</span>
     <BLANKLINE>
     </body></html>
+
+The proxy should be able to handle HEAD requests properly, meaning that
+the response headers (including Content-length) for a HEAD request should
+match the headers for a GET request through Deliverance -- and may not match
+the response headers for a request that circumvents Deliverance::
+
+    >>> app['/sample'] = lambda e, s: Response("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    ... "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    ... <html><head></head><body> 
+    ... <div>Content div!</div>
+    ... </body></html>""")(e, s)
+
+    >>> req = Request.blank('/sample')
+    >>> req.method = "HEAD"
+    >>> resp = req.get_response(app)
+    >>> print resp.body
+    <BLANKLINE>
+    >>> print resp.content_length
+    187
+
+    >>> req = Request.blank('/sample')
+    >>> req.method = "HEAD"
+    >>> themed_head_resp = req.get_response(deliv_filename)
+    >>> print themed_head_resp.body
+    <BLANKLINE>
+    >>> print themed_head_resp.content_length
+    291
+
+    >>> resp.headers != themed_head_resp.headers
+    True
+
+    >>> req = Request.blank('/sample')
+    >>> req.method = "GET"
+    >>> themed_resp = req.get_response(deliv_filename)
+    >>> print themed_resp.content_length
+    291
+    >>> themed_resp.headers == themed_head_resp.headers
+    True

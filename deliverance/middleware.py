@@ -101,7 +101,17 @@ class DeliveranceMiddleware(object):
                 return self.clientside_response(req, rule_set, resource_fetcher, log)(environ, start_response)
             else:
                 log.debug(self, 'Not doing clientside theming because jsEnabled cookie not set')
+
+        head_response = None
+        if req.method == "HEAD":
+            # We need to copy the request instead of reusing it, 
+            # in case the downstream app modifies req.environ in-place
+            head_req = req.copy()
+            head_response = head_req.get_response(self.app)
+            req.method = "GET"
+
         resp = req.get_response(self.app)
+
         ## FIXME: also XHTML?
         if resp.content_type != 'text/html':
             ## FIXME: remove from known_html?
@@ -116,6 +126,9 @@ class DeliveranceMiddleware(object):
         if resp.content_length == 0:
             return resp(environ, start_response)
 
+        if resp.body == '':
+            return resp(environ, start_response)
+
         if clientside and req.url not in self.known_html:
             log.debug(self, '%s would have been a clientside check; in future will be since we know it is HTML'
                       % req.url)
@@ -127,6 +140,10 @@ class DeliveranceMiddleware(object):
             resp.decode_content()
             resp.body = self._substitute_jsenable(resp.body)
         resp = log.finish_request(req, resp)
+
+        if head_response:
+            head_response.headers = resp.headers
+            resp = head_response
 
         return resp(environ, start_response)
 
@@ -732,3 +749,7 @@ def make_deliverance_middleware(app, global_conf,
         execute_pyref=execute_pyref)
     
     return app
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testfile("tests/test_middleware.txt")
