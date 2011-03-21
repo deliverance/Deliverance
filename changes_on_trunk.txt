@@ -16,6 +16,8 @@
 
  * Fixed error when trying to move or copy HTML comment nodes (#69)
 
+ * Fixed error in deliverance-proxy when proxying HEAD requests (#66)
+
  * Factored out method ``DeliveranceMiddleware.default_theme(self, environ)``
    so that subclasses can implement custom logic for calculating the global
    default theme per request based on the WSGI environment and the value of
