@@ -9,7 +9,12 @@
    (append, prepend, replace) which can signal that elements moved
    from the content to the theme should be "fully collapsed" into the
    theme immediately, allowing subsequent actions to act on those
-   elements within the theme. (ejucovy)
+   elements within the theme.
+
+ * Added support for mounting WSGI applications directly in the proxy,
+   as an alternative to HTTP proxy endpoints.
+
+ * Fixed error when trying to move or copy HTML comment nodes (#69)
 
  * Factored out method ``DeliveranceMiddleware.default_theme(self, environ)``
    so that subclasses can implement custom logic for calculating the global
