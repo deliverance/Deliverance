@@ -6,3 +6,5 @@ docs/
 eggs/
 include/
 lib/
+*.pyc
+Deliverance.egg-info/
