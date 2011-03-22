@@ -64,6 +64,7 @@ def setup_backend_site():
     app['/magic2'] = make_response(get_text("magic2.html"))
     app['/foo'] = make_response(get_text("foo.html"))
     app['/empty'] = make_response("")
+    app['/html_entities.html'] = make_response(get_text("html_entities.html"))
 
     rule_xml = get_text("rule.xml")
     # Rule files can be published and fetched with a subrequest:
@@ -142,3 +143,10 @@ def test_empty_response():
     resp = deliv_url.get("/empty")
     assert resp.body == ''
     assert resp.status == "200 OK"
+
+def test_html_entities():
+    """ Deliverance should preserve HTML entities in content correctly """
+    deliv_filename, deliv_url, raw_app = setup_backend_site()
+    raw_app.get("/html_entities.html").mustcontain("&hellip;")
+    deliv_url.get("/html_entities.html").mustcontain("&#8230;")
+
