@@ -1,0 +1,30 @@
+<ruleset>
+  <match path="/blog" class="blog" />
+  <match path="exact:/about.html" class="breakout" />
+  <match request-header="X-No-Deliverate: boolean:true" abort="1" />
+  <match response-header="X-No-Deliverate: boolean:true" abort="1" />
+  <match environ="wsgi.url_scheme: https" class="via-https" />
+  <theme href="/theme.html" />
+  <match path="exact:/magic" class="magic" />
+  <rule class="magic">
+    
+  </rule>
+  <rule path="/foo">
+    <drop content="#badstuff" />
+  </rule>
+  <rule class="default">
+    <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
+    <replace content="children:body" theme="children:#content" nocontent="abort" />
+    <prepend content="elements:/html/head/meta" theme="children:/html/head" nocontent="ignore" />  
+  </rule>
+  <rule class="breakout">
+    <replace content="children:#footer" theme="children:#footer" nocontent="ignore" />
+    <replace content="children:body" theme="children:#content-wrapper" nocontent="abort" />
+  </rule>
+  <rule class="blog">
+    <drop theme="#copyright" if-content="#cc" />
+    <drop theme="tag:#copyright" notheme="ignore" />
+    <drop content="#cc" nocontent="ignore" />
+    <replace content="children:#content" theme="children:#content" nocontent="abort" />
+  </rule>
+</ruleset>

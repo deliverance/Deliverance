@@ -30,7 +30,7 @@ New in this release:
       include_package_data=True,
       zip_safe=False,
       test_suite='nose.collector', 
-      tests_require=['nose'],
+      tests_require=['nose', "WebTest"],
       install_requires=[
         "lxml>=2.1alpha1",
         "WebOb",
