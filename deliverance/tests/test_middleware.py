@@ -52,7 +52,9 @@ def make_response(*args, **kw):
         return Response(*args, **kw)(environ, start_response)
     return f
 
-def setup_backend_site():
+raw_app = rule_filename = deliv_filename = deliv_url = None
+def setup():
+    global raw_app, rule_filename, deliv_filename, deliv_url
     app = URLMap()
     
     app['/theme.html'] = make_response(get_text("theme.html"))
@@ -89,11 +91,7 @@ def setup_backend_site():
     deliv_filename = TestApp(deliv_filename)
     deliv_url = TestApp(deliv_url)
 
-    return deliv_filename, deliv_url, raw_app
-
 def test_fundamentals():
-    deliv_filename, deliv_url, raw_app = setup_backend_site()
-
     resp = raw_app.get("/blog/index.html")
     resp.mustcontain("A blog post")
     resp.mustcontain("footer that will be ignored")
@@ -126,27 +124,42 @@ def test_fundamentals():
     find_in_css(resp.body, "div#footer", "footer that will be ignored")
 
 def test_x_no_deliverate_header():
-    deliv_filename, deliv_url, raw_app = setup_backend_site()
     assert "2000 Some Corporation" not in deliv_url.get("/magic")
     assert deliv_filename.get("/magic").body == \
         deliv_url.get("/magic").body == raw_app.get("/magic").body
 
 def test_x_no_deliverate_meta_tag():
-    deliv_filename, deliv_url, raw_app = setup_backend_site()
     assert "2000 Some Corporation" not in deliv_url.get("/magic2")
     assert deliv_filename.get("/magic2").body == \
         deliv_url.get("/magic2").body == raw_app.get("/magic2").body
     
 def test_empty_response():
     """ Deliverance should not blow up if the content response is empty """
-    deliv_filename, deliv_url, raw_app = setup_backend_site()
     resp = deliv_url.get("/empty")
     assert resp.body == ''
     assert resp.status == "200 OK"
 
 def test_html_entities():
     """ Deliverance should preserve HTML entities in content correctly """
-    deliv_filename, deliv_url, raw_app = setup_backend_site()
     raw_app.get("/html_entities.html").mustcontain("&hellip;")
     deliv_url.get("/html_entities.html").mustcontain("&#8230;")
 
+def brokentest_reread_filesystem_rule_file():
+    resp = deliv_filename.get("/blog/index.html")
+    url_resp = deliv_url.get("/blog/index.html")
+
+    assert resp.body == url_resp.body
+
+    new_rule_xml = get_text("new_rule.xml")
+    f = open(rule_filename, 'w+')
+    f.write(new_rule_xml)
+    f.close()
+    new_resp = deliv_filename.get("/blog/index.html")
+
+    assert resp.body == new_resp.body
+    url_resp = deliv_url.get("/blog/index.html")
+    assert resp.body != url_resp.body
+
+    deliv_filename.always_reload = True
+    newer_resp = deliv_filename.get("/blog/index.html")
+    assert new_resp.body != newer_resp.body
