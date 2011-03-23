@@ -3,7 +3,10 @@ This tests pagematch, which tests whether a request/response matches a <match> t
     >>> from deliverance.pagematch import Match
     >>> from lxml.etree import XML
     >>> from webob import Request, Response
-    >>> from webob.headerdict import HeaderDict
+    >>> try:
+    ...     from webob.headerdict import HeaderDict  # 0.9.x
+    ... except ImportError:
+    ...     from webob.headers import ResponseHeaders as HeaderDict  # 1.x
     >>> from deliverance.log import SavingLogger
     >>> def make(xml):
     ...     el = XML(xml)
