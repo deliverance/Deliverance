@@ -67,6 +67,8 @@ def setup():
     app['/foo'] = make_response(get_text("foo.html"))
     app['/empty'] = make_response("")
     app['/html_entities.html'] = make_response(get_text("html_entities.html"))
+    app['/xhtml_doctype.html'] = make_response(get_text("xhtml_doctype.html"))
+    app['/no_xhtml_doctype.html'] = make_response(get_text("no_xhtml_doctype.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -177,3 +179,24 @@ def test_reread_filesystem_rule_file():
     deliv_filename.app.rule_getter.always_reload = True
     newer_resp = deliv_filename.get("/blog/index.html")
     assert new_resp.body != newer_resp.body
+
+def test_xhtml_doctype():
+    """ 
+    The content's DOCTYPE should be respected. So if the content's DOCTYPE is XHTML,
+    the merged output should preserve that DOCTYPE, and self-closing tags should be
+    preserved rather than being rewritten as unclosed tags.
+    """
+    
+    resp = deliv_url.get("/xhtml_doctype.html")
+    resp.mustcontain('<img src="foo.png" />')
+    resp.mustcontain('<a name="top" id="top">')
+    assert "XHTML 1.0 Transitional//EN" in \
+        lxml.html.fromstring(resp.body).getroottree().docinfo.doctype
+
+    # Compare to the same content sans doctype declaration:
+    resp = deliv_url.get("/no_xhtml_doctype.html")
+    resp.mustcontain('<img src="foo.png">')
+    resp.mustcontain('<a name="top">')
+    assert "HTML 4.0 Transitional//EN" in \
+        lxml.html.fromstring(resp.body).getroottree().docinfo.doctype
+
