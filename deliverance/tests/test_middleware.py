@@ -144,7 +144,14 @@ def test_html_entities():
     raw_app.get("/html_entities.html").mustcontain("&hellip;")
     deliv_url.get("/html_entities.html").mustcontain("&#8230;")
 
-def brokentest_reread_filesystem_rule_file():
+def test_reread_filesystem_rule_file():
+
+    # If you're using the SubrequestRuleGetter (a http:// url for the rule-doc)
+    # then Deliverance will always reload the rule-doc on every request.
+    # If you're using the FileRuleGetter (a file:// url for the rule-doc)
+    # then Deliverance will only load the rule-doc once, and keep it in memory,
+    # unless you set rule_getter.always_reload = True.
+
     resp = deliv_filename.get("/blog/index.html")
     url_resp = deliv_url.get("/blog/index.html")
 
@@ -157,9 +164,12 @@ def brokentest_reread_filesystem_rule_file():
     new_resp = deliv_filename.get("/blog/index.html")
 
     assert resp.body == new_resp.body
+
+    deliv_url.app.app['/mytheme/rules.xml'] = make_response(
+        new_rule_xml, content_type="application/xml")
     url_resp = deliv_url.get("/blog/index.html")
     assert resp.body != url_resp.body
 
-    deliv_filename.always_reload = True
+    deliv_filename.app.rule_getter.always_reload = True
     newer_resp = deliv_filename.get("/blog/index.html")
     assert new_resp.body != newer_resp.body
