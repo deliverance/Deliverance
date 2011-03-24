@@ -11,6 +11,18 @@ import tempfile
 from webob import Request, Response
 from webtest import TestApp
 
+def find_in_css_raw(html, css, what):
+    tree = lxml.html.document_fromstring(html)
+    sel = CSSSelector(css)
+    results = sel(tree)
+    results = '\n'.join(lxml.html.tostring(r)
+                        for r in results)
+
+    if what not in results:
+        raise AssertionError("no match to '%s' in '%s'" %
+                             (what, results))
+    return what
+
 def find_in_css(html, css, what):
     tree = lxml.html.document_fromstring(html)
     sel = CSSSelector(css)
@@ -69,6 +81,7 @@ def setup():
     app['/html_entities.html'] = make_response(get_text("html_entities.html"))
     app['/xhtml_doctype.html'] = make_response(get_text("xhtml_doctype.html"))
     app['/no_xhtml_doctype.html'] = make_response(get_text("no_xhtml_doctype.html"))
+    app['/scriptcomments'] = make_response(get_text("scriptcomments.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -189,6 +202,8 @@ def test_xhtml_doctype():
     
     resp = deliv_url.get("/xhtml_doctype.html")
     resp.mustcontain('<img src="foo.png" />')
+    # There's a new id="top" attribute on the <a name="top"> tag;
+    # it's required for XHTML: http://www.w3.org/TR/xhtml1/#h-4.10
     resp.mustcontain('<a name="top" id="top">')
     assert "XHTML 1.0 Transitional//EN" in \
         lxml.html.fromstring(resp.body).getroottree().docinfo.doctype
@@ -199,4 +214,16 @@ def test_xhtml_doctype():
     resp.mustcontain('<a name="top">')
     assert "HTML 4.0 Transitional//EN" in \
         lxml.html.fromstring(resp.body).getroottree().docinfo.doctype
+
+def test_rule_matches():
+    # FIXME: what is this testing exactly?  look in rules.xml and also commit history
+    raw_app.get("/foo").mustcontain("badstuff")
+    assert "badstuff" not in deliv_url.get("/foo")
+
+def test_style_comments_not_escaped():
+    """ Test that HTML comments inside SCRIPT and STYLE tags aren't escaped """
+    # FIXME: not working as a regex search; probably some special characters are in there
+    find_in_css_raw(
+        deliv_url.get("/scriptcomments").body, "style",
+        "<!-- @import url( http://localhost:8080/testplonesite/content_types.css); -->")
 
