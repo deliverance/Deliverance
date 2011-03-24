@@ -69,14 +69,20 @@ def setup():
     app['/html_entities.html'] = make_response(get_text("html_entities.html"))
 
     rule_xml = get_text("rule.xml")
-    # Rule files can be published and fetched with a subrequest:
-    app['/mytheme/rules.xml'] = make_response(rule_xml, content_type="application/xml")
 
-    # Rule files can also be read directly from the filesystem:
+    # Rule files can be read directly from the filesystem:
     rule_filename_pos, rule_filename = tempfile.mkstemp()
     f = open(rule_filename, 'w+')
     f.write(rule_xml)
     f.close()
+
+    # Rule files can also be published and fetched with an HTTP subrequest:
+    def read_rule_file(environ, start_response):
+        f = open(rule_filename)
+        content = f.read()
+        f.close()
+        return Response(content, content_type="application/xml")(environ, start_response)
+    app['/mytheme/rules.xml'] = read_rule_file
 
     # We'll set up one DeliveranceMiddleware using the published rules, 
     # and another using the rule file:
@@ -165,8 +171,6 @@ def test_reread_filesystem_rule_file():
 
     assert resp.body == new_resp.body
 
-    deliv_url.app.app['/mytheme/rules.xml'] = make_response(
-        new_rule_xml, content_type="application/xml")
     url_resp = deliv_url.get("/blog/index.html")
     assert resp.body != url_resp.body
 
