@@ -106,6 +106,7 @@ def setup():
     app['/newfooter_sneaky_cdata.html'] = make_response(get_text("newfooter_sneaky_cdata.html"))
     app['/reddot.html'] = make_response(get_text("reddot.html"))
     app['/reddot2.html'] = make_response(get_text("reddot2.html"))
+    app['/ellipse.html'] = make_response(get_text("ellipse.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -380,8 +381,29 @@ def test_meta_charset_declaration():
     resp.find_in_css(
         "title", "日本語".decode("utf8").encode("ascii", "xmlcharrefreplace"),
         raw=True)
-    raw_app.get("/theme.html?deliv_notheme").mustcontain("""</title>
+    raw_app.get("/theme.html").mustcontain("""</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <link""")
     resp.mustcontain("""<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>""")
+
+def test_nonascii_characters():
+    # Some non-ASCII characters can end up mangled when they pass through lxml.html
+    ellipse = "…"
+    x = "<html><body>%s</body></html>" % ellipse
+    assert lxml.html.tostring(lxml.html.fromstring(x)) != \
+        "<html><body>%s</body></html>" % ellipse.decode("utf8").encode("ascii", "xmlcharrefreplace")
+   
+    # That should have been "&#8230;", which is the HTML code for the ellipsis character.
+    # The way to fix this is to decode the string to unicode before lxml.html gets it.
+    assert lxml.html.tostring(lxml.html.fromstring(x.decode("utf"))) == \
+        "<html><body>%s</body></html>" % ellipse.decode("utf8").encode("ascii", "xmlcharrefreplace")
+
+    # So, internally, Deliverance will use webob.Response.unicode_body, which uses the
+    # response's charset to figure out how to decode the string. Let's make sure that
+    # these characters aren't mangled when they are themed through Deliverance::
+    raw_app.get("/ellipse.html").mustcontain(ellipse)
+    deliv_url.get("/ellipse.html").mustcontain(
+        ellipse.decode("utf8").encode("ascii", "xmlcharrefreplace"))
+    deliv_url.get("/ellipse.html").find_in_css(
+        "body", ellipse.decode("utf8").encode("ascii", "xmlcharrefreplace"))
 
