@@ -450,3 +450,23 @@ def test_source_tracking():
     deliv_url.get("/collapse_content.html").find_in_css(
         "body div", "Content div!", should_fail=True)
     assert "div" not in deliv_url.get("/collapse_content.html")
+
+def test_head_requests():
+    """
+    The proxy should be able to handle HEAD requests properly, meaning that
+    the response headers (including Content-length) for a HEAD request should
+    match the headers for a GET request through Deliverance -- and may not match
+    the response headers for a request that circumvents Deliverance.
+    """
+    resp = raw_app.head("/collapse_content.html")
+    raw_content_length = len(get_text("collapse_content.html"))
+    assert not resp.body
+    assert resp.content_length == raw_content_length
+
+    head_resp = deliv_filename.head("/collapse_content.html")
+    assert not head_resp.body
+    assert head_resp.content_length != raw_content_length
+
+    resp = deliv_filename.get("/collapse_content.html")
+    assert resp.content_length == head_resp.content_length
+    assert resp.headers == head_resp.headers
