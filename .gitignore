@@ -8,3 +8,4 @@ include/
 lib/
 *.pyc
 Deliverance.egg-info/
+dist/

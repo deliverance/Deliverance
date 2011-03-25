@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.4.0'
+version = '0.4.1-dev'
 
 setup(name='Deliverance',
       version=version,
@@ -24,7 +24,7 @@ New in this release:
       keywords='wsgi theming html',
       author='Ian Bicking, Ethan Jucovy',
       author_email='deliverance-devel@lists.coactivate.org',
-      url='http://packages.python.org/Deliverance/',
+      url='https://github.com/deliverance/Deliverance/',
       license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
