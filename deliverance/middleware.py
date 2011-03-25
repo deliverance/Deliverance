@@ -750,6 +750,3 @@ def make_deliverance_middleware(app, global_conf,
     
     return app
 
-if __name__ == '__main__':
-    import doctest
-    doctest.testfile("tests/test_middleware.txt")
