@@ -11,6 +11,15 @@ import tempfile
 from webob import Request, Response
 from webtest import TestApp
 
+def notfind_in_css_raw(html, css, what):
+    try:
+        find_in_css_raw(html, css, what)
+    except AssertionError:
+        return
+    else:
+        raise AssertionError("match to '%s' in '%s' in '%s'" % 
+                             (what, css, html))
+
 def find_in_css_raw(html, css, what):
     tree = lxml.html.document_fromstring(html)
     sel = CSSSelector(css)
@@ -82,6 +91,8 @@ def setup():
     app['/xhtml_doctype.html'] = make_response(get_text("xhtml_doctype.html"))
     app['/no_xhtml_doctype.html'] = make_response(get_text("no_xhtml_doctype.html"))
     app['/scriptcomments'] = make_response(get_text("scriptcomments.html"))
+    app['/xhtml_scriptcomments'] = make_response(get_text("xhtml_scriptcomments.html"))
+    app['/cdata.html'] = make_response(get_text("cdata.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -227,3 +238,38 @@ def test_style_comments_not_escaped():
         deliv_url.get("/scriptcomments").body, "style",
         "<!-- @import url( http://localhost:8080/testplonesite/content_types.css); -->")
 
+    # But the same content with an XHTML doctype *will* escape
+    # the HTML comments; they are not valid in XHTML
+    # FIXME: link to reference in trac / mailing list archives
+    find_in_css_raw(
+        deliv_url.get("/xhtml_scriptcomments").body, "style",
+        "&lt;!-- @import url( http://localhost:8080/testplonesite/content_types.css); --&gt;")
+    
+def test_cdata_preserved():
+    """ 
+    CDATA sections in XHTML documents should be preserved! lxml has a tendency to escape the angle brackets
+    that start and end a CDATA section in XHTML documents (but not HTML) -- so Deliverance will munge the 
+    markers that start and end CDATA sections before passing the documents to lxml, and then unmunge them
+    after getting a merged string back from lxml. Let's make sure they're properly preserved in both theme
+    and content documents.
+    """
+    # Swap out the theme-doc for one which has a cdata section:
+    deliv_url.app.app['/theme.html'] = make_response(get_text("cdata_theme.html"))
+
+    # Look for the CDATA section in the head provided by the theme-doc:
+    notfind_in_css_raw(raw_app.get("/cdata.html").body,
+                       "head", "<![CDATA[")
+    find_in_css_raw(deliv_url.get("/cdata.html").body,
+                    "head", "/*<![CDATA[*/")
+
+    # And look for the CDATA section in the body provided by the content-doc:
+    find_in_css_raw(raw_app.get("/cdata.html").body,
+                    "body", "//<![CDATA[")
+    find_in_css_raw(deliv_url.get("/cdata.html").body,
+                    "body", "//<![CDATA[")
+
+    # Make sure that the content within the CDATA section is properly unescaped:
+    find_in_css_raw(deliv_url.get("/cdata.html").body,
+                    "body script", "foo < bar")
+    notfind_in_css_raw(deliv_url.get("/cdata.html").body,
+                       "body script", "foo &lt; bar")
