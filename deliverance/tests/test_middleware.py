@@ -65,8 +65,8 @@ class HtmlTestApp(TestApp):
 def get_text(name):
     path = pkg_resources.resource_filename(
         "deliverance", "tests/test_content/%s" % name)
+    fp = open(path)
     try:
-        fp = open(path)
         content = fp.read()
     finally:
         fp.close()
@@ -101,12 +101,17 @@ def setup():
     app['/no_xhtml_doctype.html'] = make_response(get_text("no_xhtml_doctype.html"))
     app['/scriptcomments'] = make_response(get_text("scriptcomments.html"))
     app['/xhtml_scriptcomments'] = make_response(get_text("xhtml_scriptcomments.html"))
+
     app['/cdata.html'] = make_response(get_text("cdata.html"))
     app['/newfooter.html'] = make_response(get_text("newfooter.html"))
     app['/newfooter_sneaky_cdata.html'] = make_response(get_text("newfooter_sneaky_cdata.html"))
+
     app['/reddot.html'] = make_response(get_text("reddot.html"))
     app['/reddot2.html'] = make_response(get_text("reddot2.html"))
     app['/ellipse.html'] = make_response(get_text("ellipse.html"))
+
+    app['/collapse_theme.html'] = make_response(get_text("collapse_theme.html"))
+    app['/collapse_content.html'] = make_response(get_text("collapse_content.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -407,3 +412,41 @@ def test_nonascii_characters():
     deliv_url.get("/ellipse.html").find_in_css(
         "body", ellipse.decode("utf8").encode("ascii", "xmlcharrefreplace"))
 
+def test_source_tracking():
+    # By default Deliverance keeps track of the source of elements in the
+    # theme.  If content elements are merged into the theme, later actions
+    # won't be able to find those elements in the theme.  
+
+    # Swap in a new rule file to test this, ho hum
+    f = open(rule_filename, 'w+')
+    f.write(get_text("rule_test_source_tracking.xml"))
+    f.close()
+
+    # The <div>Content div!</div> from the content source will remain in the
+    # output, since the <drop> action only applies to elements that were in
+    # the original theme, even though that div has landed in the theme by
+    # the time the <drop> action occurs::
+    raw_app.get("/collapse_content.html").find_in_css(
+        "body div", "Content div!")
+    deliv_url.get("/collapse_content.html").find_in_css(
+        "body div", "Content div!")
+
+    # It is occasionally useful to tell Deliverance to ignore this
+    # distinction and act on elements that were placed in the theme by an
+    # earlier rule. To do this, use a ``<rule collapse-sources="1" />``. If
+    # this attribute is set for an action, then elements that are moved into
+    # the theme during that action will be immediately merged with the theme
+    # so that later actions on the theme can act upon them.  So in our
+    # example, setting ``collapse-sources="1"`` on the <append> action will
+    # cause the final output to contain no <div>s at all::
+
+    # Swap in a new rule file to test this .. ho hum
+    f = open(rule_filename, 'w+')
+    f.write(get_text("rule_test_source_collapsing.xml"))
+    f.close()
+
+    raw_app.get("/collapse_content.html").find_in_css(
+        "body div", "Content div!")
+    deliv_url.get("/collapse_content.html").find_in_css(
+        "body div", "Content div!", should_fail=True)
+    assert "div" not in deliv_url.get("/collapse_content.html")

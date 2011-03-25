@@ -1,0 +1,7 @@
+<ruleset>
+  <theme href="/collapse_theme.html" />
+  <rule class="default">
+    <append content="div" theme="children:body" />
+    <drop theme="div" />
+  </rule>
+</ruleset>
