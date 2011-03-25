@@ -101,6 +101,8 @@ def setup():
     app['/scriptcomments'] = make_response(get_text("scriptcomments.html"))
     app['/xhtml_scriptcomments'] = make_response(get_text("xhtml_scriptcomments.html"))
     app['/cdata.html'] = make_response(get_text("cdata.html"))
+    app['/newfooter.html'] = make_response(get_text("newfooter.html"))
+    app['/newfooter_sneaky_cdata.html'] = make_response(get_text("newfooter_sneaky_cdata.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -287,3 +289,51 @@ def test_cdata_preserved():
         "body script", "foo < bar", raw=True)
     deliv_url.get("/cdata.html").find_in_css(
         "body script", "foo &lt; bar", raw=True, should_fail=True)
+
+    # We should also see what happens to CDATA sections merged in from external
+    # content documents, when the `href` attribute  is used in a rule action.
+
+    # First we'll swap in a new rule file that pulls in content from /newfooter.html
+    new_rule_xml = get_text("rule_with_cdata_footer.xml")
+    f = open(rule_filename, 'w+')
+    f.write(new_rule_xml)
+    f.close()
+
+    # FIXME: why doesn't find_in_css work for this? lxml is eating the cdata
+    # in the footer, but not the cdata elsewhere in the same document.
+    assert """
+    <div id="footer">
+      foo
+      <![CDATA[
+                some unescaped script content in the footer
+                ]]>
+    </div>""" not in raw_app.get("/cdata.html")
+    deliv_url.get("/cdata.html").mustcontain("""
+    <div id="footer">
+      foo
+      <![CDATA[
+                some unescaped script content in the footer
+                ]]>
+    </div>""")
+
+    # Note that there's a small chance of false positives, if a document 
+    # happens to contain the text markers that we use internally for the 
+    # CDATA start and end.
+    # (__START_CDATA__ and __END_CDATA__, defined in deliverance.utils.cdata)
+    
+    # Swap in yet another rule file, ho-hum
+    new_rule_xml = get_text("rule_with_sneaky_cdata_footer.xml")
+    f = open(rule_filename, 'w+')
+    f.write(new_rule_xml)
+    f.close()
+    
+    raw_app.get("/newfooter_sneaky_cdata.html").find_in_css(
+        "#footer", "__START_CDATA__")
+    assert "__START_CDATA__" not in deliv_url.get("/cdata.html")
+    deliv_url.get("/cdata.html").mustcontain("""
+    <div id="footer">
+      foo
+      <![CDATA[
+                some unescaped script content in the footer
+                ]]>
+    </div>""")
