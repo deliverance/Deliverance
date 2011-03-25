@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.4-dev'
+version = '0.4.0'
 
 setup(name='Deliverance',
       version=version,
@@ -22,7 +22,7 @@ New in this release:
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware",
       ],
       keywords='wsgi theming html',
-      author='Ian Bicking, The Open Planning Project, and the Deliverance development community',
+      author='Ian Bicking, Ethan Jucovy',
       author_email='deliverance-devel@lists.coactivate.org',
       url='http://packages.python.org/Deliverance/',
       license='MIT',

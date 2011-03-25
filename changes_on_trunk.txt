@@ -37,3 +37,6 @@
    ``x-deliverance-theme-subrequest`` set.  Subclasses can override
    this behavior, e.g. to preserve certain headers from the original
    request into subrequests. 
+
+ * Moved tests from test_middleware.txt to test_middleware.py, and converted
+   to WebTest, to improve clarity of tests and ease of adding new tests.
