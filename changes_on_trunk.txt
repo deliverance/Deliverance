@@ -38,5 +38,11 @@
    this behavior, e.g. to preserve certain headers from the original
    request into subrequests. 
 
+ * Factored out method ``DeliveranceMiddleware.notheme_request(self, request)``
+   so that subclasses can customize the logic to determine which requests
+   should never be themed by Deliverance.  
+
+   The default implementation checks for "deliv_notheme" in the querystring.
+
  * Moved tests from test_middleware.txt to test_middleware.py, and converted
    to WebTest, to improve clarity of tests and ease of adding new tests.
