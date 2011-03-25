@@ -78,6 +78,11 @@ def make_response(*args, **kw):
 
 raw_app = rule_filename = deliv_filename = deliv_url = None
 def setup():
+    # Monkeypatch webtest TestRequest to inject our custom TestResponse
+    # for now, hopefully subclass approach (demonstrated above to no effect)
+    # will be merged to WebTest trunk (from bitbucket.org/ejucovy/webtest)
+    TestRequest.ResponseClass = HtmlTestResponse
+
     global raw_app, rule_filename, deliv_filename, deliv_url
     app = URLMap()
     
@@ -125,6 +130,9 @@ def setup():
 
     deliv_filename = HtmlTestApp(deliv_filename)
     deliv_url = HtmlTestApp(deliv_url)
+
+def teardown():
+    TestRequest.ResponseClass = TestResponse
 
 def test_fundamentals():
     resp = raw_app.get("/blog/index.html")
