@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from deliverance.log import PrintingLogger
 from deliverance.middleware import DeliveranceMiddleware
 from deliverance.middleware import FileRuleGetter, SubrequestRuleGetter
@@ -103,6 +104,8 @@ def setup():
     app['/cdata.html'] = make_response(get_text("cdata.html"))
     app['/newfooter.html'] = make_response(get_text("newfooter.html"))
     app['/newfooter_sneaky_cdata.html'] = make_response(get_text("newfooter_sneaky_cdata.html"))
+    app['/reddot.html'] = make_response(get_text("reddot.html"))
+    app['/reddot2.html'] = make_response(get_text("reddot2.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -337,3 +340,48 @@ def test_cdata_preserved():
                 some unescaped script content in the footer
                 ]]>
     </div>""")
+
+def test_meta_charset_declaration():
+    """
+    lxml will properly parse html documents only if the meta tag with charset
+    declaration occurs before any chars outside ASCII (per the HTML spec). To
+    play nicely with content that breaks that assumption, Deliverance will move
+    the charset declaration before passing the document to lxml, to make sure
+    the resulting content isn't mangled.
+    """
+    # FIXME: find mailing list reference about this, whynot
+    # FTR, they're called reddot b/c RedDot CMS does this, apparently
+    raw_app.get("/reddot.html").mustcontain("日本語")
+    deliv_url.get("/reddot.html").mustcontain(
+        "日本語".decode("utf8").encode("ascii", "xmlcharrefreplace"))
+    raw_app.get("/reddot2.html").mustcontain("日本語")
+    deliv_url.get("/reddot2.html").mustcontain(
+        "日本語".decode("utf8").encode("ascii", "xmlcharrefreplace"))
+
+    raw_app.get("/reddot.html").mustcontain("""</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  </head>""")
+    deliv_url.get("/reddot.html").mustcontain(
+        """<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>""")
+
+    # reddot2.html has a closing meta-tag, which isn't correct for html.
+    # we're just showing here that lxml will remove the closing tag.
+    raw_app.get("/reddot2.html").mustcontain("""</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></meta>
+  </head>""")
+    deliv_url.get("/reddot2.html").mustcontain(
+        """<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>""")
+
+    # Let's test that for the theme document also. We'll put the Japanese title and misplaced
+    # charset declaration in the theme instead of the content. The resulting title should be
+    # the correct HTML sequence:
+    raw_app.app['/theme.html'] = make_response(get_text("new_theme.html"))
+    resp = deliv_url.get("/foo")
+    resp.find_in_css(
+        "title", "日本語".decode("utf8").encode("ascii", "xmlcharrefreplace"),
+        raw=True)
+    raw_app.get("/theme.html?deliv_notheme").mustcontain("""</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link""")
+    resp.mustcontain("""<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>""")
+
