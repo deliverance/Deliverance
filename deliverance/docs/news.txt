@@ -1,6 +1,59 @@
 News
 ====
 
+0.4.0
+-----
+
+
+ * Added a response-status matcher, for matching against the status code of the response.
+   Use like <match response-status="404" class="notfounds" /> (esanchez) (#39)
+
+ * Added a ReverseMatcher, which allows you to prefix a match statement with not: to reverse
+   the result.  Use like <match path="not:/bad-path" /> (esanchez) (#39)
+
+ * Added a boolean collapse-sources attribute on TransformActions
+   (append, prepend, replace) which can signal that elements moved
+   from the content to the theme should be "fully collapsed" into the
+   theme immediately, allowing subsequent actions to act on those
+   elements within the theme. 
+
+ * Added support for mounting WSGI applications directly in the proxy,
+   as an alternative to HTTP proxy endpoints. (#48)
+
+ * Fixed error when trying to move or copy HTML comment nodes (#69)
+
+ * Fixed error in deliverance-proxy when proxying HEAD requests (#66)
+
+ * Factored out method ``DeliveranceMiddleware.default_theme(self, environ)``
+   so that subclasses can implement custom logic for calculating the global
+   default theme per request based on the WSGI environment and the value of
+   ``self._default_theme`` which is set by the ``theme_uri`` parameter in
+   the paste.deploy configuration.
+
+   The default implementation returns the raw string ``self._default_theme``
+   directly.
+
+ * Factored out method ``DeliveranceMiddleware.build_external_subrequest``
+   which is called when Deliverance is getting a resource via an external
+   subrequest (as opposed to a file:// URL or an internal subrequest to the
+   application being wrapped by Deliverance)
+
+   The method returns a webob.Request object; the default implementation
+   returns a blank Request with only the header
+   ``x-deliverance-theme-subrequest`` set.  Subclasses can override
+   this behavior, e.g. to preserve certain headers from the original
+   request into subrequests. 
+
+ * Factored out method ``DeliveranceMiddleware.notheme_request(self, request)``
+   so that subclasses can customize the logic to determine which requests
+   should never be themed by Deliverance.  
+
+   The default implementation checks for "deliv_notheme" in the querystring.
+
+ * Moved tests from test_middleware.txt to test_middleware.py, and converted
+   to WebTest, to improve clarity of tests and ease of adding new tests.
+
+
 0.3.1
 -----
 
