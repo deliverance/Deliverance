@@ -9,54 +9,57 @@ from paste.urlmap import URLMap
 import pkg_resources
 import tempfile
 from webob import Request, Response
-from webtest import TestApp
+from webtest import TestApp, TestResponse, TestRequest
 
-def notfind_in_css_raw(html, css, what):
-    try:
-        find_in_css_raw(html, css, what)
-    except AssertionError:
-        return
-    else:
-        raise AssertionError("match to '%s' in '%s' in '%s'" % 
-                             (what, css, html))
+class HtmlTestResponse(TestResponse):
+    def find_in_css(self, css, what, raw=False, should_fail=False):
+        html = self.body
 
-def find_in_css_raw(html, css, what):
-    tree = lxml.html.document_fromstring(html)
-    sel = CSSSelector(css)
-    results = sel(tree)
-    results = '\n'.join(lxml.html.tostring(r)
-                        for r in results)
+        tree = lxml.html.document_fromstring(html)
+        sel = CSSSelector(css)
+        results = sel(tree)
+        results = '\n'.join(lxml.html.tostring(r)
+                            for r in results)
 
-    if what not in results:
-        raise AssertionError("no match to '%s' in '%s'" %
-                             (what, results))
-    return what
+        if raw:
+            found = what in results
+            if should_fail:
+                if not found:
+                    return True
+                else:
+                    raise AssertionError("bad match to '%s' in '%s'" &
+                                         (what, results))
+            if found:
+                return what
+            else:
+                raise AssertionError("no match to '%s' in '%s'" % 
+                                     (what, results))
 
-def find_in_css(html, css, what):
-    tree = lxml.html.document_fromstring(html)
-    sel = CSSSelector(css)
-    results = sel(tree)
-    results = '\n'.join(lxml.html.tostring(r)
-                        for r in results)
+        regexp = re.compile(what, re.IGNORECASE)
+        m = regexp.search(results)
 
-    regexp = re.compile(what, re.IGNORECASE)
-    m = regexp.search(results)
-    if not m:
-        raise AssertionError("no match to '%s' in '%s'" %
-                             (what, results))
-    
-    if m.groups():
-        match_str = m.group(1)
-    else:
-        match_str = m.group(0)
-    return match_str
+        if should_fail:
+            if not m:
+                return True
+            else:
+                raise AssertionError("bad match to '%s' in '%s'" % 
+                                     (what, results))
 
-def notfind_in_css(html, css, what):
-    try:
-        find_in_css(html, css, what)
-    except AssertionError:
-        return
-    raise AssertionError("match to '%s' in %s" % (what, repr(css)))
+        if not m:
+            raise AssertionError("no match to '%s' in '%s'" %
+                                 (what, results))
+        
+        if m.groups():
+            match_str = m.group(1)
+        else:
+            match_str = m.group(0)
+        return match_str
+
+class HtmlTestRequest(TestRequest):
+    ResponseClass = HtmlTestResponse
+
+class HtmlTestApp(TestApp):
+    RequestClass = HtmlTestRequest
 
 def get_text(name):
     path = pkg_resources.resource_filename(
@@ -118,10 +121,10 @@ def setup():
     deliv_url = DeliveranceMiddleware(
         app, SubrequestRuleGetter('http://localhost/mytheme/rules.xml'),
         PrintingLogger, log_factory_kw=dict(print_level=logging.WARNING))
-    raw_app = TestApp(app)
+    raw_app = HtmlTestApp(app)
 
-    deliv_filename = TestApp(deliv_filename)
-    deliv_url = TestApp(deliv_url)
+    deliv_filename = HtmlTestApp(deliv_filename)
+    deliv_url = HtmlTestApp(deliv_url)
 
 def test_fundamentals():
     resp = raw_app.get("/blog/index.html")
@@ -144,16 +147,17 @@ def test_fundamentals():
 
     resp = raw_app.get("/about.html")
     resp.mustcontain("all about this site.")
-    notfind_in_css(resp.body, "div#content-wrapper", "all about this site.")
-    find_in_css(resp.body, "title", "About this site")
-    find_in_css(resp.body, "div#footer", "footer that will be ignored")
+    resp.find_in_css("div#content-wrapper", "all about this site.", 
+                     should_fail=True)
+    resp.find_in_css("title", "About this site")
+    resp.find_in_css("div#footer", "footer that will be ignored")
     
     resp = deliv_url.get("/about.html")
     resp.mustcontain("all about this site.")
-    find_in_css(resp.body, "div#content-wrapper", "all about this site.")
-    find_in_css(resp.body, "title", "About this site")
+    resp.find_in_css("div#content-wrapper", "all about this site.")
+    resp.find_in_css("title", "About this site")
     # FIXME: why is this supposed to show up here?
-    find_in_css(resp.body, "div#footer", "footer that will be ignored")
+    resp.find_in_css("div#footer", "footer that will be ignored")
 
 def test_x_no_deliverate_header():
     assert "2000 Some Corporation" not in deliv_url.get("/magic")
@@ -234,16 +238,18 @@ def test_rule_matches():
 def test_style_comments_not_escaped():
     """ Test that HTML comments inside SCRIPT and STYLE tags aren't escaped """
     # FIXME: not working as a regex search; probably some special characters are in there
-    find_in_css_raw(
-        deliv_url.get("/scriptcomments").body, "style",
-        "<!-- @import url( http://localhost:8080/testplonesite/content_types.css); -->")
+    deliv_url.get("/scriptcomments").find_in_css(
+        "style",
+        "<!-- @import url( http://localhost:8080/testplonesite/content_types.css); -->",
+        raw=True)
 
     # But the same content with an XHTML doctype *will* escape
     # the HTML comments; they are not valid in XHTML
     # FIXME: link to reference in trac / mailing list archives
-    find_in_css_raw(
-        deliv_url.get("/xhtml_scriptcomments").body, "style",
-        "&lt;!-- @import url( http://localhost:8080/testplonesite/content_types.css); --&gt;")
+    deliv_url.get("/xhtml_scriptcomments").find_in_css(
+        "style",
+        "&lt;!-- @import url( http://localhost:8080/testplonesite/content_types.css); --&gt;",
+        raw=True)
     
 def test_cdata_preserved():
     """ 
@@ -257,19 +263,19 @@ def test_cdata_preserved():
     deliv_url.app.app['/theme.html'] = make_response(get_text("cdata_theme.html"))
 
     # Look for the CDATA section in the head provided by the theme-doc:
-    notfind_in_css_raw(raw_app.get("/cdata.html").body,
-                       "head", "<![CDATA[")
-    find_in_css_raw(deliv_url.get("/cdata.html").body,
-                    "head", "/*<![CDATA[*/")
+    raw_app.get("/cdata.html").find_in_css("head", "<![CDATA[",
+                                           raw=True, should_fail=True)
+    deliv_url.get("/cdata.html").find_in_css(
+        "head", "/*<![CDATA[*/", raw=True)
 
     # And look for the CDATA section in the body provided by the content-doc:
-    find_in_css_raw(raw_app.get("/cdata.html").body,
-                    "body", "//<![CDATA[")
-    find_in_css_raw(deliv_url.get("/cdata.html").body,
-                    "body", "//<![CDATA[")
+    raw_app.get("/cdata.html").find_in_css(
+        "body", "//<![CDATA[", raw=True)
+    deliv_url.get("/cdata.html").find_in_css(
+        "body", "//<![CDATA[", raw=True)
 
     # Make sure that the content within the CDATA section is properly unescaped:
-    find_in_css_raw(deliv_url.get("/cdata.html").body,
-                    "body script", "foo < bar")
-    notfind_in_css_raw(deliv_url.get("/cdata.html").body,
-                       "body script", "foo &lt; bar")
+    deliv_url.get("/cdata.html").find_in_css(
+        "body script", "foo < bar", raw=True)
+    deliv_url.get("/cdata.html").find_in_css(
+        "body script", "foo &lt; bar", raw=True, should_fail=True)
