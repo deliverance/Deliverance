@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.4.1-dev'
+version = '0.4.1'
 
 setup(name='Deliverance',
       version=version,
@@ -9,11 +9,7 @@ setup(name='Deliverance',
 Deliverance does transformations of HTML to 'theme' pages, similar in
 function to XSLT but using a simpler XML-based language to express the
 transformation.
-
-New in this release:
-
-%s
-""" % open('changes_on_trunk.txt').read(),
+""",
       classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Web Environment",
