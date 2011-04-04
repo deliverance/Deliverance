@@ -1,6 +1,21 @@
 News
 ====
 
+0.4.2
+-----
+
+ * Added MANIFEST.in to ensure necessary static files are installed alongside code
+   (paster templates, templates + media for editarea.js, client-side theming scripts)
+
+   These were lost somehow when the code moved from SVN to Git, because of some setuptools
+   magic that I don't understand.
+
+0.4.1
+-----
+
+ * Removed reference to changes_on_trunk.txt file in setup.py so that code can install
+   without that file present.
+
 0.4.0
 -----
 
