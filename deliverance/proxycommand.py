@@ -123,7 +123,10 @@ class ReloadingApp(object):
         """Loads or reloads the ProxySet object from the file"""
         if warn:
             print 'Reloading rule file %s' % self.rule_filename
-        self.proxy_set = ProxySet.parse_file(self.rule_filename)
+        self.proxy_set = ProxySet.parse_file(
+            self.rule_filename,
+            middleware_factory=self.settings.middleware_factory,
+            middleware_factory_kwargs=self.settings.middleware_factory_kwargs)
         self.proxy_set_mtime = os.path.getmtime(self.rule_filename)
         self.application = self.settings.middleware(self.proxy_set.application)
 
