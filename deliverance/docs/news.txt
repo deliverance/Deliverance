@@ -5,12 +5,12 @@ News
 ---
 
  * Made the DeliveranceMiddleware factory used in deliverance-proxy
-   configurable through a `middleware-factory` directive in the
-   `server-settings` section of `deliverance.xml`.  You can use a
-   `pyref` to point to any callable which returns an instance of
+   configurable through a ``middleware-factory`` directive in the
+   ``server-settings`` section of ``deliverance.xml``.  You can use a
+   ``pyref`` to point to any callable which returns an instance of
    DeliveranceMiddleware or a subclass.  The signature of the callable
-   factory must conform to `(app, rule_getter, **kwargs)`; keyword
-   arguments can be provided with `pyarg-foo="bar"` attributes in the
+   factory must conform to ``(app, rule_getter, **kwargs)``; keyword
+   arguments can be provided with ``pyarg-foo="bar"`` attributes in the
    configuration.  For example:
 
      <ruleset>
@@ -23,6 +23,12 @@ News
        </server-settings>
      </ruleset>
 
+ * Factored out method
+   ``DeliveranceMiddleware.use_internal_subrequest`` which is called
+   to determine whether Deliverance should get a resource via an
+   internal subrequest to the WSGI callable wrapped by Deliverance.
+   Subclasses can customize this to control when Deliverance should
+   make full HTTP subrequests.
 
 0.4.2
 -----
