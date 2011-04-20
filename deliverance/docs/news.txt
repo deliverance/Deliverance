@@ -1,6 +1,29 @@
 News
 ====
 
+0.5
+---
+
+ * Made the DeliveranceMiddleware factory used in deliverance-proxy
+   configurable through a `middleware-factory` directive in the
+   `server-settings` section of `deliverance.xml`.  You can use a
+   `pyref` to point to any callable which returns an instance of
+   DeliveranceMiddleware or a subclass.  The signature of the callable
+   factory must conform to `(app, rule_getter, **kwargs)`; keyword
+   arguments can be provided with `pyarg-foo="bar"` attributes in the
+   configuration.  For example:
+
+     <ruleset>
+       <server-settings>
+         [..]
+         <middleware-factory
+            pyref="libopencore.deliverance_middleware:CustomDeliveranceMiddleware"
+            pyarg-default_theme="http://mysite.com/theme"
+            pyarg-other_custom_setting="1" />
+       </server-settings>
+     </ruleset>
+
+
 0.4.2
 -----
 
