@@ -38,24 +38,36 @@ class ProxySet(object):
     ruleset.
     """
 
-    def __init__(self, proxies, ruleset, source_location=None):
+    def __init__(self, proxies, ruleset, source_location=None, 
+                 middleware_factory=None, 
+                 middleware_factory_kwargs=None):
         self.proxies = proxies
         self.ruleset = ruleset
         self.source_location = source_location
-        self.deliverator = DeliveranceMiddleware(self.proxy_app, self.rule_getter)
+
+        middleware_factory = middleware_factory or DeliveranceMiddleware
+        middleware_factory_kwargs = middleware_factory_kwargs or {}
+        self.deliverator = middleware_factory(self.proxy_app, self.rule_getter, 
+                                              **middleware_factory_kwargs)
 
     @classmethod
-    def parse_xml(cls, el, source_location):
+    def parse_xml(cls, el, source_location, 
+                  middleware_factory=None,
+                  middleware_factory_kwargs=None):
         """Parse an instance from an XML/etree element"""
         proxies = []
         for child in el:
             if child.tag == 'proxy':
                 proxies.append(Proxy.parse_xml(child, source_location))
         ruleset = RuleSet.parse_xml(el, source_location)
-        return cls(proxies, ruleset, source_location)
+        return cls(proxies, ruleset, source_location, 
+                   middleware_factory=middleware_factory,
+                   middleware_factory_kwargs=middleware_factory_kwargs)
 
     @classmethod
-    def parse_file(cls, filename):
+    def parse_file(cls, filename,
+                   middleware_factory=None,
+                   middleware_factory_kwargs=None):
         """Parse this from a filname"""
         file_url = filename_to_url(filename)
         file = open(filename)
@@ -63,7 +75,9 @@ class ProxySet(object):
         file.close()
         el = tree.getroot()
         tree.xinclude()
-        return cls.parse_xml(el, file_url)
+        return cls.parse_xml(el, file_url, 
+                             middleware_factory=middleware_factory,
+                             middleware_factory_kwargs=middleware_factory_kwargs)
 
     def proxy_app(self, environ, start_response):
         """Implements the proxy, finding the matching `Proxy` object and
@@ -784,7 +798,9 @@ class ProxySettings(object):
                  edit_local_files=True,
                  dev_allow_ips=None, dev_deny_ips=None, dev_htpasswd=None, dev_users=None,
                  dev_expiration=0, dev_secret_file='/tmp/deliverance/devauth.txt',
-                 source_location=None):
+                 source_location=None,
+                 middleware_factory=None,
+                 middleware_factory_kwargs=None):
         self.server_host = server_host
         self.execute_pyref = execute_pyref
         self.display_local_files = display_local_files
@@ -797,9 +813,16 @@ class ProxySettings(object):
         self.dev_secret_file = dev_secret_file
         self.source_location = source_location
 
+        self.middleware_factory = middleware_factory
+        self.middleware_factory_kwargs = middleware_factory_kwargs
+
     @classmethod
     def parse_xml(cls, el, source_location, environ=None, traverse=False):
         """Parse an instance from an etree XML element"""
+
+        middleware_factory = None
+        middleware_factory_kwargs = None
+
         if traverse and el.tag != 'server-settings':
             try:
                 el = el.xpath('//server-settings')[0]
@@ -858,6 +881,10 @@ class ProxySettings(object):
                 dev_users[username] = password
             elif child.tag == 'dev-secret-file':
                 dev_secret_file = cls.substitute(child.text, environ)
+            elif child.tag == 'middleware-factory':
+                ref = PyReference.parse_xml(child, source_location)
+                middleware_factory = ref.function
+                middleware_factory_kwargs = ref.args or None
             else:
                 raise DeliveranceSyntaxError(
                     'Unknown element in <server-settings>: <%s>' % child.tag,
@@ -877,7 +904,9 @@ class ProxySettings(object):
                    dev_users=dev_users, dev_htpasswd=dev_htpasswd,
                    dev_expiration=dev_expiration,
                    source_location=source_location,
-                   dev_secret_file=dev_secret_file)
+                   dev_secret_file=dev_secret_file,
+                   middleware_factory=middleware_factory,
+                   middleware_factory_kwargs=middleware_factory_kwargs)
 
     @classmethod
     def parse_file(cls, filename):
