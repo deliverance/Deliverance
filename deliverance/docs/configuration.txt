@@ -362,6 +362,16 @@ but you can use includes like these to introduce several sources of
 dynamic content into a single page: ``/sidebar`` can be a dynamically
 generated page itself.
 
+Normally, when the href points to a path under the URL-space wrapped
+by Deliverance itself, the resource is fetched with a subrequest
+directly to the unwrapped proxied application, rather than making a
+request back to Deliverance itself.  Sometimes it may be necessary to
+refer back to Deliverance and have Deliverance's rules applied to the
+subrequest.  To control this, you should use a custom subclass of
+``DeliveranceMiddleware`` and provide a custom implementation of the
+`use_internal_subrequest(url_to_fetch, original_request, log)`
+method.
+
 Moving and copying
 ~~~~~~~~~~~~~~~~~~
 

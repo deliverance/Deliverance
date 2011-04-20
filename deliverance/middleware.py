@@ -70,6 +70,16 @@ class DeliveranceMiddleware(object):
         if 'deliv_notheme' in req.GET:
             return True
 
+    def use_internal_subrequest(self, url, orig_req, log):
+        """
+        Subclasses can override this method to control when
+        Deliverance should make internal subrequests directly to the
+        proxied application (in other words, calling the WSGI
+        application that DeliveranceMiddleware is wrapping) rather
+        than making an HTTP subrequest to a fully external URL.
+        """
+        return url.startswith(orig_req.application_url + '/')
+
     def __call__(self, environ, start_response):
         req = Request(environ)
         if self.notheme_request(req):
@@ -230,7 +240,7 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             f.close()
             return subresp
 
-        elif url.startswith(orig_req.application_url + '/'):
+        elif self.use_internal_subrequest(url, orig_req, log):
             subreq = orig_req.copy_get()
             subreq.environ['deliverance.subrequest_original_environ'] = orig_req.environ
             new_path_info = url[len(orig_req.application_url):]
