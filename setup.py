@@ -28,7 +28,7 @@ transformation.
       test_suite='nose.collector', 
       tests_require=['nose', "WebTest"],
       install_requires=[
-        "lxml>=2.1alpha1",
+        "lxml",
         "WebOb",
         "WSGIProxy",
         "Tempita",
