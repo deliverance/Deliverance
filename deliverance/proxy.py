@@ -753,6 +753,8 @@ class ProxyResponseModification(object):
                     self, 
                     'Not rewriting links in response from %s, because Content-Type is %s'
                     % (proxied_url, response.content_type))
+            elif len(response.body) == 0:
+                pass
             else:
                 if not response.charset:
                     ## FIXME: maybe we should guess the encoding?
