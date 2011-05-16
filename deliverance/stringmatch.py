@@ -73,7 +73,7 @@ class Matcher(object):
 
     name = None
 
-    def strip_prefix(self):
+    def strip_prefix(self, request):
         """
         String prefix to strip from a matched string
         """
@@ -164,11 +164,48 @@ class PathMatcher(Matcher):
         return (s == self.pattern[:-1]
                 or s.startswith(self.pattern))
 
-    def strip_prefix(self):
+    def strip_prefix(self, request):
         """The prefix that can be stripped (path: actually can do this)"""
         return self.pattern
 
 _add_matcher(PathMatcher)
+
+class SubpathMatcher(Matcher):
+    """
+    Matches a value as a subpath against a path.  This checks prefixes, but also
+    only matches /-delimited segments.
+
+    >>> m = SubpathMatcher("/foo")
+    >>> m("/foo")
+    False
+    >>> m("/foo/")
+    False
+    >>> m("/foo/bar")
+    True
+    """
+
+    name = 'subpath'
+
+    def __init__(self, pattern):
+        if not pattern.endswith('/'):
+            pattern += '/'
+        super(SubpathMatcher, self).__init__(pattern)
+
+    def __call__(self, s):
+        return (s.startswith(self.pattern)
+                and len(s) > len(self.pattern))
+
+    def strip_prefix(self, request):
+        """The prefix that can be stripped (path: actually can do this)"""
+        if not self(request.path_info):
+            return None
+        pattern = self.pattern.rstrip('/')
+        path_info = request.path_info[len(pattern):]
+        assert path_info.startswith('/')
+        path_info = self.pattern + path_info.split('/', 2)[1] + '/'
+        return path_info
+
+_add_matcher(SubpathMatcher)
 
 class ExactMatcher(Matcher):
     """
@@ -180,7 +217,7 @@ class ExactMatcher(Matcher):
     def __call__(self, s):
         return s == self.pattern
 
-    def strip_prefix(self):
+    def strip_prefix(self, request):
         return self.pattern
 
 _add_matcher(ExactMatcher)
@@ -199,7 +236,7 @@ class ReverseMatcher(Matcher):
     def __call__(self, s):
         return not self.matcher(s)
 
-    def strip_prefix(self):
+    def strip_prefix(self, request):
         return self.pattern
 
 _add_matcher(ReverseMatcher)

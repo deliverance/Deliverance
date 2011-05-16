@@ -296,7 +296,7 @@ class Proxy(object):
         This also applies all the request and response transformations.
         """
         request = Request(environ)
-        prefix = self.match.strip_prefix()
+        prefix = self.match.strip_prefix(request)
         if prefix:
             if prefix.endswith('/'):
                 prefix = prefix[:-1]
@@ -310,6 +310,7 @@ class Proxy(object):
             else:
                 request.script_name = request.script_name + prefix
                 request.path_info = path_info[len(prefix):]
+                print prefix, request.script_name, request.path_info
         log = request.environ['deliverance.log']
         for modifier in self.request_modifications:
             request = modifier.modify_request(request, log)
@@ -525,10 +526,10 @@ class ProxyMatch(AbstractMatch):
         """The context for log messages"""
         return self.proxy
 
-    def strip_prefix(self):
+    def strip_prefix(self, request=None):
         """The prefix that can be stripped off the request before forwarding it"""
         if self.path:
-            return self.path.strip_prefix()
+            return self.path.strip_prefix(request)
         return None
 
 class ProxyWsgi(object):
