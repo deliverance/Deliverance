@@ -68,7 +68,7 @@ Let's test the stringmatchers' strip_prefix method:
       /foo: /foo/
       /bar: /foo/
       >>> strip('subpath:/foo', '/foo', '/bar', '/foo/bar', '/foo/fleem')
-      /foo: None
-      /bar: None
-      /foo/bar: /foo/bar/
-      /foo/fleem: /foo/fleem/
+      /foo: /foo/
+      /bar: /foo/
+      /foo/bar: /foo/
+      /foo/fleem: /foo/

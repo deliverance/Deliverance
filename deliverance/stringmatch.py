@@ -197,13 +197,7 @@ class SubpathMatcher(Matcher):
 
     def strip_prefix(self, request):
         """The prefix that can be stripped (path: actually can do this)"""
-        if not self(request.path_info):
-            return None
-        pattern = self.pattern.rstrip('/')
-        path_info = request.path_info[len(pattern):]
-        assert path_info.startswith('/')
-        path_info = self.pattern + path_info.split('/', 2)[1] + '/'
-        return path_info
+        return self.pattern
 
 _add_matcher(SubpathMatcher)
 
