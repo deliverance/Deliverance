@@ -667,8 +667,8 @@ header.
 
 You can also match against things besides the path; anything in
 `request/response matching`_ is available.  But without a simple
-``path`` match the path stripping won't work.  (A path match like
-``path="regex:.*/manage$"`` wouldn't work, for instance.)
+``path`` or ``subpath`` match the path stripping won't work.  (A path
+match like ``path="regex:.*/manage$"`` wouldn't work, for instance.)
 
 You can also add `page classes`_ for the proxied request, by using
 ``<proxy class="page-class">``.
@@ -800,6 +800,13 @@ also apply to the key/value matching described in the next section):
     path ``/some-path/to/a/place``, ``/some-path/`` and
     ``/some-path``, but it will not match
     ``/some-path-to-somewhere``. 
+
+``subpath:`` 
+    (New in 0.5) Matches the string as a path prefix.  For a
+    path to match, it must be a strict subpath of the given path; not
+    the path itself.  So ``subpath:/some-path`` will match the path
+    ``/some-path/to/a/place``, but it will not match ``/some-path/``
+    or ``/some-path-to-somewhere``.
 
 ``exact:``
     This matches the exact string.
