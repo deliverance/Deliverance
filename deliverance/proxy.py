@@ -310,7 +310,6 @@ class Proxy(object):
             else:
                 request.script_name = request.script_name + prefix
                 request.path_info = path_info[len(prefix):]
-                print prefix, request.script_name, request.path_info
         log = request.environ['deliverance.log']
         for modifier in self.request_modifications:
             request = modifier.modify_request(request, log)
