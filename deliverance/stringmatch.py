@@ -73,7 +73,7 @@ class Matcher(object):
 
     name = None
 
-    def strip_prefix(self, request):
+    def strip_prefix(self):
         """
         String prefix to strip from a matched string
         """
@@ -164,7 +164,7 @@ class PathMatcher(Matcher):
         return (s == self.pattern[:-1]
                 or s.startswith(self.pattern))
 
-    def strip_prefix(self, request):
+    def strip_prefix(self):
         """The prefix that can be stripped (path: actually can do this)"""
         return self.pattern
 
@@ -195,7 +195,7 @@ class SubpathMatcher(Matcher):
         return (s.startswith(self.pattern)
                 and len(s) > len(self.pattern))
 
-    def strip_prefix(self, request):
+    def strip_prefix(self):
         """The prefix that can be stripped (path: actually can do this)"""
         return self.pattern
 
@@ -211,7 +211,7 @@ class ExactMatcher(Matcher):
     def __call__(self, s):
         return s == self.pattern
 
-    def strip_prefix(self, request):
+    def strip_prefix(self):
         return self.pattern
 
 _add_matcher(ExactMatcher)
@@ -230,7 +230,7 @@ class ReverseMatcher(Matcher):
     def __call__(self, s):
         return not self.matcher(s)
 
-    def strip_prefix(self, request):
+    def strip_prefix(self):
         return self.pattern
 
 _add_matcher(ReverseMatcher)
