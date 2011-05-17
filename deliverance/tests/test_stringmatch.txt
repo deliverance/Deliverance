@@ -55,3 +55,20 @@ And then some header matching:
      (False, ['X-Foo-Bar'])
      >>> mheader('X-*: contains:other', {'X-Other': 'nothing', 'X-Foo-Bar': 'some evil!'})
      (False, ['X-Foo-Bar', 'X-Other'])
+
+Let's test the stringmatchers' strip_prefix method:
+
+      >>> from webob import Request
+      >>> def strip(pattern, *paths):
+      ...     for path in paths:
+      ...         request = Request.blank(path)
+      ...         result = compile_matcher(pattern).strip_prefix(request)
+      ...         print '%s: %s' % (request.path, result)
+      >>> strip('path:/foo', '/foo', '/bar')
+      /foo: /foo/
+      /bar: /foo/
+      >>> strip('subpath:/foo', '/foo', '/bar', '/foo/bar', '/foo/fleem')
+      /foo: None
+      /bar: None
+      /foo/bar: /foo/bar/
+      /foo/fleem: /foo/fleem/
