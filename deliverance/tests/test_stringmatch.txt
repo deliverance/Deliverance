@@ -32,6 +32,12 @@ This tests different kinds of matchers.
      /foobar: False
      >>> match('contains:foo', 'somefoo thing')
      somefoo thing: True
+     >>> match('subpath:/foo', '/foo', '/foo/', '/foo/something', '/foobar', '/foo/something/else/')
+     /foo: False
+     /foo/: False
+     /foo/something: True
+     /foobar: False
+     /foo/something/else/: True
 
 And then some header matching:
 
@@ -49,3 +55,4 @@ And then some header matching:
      (False, ['X-Foo-Bar'])
      >>> mheader('X-*: contains:other', {'X-Other': 'nothing', 'X-Foo-Bar': 'some evil!'})
      (False, ['X-Foo-Bar', 'X-Other'])
+

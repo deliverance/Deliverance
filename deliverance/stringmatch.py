@@ -170,6 +170,37 @@ class PathMatcher(Matcher):
 
 _add_matcher(PathMatcher)
 
+class SubpathMatcher(Matcher):
+    """
+    Matches a value as a subpath against a path.  This checks prefixes, but also
+    only matches /-delimited segments.
+
+    >>> m = SubpathMatcher("/foo")
+    >>> m("/foo")
+    False
+    >>> m("/foo/")
+    False
+    >>> m("/foo/bar")
+    True
+    """
+
+    name = 'subpath'
+
+    def __init__(self, pattern):
+        if not pattern.endswith('/'):
+            pattern += '/'
+        super(SubpathMatcher, self).__init__(pattern)
+
+    def __call__(self, s):
+        return (s.startswith(self.pattern)
+                and len(s) > len(self.pattern))
+
+    def strip_prefix(self):
+        """The prefix that can be stripped (path: actually can do this)"""
+        return self.pattern
+
+_add_matcher(SubpathMatcher)
+
 class ExactMatcher(Matcher):
     """
     Matches a string exactly.
