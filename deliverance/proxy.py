@@ -753,18 +753,17 @@ class ProxyResponseModification(object):
                     self, 
                     'Not rewriting links in response from %s, because Content-Type is %s'
                     % (proxied_url, response.content_type))
-            elif len(response.body) == 0:
-                pass
             else:
                 if not response.charset:
                     ## FIXME: maybe we should guess the encoding?
                     body = response.body
                 else:
                     body = response.unicode_body
-                body_doc = document_fromstring(body, base_url=proxied_url)
-                body_doc.make_links_absolute()
-                body_doc.rewrite_links(link_repl_func)
-                response.body = tostring(body_doc)
+                if len(body) > 0:
+                    body_doc = document_fromstring(body, base_url=proxied_url)
+                    body_doc.make_links_absolute()
+                    body_doc.rewrite_links(link_repl_func)
+                    response.body = tostring(body_doc)
             if response.location:
                 ## FIXME: if you give a proxy like
                 ## http://openplans.org, and it redirects to
