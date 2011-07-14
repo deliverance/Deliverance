@@ -4,6 +4,14 @@ News
 0.5
 ---
 
+ * Fixed runtime error when handling a 302 response with a "text/html" 
+   type but an empty body.
+
+ * Added a subpath matcher, which lets you match URLs against a subpath,
+   so ``<match path="subpath:/foo" />`` will match requests to "/foo/bar"
+   and "/foo/bar/baz" but requests to "/foobar" or "/foo" will not match.
+
+   a URL
  * Made the DeliveranceMiddleware factory used in deliverance-proxy
    configurable through a ``middleware-factory`` directive in the
    ``server-settings`` section of ``deliverance.xml``.  You can use a
