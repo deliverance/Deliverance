@@ -10,7 +10,7 @@ from deliverance.exceptions import DeliveranceSyntaxError
 
 type_re = re.compile(r'^(elements?|children|tag|attributes?):')
 type_map = dict(element='elements', attribute='attributes')
-attributes_re = re.compile(r'^attributes[(]([a-zA-Z0-9_,-]+)[)]:')
+attributes_re = re.compile(r'^attributes[(]([a-zA-Z0-9_, -:]+)[)]:')
 
 class Selector(object):
     """

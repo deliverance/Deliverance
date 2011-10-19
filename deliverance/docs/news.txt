@@ -1,6 +1,11 @@
 News
 ====
 
+0.5.1
+-----
+
+ * Add support for matching on namespace-prefixed attributes (malthe)
+
 0.5
 ---
 

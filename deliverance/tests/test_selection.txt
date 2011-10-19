@@ -2,7 +2,7 @@ First we create a theme document to test out:
 
     >>> from lxml.html import fromstring, tostring
     >>> theme = fromstring('''\
-    ... <html>
+    ... <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     ...  <head>
     ...   <title>This is a theme title</title>
     ...   <link rel=Stylesheet type="text/css" href="style.css">
@@ -63,6 +63,11 @@ Then, lets select something:
     children:<title>This is a theme title</title>
     >>> t_select('attributes(class):#header')
     attributes:div class="title-bar"
+
+Make sure we're able to select on namespace attributes too::
+    >>> t_select('attributes(xml:lang):/html')
+    attributes:html xml:lang="en"
+
     >>> t_select('#nothing')
     >>> t_select('div')
     <div id="header" class="title-bar">
