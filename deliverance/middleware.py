@@ -180,7 +180,28 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             resp.md5_etag()
         return resp
 
-    def get_resource(self, url, orig_req, log, retry_inner_if_not_200=False):
+    def get_resource(self, url, orig_req, log,
+                     retry_inner_if_not_200=False,
+                     redirections=5):
+        resp = self._get_resource(url, orig_req, log, retry_inner_if_not_200, redirections)
+        if not resp.status.startswith("3") or not resp.location:
+            return resp
+        max_redirections = redirections
+        while redirections > 0:
+            redirections = redirections - 1
+            log.debug(self, "Request for %s returned %s; following redirect Location: %s" % (
+                    url, resp.status, resp.location))
+            url = resp.location
+            resp = self._get_resource(url, orig_req, log, retry_inner_if_not_200, redirections)
+            if not resp.status.startswith("3") or not resp.location:
+                return resp
+        log.debug("Max redirects (%s) reached; returning response %s from %s" % (
+                max_redirections, url, resp.status))
+        return resp
+
+    def _get_resource(self, url, orig_req, log,
+                      retry_inner_if_not_200=False,
+                      redirections=5):
         """
         Gets the resource at the given url, using the original request
         `orig_req` as the basis for constructing the subrequest.
