@@ -10,6 +10,7 @@ from paste.urlmap import URLMap
 import pkg_resources
 import tempfile
 from webob import Request, Response
+from webob.exc import HTTPTemporaryRedirect
 from webtest import TestApp, TestResponse, TestRequest
 
 class HtmlTestResponse(TestResponse):
@@ -33,8 +34,8 @@ class HtmlTestResponse(TestResponse):
             if found:
                 return what
             else:
-                raise AssertionError("no match to '%s' in '%s'" % 
-                                     (what, results))
+                raise AssertionError("no match to '%s' in '%s'\n\n%s" % 
+                                     (what, results, html))
 
         regexp = re.compile(what, re.IGNORECASE)
         m = regexp.search(results)
@@ -47,8 +48,8 @@ class HtmlTestResponse(TestResponse):
                                      (what, results))
 
         if not m:
-            raise AssertionError("no match to '%s' in '%s'" %
-                                 (what, results))
+            raise AssertionError("no match to '%s' in '%s'\n\n%s" %
+                                 (what, results, html))
         
         if m.groups():
             match_str = m.group(1)
@@ -75,6 +76,11 @@ def get_text(name):
 def make_response(*args, **kw):
     def f(environ, start_response):
         return Response(*args, **kw)(environ, start_response)
+    return f
+
+def make_redirect(location):
+    def f(environ, start_response):
+        return HTTPTemporaryRedirect(location=location)(environ, start_response)
     return f
 
 raw_app = rule_filename = deliv_filename = deliv_url = None
@@ -112,6 +118,16 @@ def setup():
 
     app['/collapse_theme.html'] = make_response(get_text("collapse_theme.html"))
     app['/collapse_content.html'] = make_response(get_text("collapse_content.html"))
+
+    app['/redirect_test/theme.html'] = make_redirect("/theme.html")
+    app['/redirect_test/dynamic_topnav/logged_in.html'] = make_response(
+        get_text("logged_in_topnav.html"))
+    app['/redirect_test/dynamic_topnav'] = make_redirect(
+        "/redirect_test/dynamic_topnav/logged_in.html")
+    app['/redirect_test/dynamic_topnav'] = make_redirect(
+        "/redirect_test/dynamic_topnav/logged_in.html")
+    app['/redirect_test'] = make_redirect("/redirect_test/welcome.html")
+    app['/redirect_test/welcome.html'] = make_response(get_text("welcome.html"))
 
     rule_xml = get_text("rule.xml")
 
@@ -198,6 +214,37 @@ def test_html_entities():
     """ Deliverance should preserve HTML entities in content correctly """
     raw_app.get("/html_entities.html").mustcontain("&hellip;")
     deliv_url.get("/html_entities.html").mustcontain("&#8230;")
+
+def test_follow_redirects():
+    """
+    When fetching internally subrequested resources, like the theme or 
+    content documents fetched by a `rule href`, Deliverance should follow
+    3xx response redirects.
+
+    However, when fetching the primary content document whose URL should
+    be visible to the end user, Deliverance should not follow redirects
+    internally. Instead it should pass the response through to the client,
+    possibly rewriting the `Location` header depending on whether the rules
+    have a `response rewrite-links` configured.
+    """
+
+    # First we'll test that the theme path, which is a redirect, is correctly followed.
+    # If the response contains the basic theme template, that means the redirect was
+    # followed to a real HTML response.
+    resp = deliv_filename.get("/redirect_test/welcome.html")
+    resp.find_in_css("#footer", "Some Corporation")
+
+    # The rule file is fetching some content from an external href, which is pointing to
+    # a path that returns a redirect to another path with actual HTML content.  To check
+    # if the redirect is properly being followed in a `rule href` we will look for the
+    # content that's supposed to be pulled in from the end result of that redirect.
+    resp.find_in_css("#header", "Lammy")
+    resp.find_in_css("#header", "theme title", should_fail=True)
+
+    # But if we try to fetch a content URL that returns a redirect, we should end up
+    # receiving that HTTP redirect in the client.
+    resp = deliv_filename.get("/redirect_test", status=307)
+    assert resp.location == "http://localhost/redirect_test/welcome.html", resp.location
 
 def test_reread_filesystem_rule_file():
 

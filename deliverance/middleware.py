@@ -201,7 +201,7 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
     def get_resource(self, url, orig_req, log,
                      retry_inner_if_not_200=False,
                      redirections=5):
-        resp = self._get_resource(url, orig_req, log, retry_inner_if_not_200, redirections)
+        resp = self._get_resource(url, orig_req, log, retry_inner_if_not_200)
         if not resp.status.startswith("3") or not resp.location:
             return resp
         max_redirections = redirections
@@ -210,16 +210,15 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             log.debug(self, "Request for %s returned %s; following redirect Location: %s" % (
                     url, resp.status, resp.location))
             url = resp.location
-            resp = self._get_resource(url, orig_req, log, retry_inner_if_not_200, redirections)
+            resp = self._get_resource(url, orig_req, log, retry_inner_if_not_200)
             if not resp.status.startswith("3") or not resp.location:
                 return resp
-        log.debug("Max redirects (%s) reached; returning response %s from %s" % (
+        log.debug(self, "Max redirects (%s) reached; returning response %s from %s" % (
                 max_redirections, url, resp.status))
         return resp
 
     def _get_resource(self, url, orig_req, log,
-                      retry_inner_if_not_200=False,
-                      redirections=5):
+                      retry_inner_if_not_200=False):
         """
         Gets the resource at the given url, using the original request
         `orig_req` as the basis for constructing the subrequest.
@@ -282,7 +281,7 @@ document.cookie = 'jsEnabled=1; expires=__DATE__; path=/';
             if not retry_inner_if_not_200:
                 return subresp
 
-            if subresp.status_int == 200:
+            if subresp.status_int == 200 or subresp.status.startswith("3"):
                 return subresp
             elif 'x-deliverance-theme-subrequest' in orig_req.headers:
                 log.debug(self, 

@@ -1,6 +1,7 @@
 <ruleset>
   <match path="/blog" class="blog" />
   <match path="exact:/about.html" class="breakout" />
+  <match path="/redirect_test" class="redirect_test" />
   <match request-header="X-No-Deliverate: boolean:true" abort="1" />
   <match response-header="X-No-Deliverate: boolean:true" abort="1" />
   <match environ="wsgi.url_scheme: https" class="via-https" />
@@ -26,5 +27,11 @@
     <drop theme="tag:#copyright" notheme="ignore" />
     <drop content="#cc" nocontent="ignore" />
     <replace content="children:#content" theme="children:#content" nocontent="abort" />
+  </rule>
+  <rule class="redirect_test">
+    <theme href="/redirect_test/theme.html" />
+    <replace theme="children:#content" content="children:body" />
+    <replace theme="children:#header" content="children:body" 
+	     href="/redirect_test/dynamic_topnav" />
   </rule>
 </ruleset>
