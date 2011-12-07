@@ -1,15 +1,27 @@
 from setuptools import setup, find_packages
 
-version = '0.5.1'
+version = '0.6'
+
+long_description = """
+Deliverance does transformations of HTML to 'theme' pages, 
+similar in function to XSLT but using a simpler 
+XML-based language to express the transformation.
+
+New in this version
+-------------------
+
+* Deliverance now follows HTTP redirects when trying to fetch the
+  theme document and when fetching external content via `href` attributes
+  on rule tags.
+
+* Add support for matching on namespace-prefixed attributes (malthe)
+"""
+
 
 setup(name='Deliverance',
       version=version,
       description="Deliverance transforms HTML to theme pages",
-      long_description="""\
-Deliverance does transformations of HTML to 'theme' pages, similar in
-function to XSLT but using a simpler XML-based language to express the
-transformation.
-""",
+      long_description=long_description,
       classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Web Environment",

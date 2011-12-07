@@ -1,8 +1,12 @@
 News
 ====
 
-0.5.1
+0.6
 -----
+
+ * Deliverance now follows HTTP redirects when trying to fetch the
+   theme document and when fetching external content via `href` attributes
+   on rule tags.
 
  * Add support for matching on namespace-prefixed attributes (malthe)
 
