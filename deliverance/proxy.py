@@ -402,7 +402,11 @@ class Proxy(object):
 
     def proxy_to_dest(self, request, dest):
         """Do the actual proxying, without applying any transformations"""
-        # Not using request.copy because I don't want to copy wsgi.input:
+        # We need to remove caching headers, since the upstream parts of Deliverance
+        # can't handle Not-Modified responses.
+        # Not using request.copy because I don't want to copy wsgi.input
+        request = Request(request.environ.copy())
+        request.remove_conditional_headers()
 
         try:
             proxy_req = self.construct_proxy_request(request, dest)
@@ -475,7 +479,6 @@ class Proxy(object):
             resp = exc.HTTPNotFound("The file %s could not be found" % filename)
         else:
             app = FileApp(filename)
-            # I don't really need a copied request here, because FileApp is so simple:
             resp = request.get_response(app)
         return resp, orig_base, dest, proxied_url
 
