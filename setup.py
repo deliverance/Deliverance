@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.6'
+version = '0.6.1'
 
 long_description = """
 Deliverance does transformations of HTML to 'theme' pages, 
@@ -10,11 +10,12 @@ XML-based language to express the transformation.
 New in this version
 -------------------
 
-* Deliverance now follows HTTP redirects when trying to fetch the
-  theme document and when fetching external content via `href` attributes
-  on rule tags.
+* Deliverance now discards caching headers from the request before fetching 
+  the theme resource, since it doesn't know how to handle 304 responses internally.
+  This prevents Deliverance from serving unthemed content if the client request
+  contains caching headers that would cause the theme server to respond with
+  304 Not Modified.
 
-* Add support for matching on namespace-prefixed attributes (malthe)
 """
 
 

@@ -1,6 +1,16 @@
 News
 ====
 
+0.6.1
+-----
+
+
+ * Deliverance now discards caching headers from the request before fetching 
+   the theme resource, since it doesn't know how to handle 304 responses internally.
+   This prevents Deliverance from serving unthemed content if the client request
+   contains caching headers that would cause the theme server to respond with
+   304 Not Modified.
+
 0.6
 -----
 
