@@ -41,6 +41,7 @@ setup(name='Deliverance',
       tests_require=['nose', "WebTest"],
       install_requires=[
         "lxml",
+        "cssselect",
         "WebOb",
         "WSGIProxy",
         "Tempita",

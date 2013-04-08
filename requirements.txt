@@ -11,6 +11,7 @@ PasteScript
 WSGIFilter
 chardet
 simplejson
+cssselect
 
 #Test
 nose
