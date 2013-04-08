@@ -1,0 +1,17 @@
+#Install
+lxml
+WebOb
+WSGIProxy
+Tempita
+Pygments
+WebError
+DevAuth
+Paste
+PasteScript
+WSGIFilter
+chardet
+simplejson
+
+#Test
+nose
+WebTest
